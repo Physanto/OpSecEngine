@@ -39,6 +39,9 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>17</maven.compiler.release>
 
+        <!-- Severidad de la regla de Checkstyle que prohíbe System.out y System.err -->
+        <checkstyle.consola.severidad>error</checkstyle.consola.severidad>
+
         <!-- Versiones de dependencias -->
         <jackson.version>2.22.4</jackson.version>
         <byte-buddy.version>1.18.16</byte-buddy.version>
@@ -50,6 +53,7 @@
 
         <!-- Versiones de herramientas usadas por plugins -->
         <google-java-format.version>1.35.0</google-java-format.version>
+        <checkstyle.version>12.3.1</checkstyle.version>
 
         <!-- Versiones de plugins -->
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
@@ -252,6 +256,33 @@
                 <executions>
                     <execution>
                         <id>verificar-formato</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>${checkstyle.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <configLocation>${maven.multiModuleProjectDirectory}/build-tools/checkstyle.xml</configLocation>
+                    <propertyExpansion>consola.severidad=${checkstyle.consola.severidad}</propertyExpansion>
+                    <consoleOutput>true</consoleOutput>
+                    <failOnViolation>true</failOnViolation>
+                    <violationSeverity>warning</violationSeverity>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>verificar-estilo</id>
                         <phase>verify</phase>
                         <goals>
                             <goal>check</goal>

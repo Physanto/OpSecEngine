@@ -15,6 +15,11 @@
     <name>OpSecEngine - CLI</name>
     <description>Interfaz de línea de comandos del motor (comando opsec).</description>
 
+    <properties>
+        <!-- Este módulo sí puede escribir en la consola -->
+        <checkstyle.consola.severidad>ignore</checkstyle.consola.severidad>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>

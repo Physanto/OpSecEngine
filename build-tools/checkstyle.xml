@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+    Configuración mínima de Checkstyle para OpSecEngine.
+
+    El formato del código lo resuelve Spotless; aquí solo se verifican reglas que el
+    formateador no cubre: Javadoc obligatorio, identificadores en ASCII y ausencia de
+    System.out y System.err en los módulos del motor.
+
+    Propiedades que entrega el pom:
+    - consola.severidad: "error" en los módulos del motor; "ignore" en opsec-cli,
+      opsec-agente y la app de práctica, que sí pueden escribir en la consola.
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- Cada paquete debe tener su package-info.java documentado -->
+    <module name="JavadocPackage"/>
+
+    <module name="TreeWalker">
+        <!-- Javadoc obligatorio en tipos, métodos y constructores públicos y protegidos -->
+        <module name="MissingJavadocType">
+            <property name="scope" value="protected"/>
+        </module>
+        <module name="MissingJavadocMethod">
+            <property name="scope" value="protected"/>
+            <property name="allowMissingPropertyJavadoc" value="false"/>
+        </module>
+        <module name="JavadocStyle">
+            <property name="checkEmptyJavadoc" value="true"/>
+        </module>
+
+        <!-- Identificadores solo con caracteres ASCII: sin tildes ni ñ -->
+        <module name="TypeName">
+            <property name="format" value="^[A-Z][A-Za-z0-9_]*$"/>
+        </module>
+        <module name="MethodName">
+            <property name="format" value="^[a-z][A-Za-z0-9_]*$"/>
+        </module>
+        <module name="MemberName">
+            <property name="format" value="^[a-z][A-Za-z0-9_]*$"/>
+        </module>
+        <module name="PackageName">
+            <property name="format" value="^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$"/>
+        </module>
+        <module name="LocalVariableName">
+            <property name="format" value="^[a-z][A-Za-z0-9_]*$"/>
+        </module>
+        <module name="ParameterName">
+            <property name="format" value="^[a-z][A-Za-z0-9_]*$"/>
+        </module>
+
+        <!-- El motor registra con java.util.logging; no escribe directo en la consola -->
+        <module name="Regexp">
+            <property name="id" value="SinConsola"/>
+            <property name="severity" value="${consola.severidad}" default="error"/>
+            <property name="format" value="System\s*\.\s*(out|err)\b"/>
+            <property name="illegalPattern" value="true"/>
+            <property name="ignoreComments" value="true"/>
+            <property name="message"
+                      value="No uses System.out ni System.err en el motor; usa java.util.logging."/>
+        </module>
+    </module>
+</module>
