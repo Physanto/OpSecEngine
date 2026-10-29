@@ -1,0 +1,17 @@
+# Normaliza los finales de línea a LF en todos los archivos de texto
+* text=auto eol=lf
+
+# Scripts de Windows con CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Script del envoltorio de Maven con LF
+mvnw text eol=lf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.gif binary
+*.jar binary
+*.zip binary
+*.ico binary
