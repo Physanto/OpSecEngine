@@ -16,6 +16,11 @@
     <name>OpSecEngine - App de práctica clientes-vulnerable</name>
     <description>Aplicación Swing de práctica con fallos sembrados, para evaluación y docencia.</description>
 
+    <properties>
+        <!-- Este módulo sí puede escribir en la consola -->
+        <checkstyle.consola.severidad>ignore</checkstyle.consola.severidad>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

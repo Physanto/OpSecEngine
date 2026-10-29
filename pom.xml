@@ -39,6 +39,9 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>17</maven.compiler.release>
 
+        <!-- Severidad de la regla de Checkstyle que prohíbe System.out y System.err -->
+        <checkstyle.consola.severidad>error</checkstyle.consola.severidad>
+
         <!-- Versiones de dependencias -->
         <jackson.version>2.22.4</jackson.version>
         <byte-buddy.version>1.18.16</byte-buddy.version>
@@ -47,6 +50,10 @@
         <archunit.version>1.5.1</archunit.version>
         <picocli.version>4.7.7</picocli.version>
         <json-schema-validator.version>2.0.8</json-schema-validator.version>
+
+        <!-- Versiones de herramientas usadas por plugins -->
+        <google-java-format.version>1.35.0</google-java-format.version>
+        <checkstyle.version>12.3.1</checkstyle.version>
 
         <!-- Versiones de plugins -->
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
@@ -232,5 +239,83 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>verificar-entorno-y-dependencias</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[17,)</version>
+                                    <message>Se necesita Java 17 o superior para construir OpSecEngine.</message>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.9,)</version>
+                                    <message>Se necesita Maven 3.9 o superior; usa ./mvnw o mvnw.cmd.</message>
+                                </requireMavenVersion>
+                                <dependencyConvergence/>
+                                <banDuplicatePomDependencyVersions/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>${google-java-format.version}</version>
+                            <!-- AOSP: indentación de 4 espacios, como en .editorconfig -->
+                            <style>AOSP</style>
+                        </googleJavaFormat>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>verificar-formato</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>${checkstyle.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <configLocation>${maven.multiModuleProjectDirectory}/build-tools/checkstyle.xml</configLocation>
+                    <propertyExpansion>consola.severidad=${checkstyle.consola.severidad}</propertyExpansion>
+                    <consoleOutput>true</consoleOutput>
+                    <failOnViolation>true</failOnViolation>
+                    <violationSeverity>warning</violationSeverity>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>verificar-estilo</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>

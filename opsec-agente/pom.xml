@@ -20,6 +20,8 @@
         <!-- JUnit 6 requiere Java 17 para compilar las pruebas -->
         <maven.compiler.testRelease>17</maven.compiler.testRelease>
         <agente.paquete.interno>${project.groupId}.agente.interno</agente.paquete.interno>
+        <!-- Este módulo sí puede escribir en la consola -->
+        <checkstyle.consola.severidad>ignore</checkstyle.consola.severidad>
     </properties>
 
     <dependencies>
