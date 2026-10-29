@@ -20,6 +20,20 @@
         </license>
     </licenses>
 
+    <modules>
+        <module>opsec-dominio</module>
+        <module>opsec-protocolo</module>
+        <module>opsec-agente</module>
+        <module>opsec-nucleo</module>
+        <module>opsec-oraculos</module>
+        <module>opsec-ataques</module>
+        <module>opsec-informes</module>
+        <module>opsec-cli</module>
+        <module>opsec-soporte-pruebas</module>
+        <module>opsec-verificacion</module>
+        <module>apps-practica/clientes-vulnerable</module>
+    </modules>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -51,6 +65,54 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Módulos internos -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-dominio</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-protocolo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-agente</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-nucleo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-oraculos</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-ataques</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-informes</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-soporte-pruebas</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Dependencias externas -->
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
