@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "tipo": "HOLA",
+  "id": "a1b2c3d4-0001-4000-8000-000000000001",
+  "cuerpo": {
+    "token": "7f3e9c2a5b8d4e1f",
+    "versionAgente": "0.0.1-SNAPSHOT",
+    "versionJava": "1.8.0_402",
+    "sistemaOperativo": "Windows 11 10.0"
+  }
+}

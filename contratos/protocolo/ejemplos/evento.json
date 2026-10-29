@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "tipo": "EVENTO",
+  "id": "a1b2c3d4-0004-4000-8000-000000000004",
+  "cuerpo": {
+    "secuencia": 17,
+    "instanteEpochMs": 1793287800123,
+    "tipo": "SQL",
+    "datos": {
+      "sql": "DELETE FROM personas WHERE id = 3",
+      "tipoSentencia": "STATEMENT",
+      "parametros": [],
+      "filasAfectadas": 1
+    }
+  }
+}

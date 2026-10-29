@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "tipo": "CAPTURA",
+  "id": "a1b2c3d4-0006-4000-8000-000000000006",
+  "correlacion": "a1b2c3d4-0005-4000-8000-000000000005",
+  "cuerpo": {
+    "ventana": "Menú Administrador",
+    "formato": "png",
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+  }
+}
