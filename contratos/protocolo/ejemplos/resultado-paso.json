@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "tipo": "RESULTADO_PASO",
+  "id": "a1b2c3d4-0003-4000-8000-000000000003",
+  "correlacion": "a1b2c3d4-0002-4000-8000-000000000002",
+  "cuerpo": {
+    "codigo": "OK",
+    "detalle": "Se escribió el texto en el campo Usuario",
+    "duracionMs": 84
+  }
+}

@@ -5,6 +5,15 @@ Mensajes que intercambian el motor y el agente (JSON por líneas sobre un socket
 - **Dueño:** líder (L). Es un contrato: los cambios se piden con una solicitud de cambio de contrato.
 - **Paquete raíz:** `io.github.physanto.opsecengine.protocolo`
 
+## Contenido
+
+- `Mensaje` y `TipoMensaje`: el sobre de cada mensaje (versión, tipo, id, correlación y cuerpo). La versión actual es `Mensaje.VERSION_PROTOCOLO` = 1.
+- Paquete `dto`: el cuerpo de cada tipo de mensaje, independiente del dominio.
+- `CodecMensajes`: JSON Lines en UTF-8 con separador `\n` fijo; ignora los campos desconocidos.
+- `CanalMensajes`: envía y recibe mensajes por un socket. Documenta el saludo `HOLA` con token.
+
+Hay un ejemplo JSON por tipo de mensaje en `contratos/protocolo/ejemplos/`, en la raíz del repositorio; las pruebas los leen todos.
+
 ## Dependencias permitidas
 
 - Jackson (`jackson-databind`).

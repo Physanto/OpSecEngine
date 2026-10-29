@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "tipo": "ARBOL",
+  "id": "a1b2c3d4-0008-4000-8000-000000000008",
+  "correlacion": "a1b2c3d4-0007-4000-8000-000000000007",
+  "cuerpo": {
+    "ventanas": [
+      {
+        "tipo": "javax.swing.JFrame",
+        "texto": "Iniciar sesión",
+        "nombre": "frmLogin",
+        "visible": true,
+        "habilitado": true,
+        "editable": false,
+        "hijos": [
+          {
+            "tipo": "javax.swing.JLabel",
+            "texto": "Usuario",
+            "visible": true,
+            "habilitado": true,
+            "editable": false,
+            "hijos": []
+          },
+          {
+            "tipo": "javax.swing.JTextField",
+            "nombre": "txtUsuario",
+            "nombreAccesible": "Usuario",
+            "visible": true,
+            "habilitado": true,
+            "editable": true,
+            "hijos": []
+          },
+          {
+            "tipo": "javax.swing.JButton",
+            "texto": "Iniciar Sesion",
+            "visible": true,
+            "habilitado": true,
+            "editable": false,
+            "hijos": []
+          }
+        ]
+      }
+    ]
+  }
+}

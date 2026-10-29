@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "tipo": "ERROR",
+  "id": "a1b2c3d4-0011-4000-8000-000000000011",
+  "correlacion": "a1b2c3d4-0001-4000-8000-000000000001",
+  "cuerpo": {
+    "codigo": "TOKEN_INVALIDO",
+    "mensaje": "El token del saludo no coincide con el de la sesión"
+  }
+}
