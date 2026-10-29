@@ -48,6 +48,9 @@
         <picocli.version>4.7.7</picocli.version>
         <json-schema-validator.version>2.0.8</json-schema-validator.version>
 
+        <!-- Versiones de herramientas usadas por plugins -->
+        <google-java-format.version>1.35.0</google-java-format.version>
+
         <!-- Versiones de plugins -->
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.6.1</maven-surefire-plugin.version>
@@ -232,5 +235,30 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>${google-java-format.version}</version>
+                            <!-- AOSP: indentación de 4 espacios, como en .editorconfig -->
+                            <style>AOSP</style>
+                        </googleJavaFormat>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>verificar-formato</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>
