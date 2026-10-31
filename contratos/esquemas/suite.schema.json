@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Physanto/OpSecEngine/main/contratos/esquemas/suite.schema.json",
+  "title": "Suite de casos de prueba",
+  "description": "Formato de los archivos suites/*.yaml: una suite con su configuración de ejecución y sus casos. Los valores enumerados se escriben en MAYÚSCULAS, como en el dominio.",
+  "type": "object",
+  "required": ["suite", "casos"],
+  "additionalProperties": false,
+  "properties": {
+    "suite": {
+      "description": "Nombre de la suite.",
+      "$ref": "#/$defs/textoNoVacio"
+    },
+    "version": {
+      "description": "Versión de la suite, definida por quien la escribe.",
+      "type": ["string", "integer"],
+      "pattern": "\\S"
+    },
+    "enfoques": {
+      "description": "Enfoques de prueba que cubre la suite.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["FUNCIONAL", "VALIDACION", "SEGURIDAD", "RENDIMIENTO", "ROBUSTEZ", "ACCESIBILIDAD", "REGRESION"]
+      }
+    },
+    "config": {
+      "$ref": "#/$defs/config"
+    },
+    "casos": {
+      "description": "Casos de la suite; sus ids no se repiten.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/caso"
+      }
+    },
+    "extensiones": {
+      "$ref": "#/$defs/extensiones"
+    }
+  },
+  "$defs": {
+    "textoNoVacio": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "extensiones": {
+      "description": "Sección libre para agregar datos sin romper el contrato. El motor la conserva y no la interpreta.",
+      "type": "object"
+    },
+    "config": {
+      "description": "Configuración de ejecución. Si falta un campo se usa su valor por defecto.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "modo": {
+          "description": "Cómo se ejecutan las acciones sobre los componentes.",
+          "enum": ["SEMANTICO", "EVENTOS", "ROBOT"],
+          "default": "EVENTOS"
+        },
+        "oculto": {
+          "description": "Si es true, las ventanas de la app se muestran fuera de la pantalla.",
+          "type": "boolean",
+          "default": false
+        },
+        "esperaMaximaPasoMs": {
+          "description": "Tiempo máximo de espera de cada paso, en milisegundos.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 10000
+        },
+        "reintentos": {
+          "description": "Veces que se repite un caso fallido para detectar si es inestable.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "semilla": {
+          "description": "Semilla de los valores aleatorios, para repetir una ejecución exactamente.",
+          "type": "integer",
+          "default": 0
+        },
+        "paralelismo": {
+          "description": "Número de sesiones de la app que se ejecutan a la vez.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      }
+    },
+    "caso": {
+      "description": "Un caso de prueba. Si no tiene rol se ejecuta sin sesión; si tiene rol, el motor inicia sesión con ese rol (login del proyecto) antes de sus pasos.",
+      "type": "object",
+      "required": ["id", "pasos"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identificador del caso, único en la suite.",
+          "$ref": "#/$defs/textoNoVacio"
+        },
+        "descripcion": {
+          "type": "string"
+        },
+        "rol": {
+          "description": "Nombre de un rol definido en proyecto.yaml.",
+          "$ref": "#/$defs/textoNoVacio"
+        },
+        "pasos": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/paso"
+          }
+        },
+        "ataques": {
+          "description": "Ids de payloads de la biblioteca de ataques. El caso se ejecuta una vez por payload, reemplazando {payload} en los valores de los pasos.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/idCatalogo"
+          }
+        },
+        "oraculos": {
+          "description": "Ids de oráculos que se evalúan además de los que aplican por defecto.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/idCatalogo"
+          }
+        },
+        "extensiones": {
+          "$ref": "#/$defs/extensiones"
+        }
+      }
+    },
+    "idCatalogo": {
+      "description": "Identificador en MAYÚSCULAS con guiones, por ejemplo SQLI-CANARIO.",
+      "type": "string",
+      "pattern": "^[A-Z0-9]+(-[A-Z0-9]+)*$"
+    },
+    "paso": {
+      "description": "Un paso es un objeto con UNA sola acción como clave. Opcionalmente lleva esperaMaximaMs y extensiones.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pulsar": {
+          "description": "Pulsa un botón, un elemento de menú u otro componente.",
+          "$ref": "#/$defs/localizador"
+        },
+        "llenar": {
+          "description": "Escribe en uno o más campos. Cada clave localiza un campo (etiqueta o texto) y su valor es el texto a escribir.",
+          "$ref": "#/$defs/valoresPorCampo"
+        },
+        "seleccionar": {
+          "description": "Elige una opción en una o más listas o combos. Cada clave localiza el componente y su valor es la opción.",
+          "$ref": "#/$defs/valoresPorCampo"
+        },
+        "marcar": {
+          "description": "Marca una casilla o un botón de opción.",
+          "$ref": "#/$defs/localizador"
+        },
+        "esperar": {
+          "description": "Espera a que aparezca un componente o una ventana (localizador) o, solo si no hay otra opción, un tiempo fijo en milisegundos.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "$ref": "#/$defs/localizador"
+            }
+          ]
+        },
+        "ir_a": {
+          "description": "Abre directamente una ventana, por ejemplo un punto de entrada con su propio main.",
+          "$ref": "#/$defs/localizador"
+        },
+        "cerrar_ventana": {
+          "description": "Cierra una ventana o un diálogo.",
+          "$ref": "#/$defs/localizador"
+        },
+        "capturar": {
+          "description": "Toma una captura. Sin valor captura la ventana activa; con un localizador, esa ventana.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/localizador"
+            }
+          ]
+        },
+        "esperaMaximaMs": {
+          "description": "Tiempo máximo de este paso, en milisegundos; reemplaza al de la configuración.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "extensiones": {
+          "$ref": "#/$defs/extensiones"
+        }
+      },
+      "oneOf": [
+        { "required": ["pulsar"] },
+        { "required": ["llenar"] },
+        { "required": ["seleccionar"] },
+        { "required": ["marcar"] },
+        { "required": ["esperar"] },
+        { "required": ["ir_a"] },
+        { "required": ["cerrar_ventana"] },
+        { "required": ["capturar"] }
+      ]
+    },
+    "localizador": {
+      "description": "Texto simple (se busca como etiqueta asociada y, si no aparece, como texto visible) u objeto con criterios. Los criterios se prueban en el orden en que se escriben.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/textoNoVacio"
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "etiqueta": { "$ref": "#/$defs/textoNoVacio" },
+            "texto": { "$ref": "#/$defs/textoNoVacio" },
+            "nombreAccesible": { "$ref": "#/$defs/textoNoVacio" },
+            "nombreComponente": { "$ref": "#/$defs/textoNoVacio" },
+            "tipo": { "$ref": "#/$defs/textoNoVacio" },
+            "ruta": { "$ref": "#/$defs/textoNoVacio" },
+            "tituloVentana": { "$ref": "#/$defs/textoNoVacio" },
+            "claseVentana": { "$ref": "#/$defs/textoNoVacio" }
+          }
+        }
+      ]
+    },
+    "valoresPorCampo": {
+      "description": "Mapa localizador (etiqueta o texto) → valor. El valor puede estar vacío y admite las variables {usuario}, {contrasena}, {payload} y {canario}.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
