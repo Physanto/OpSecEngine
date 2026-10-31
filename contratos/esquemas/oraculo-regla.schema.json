@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Physanto/OpSecEngine/main/contratos/esquemas/oraculo-regla.schema.json",
+  "title": "Archivo de reglas de oráculo",
+  "description": "Formato de los archivos oraculos/*.yaml: una lista de reglas simples que se evalúan sobre los eventos de la traza, sin compilar nada. Los valores enumerados se escriben en MAYÚSCULAS.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "$ref": "#/$defs/regla"
+  },
+  "$defs": {
+    "regla": {
+      "type": "object",
+      "required": ["id", "momento", "si", "entonces"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identificador del oráculo en MAYÚSCULAS con guiones. No debe usar un id reservado de contratos/catalogos/oraculos.yaml.",
+          "type": "string",
+          "pattern": "^[A-Z0-9]+(-[A-Z0-9]+)*$"
+        },
+        "descripcion": {
+          "type": "string"
+        },
+        "momento": {
+          "description": "EVENTO: un hallazgo por cada evento que cumple la condición. CASO: un hallazgo por caso si algún evento la cumple. SUITE: un hallazgo por suite si algún evento la cumple.",
+          "enum": ["EVENTO", "CASO", "SUITE"]
+        },
+        "si": {
+          "description": "Condición sobre un evento. Se cumple cuando se cumplen todas las partes escritas.",
+          "type": "object",
+          "required": ["tipo"],
+          "additionalProperties": false,
+          "properties": {
+            "tipo": {
+              "$ref": "traza-evento.schema.json#/$defs/tipoEvento"
+            },
+            "campo": {
+              "description": "Campo de los datos del evento que se revisa. Sin campo, texto_contiene revisa todos los campos de texto.",
+              "type": "string",
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "texto_contiene": {
+              "description": "El campo contiene al menos uno de estos textos.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "igual_a": {
+              "description": "El campo tiene exactamente este valor. Necesita campo.",
+              "type": ["string", "number", "boolean", "null"]
+            }
+          },
+          "dependentRequired": {
+            "igual_a": ["campo"]
+          }
+        },
+        "entonces": {
+          "description": "Hallazgo que se produce cuando se cumple la condición.",
+          "type": "object",
+          "required": ["titulo", "confianza"],
+          "additionalProperties": false,
+          "properties": {
+            "titulo": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "explicacion": {
+              "type": "string"
+            },
+            "cwe": {
+              "description": "Debilidad con el formato CWE-<número>; debe existir en contratos/catalogos/cwe.yaml.",
+              "type": "string",
+              "pattern": "^CWE-[0-9]+$"
+            },
+            "confianza": {
+              "enum": ["CONFIRMADO", "PROBABLE", "INFO"]
+            }
+          }
+        },
+        "extensiones": {
+          "description": "Sección libre para agregar datos sin romper el contrato.",
+          "type": "object"
+        }
+      }
+    }
+  }
+}

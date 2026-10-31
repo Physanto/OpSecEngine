@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Physanto/OpSecEngine/main/contratos/esquemas/traza-evento.schema.json",
+  "title": "Evento de una traza",
+  "description": "Formato de UNA línea de un archivo de traza JSONL (traza.jsonl): un evento por línea, en UTF-8, ordenados por secuencia. Los campos de datos de cada tipo están en contratos/catalogos/eventos.yaml.",
+  "type": "object",
+  "required": ["secuencia", "instante", "tipo", "contexto"],
+  "additionalProperties": false,
+  "properties": {
+    "secuencia": {
+      "description": "Posición del evento en la traza; no se repite.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "instante": {
+      "description": "Momento del evento en ISO-8601 con zona, por ejemplo 2026-10-30T15:30:00.125Z.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "tipo": {
+      "$ref": "#/$defs/tipoEvento"
+    },
+    "contexto": {
+      "description": "Contexto en que ocurrió el evento.",
+      "type": "object",
+      "required": ["numeroPaso", "sesionActiva"],
+      "additionalProperties": false,
+      "properties": {
+        "casoId": {
+          "description": "Id del caso; null o ausente fuera de un caso.",
+          "type": ["string", "null"],
+          "pattern": "\\S"
+        },
+        "numeroPaso": {
+          "description": "Número del paso en curso; 0 antes del primer paso o fuera de un caso.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "rol": {
+          "description": "Rol activo; null o ausente si no hay rol.",
+          "type": ["string", "null"],
+          "pattern": "\\S"
+        },
+        "sesionActiva": {
+          "description": "Si había una sesión iniciada cuando ocurrió el evento.",
+          "type": "boolean"
+        }
+      }
+    },
+    "datos": {
+      "description": "Campos propios del tipo de evento, según el catálogo de eventos.",
+      "type": "object"
+    },
+    "extensiones": {
+      "description": "Sección libre para agregar datos sin romper el contrato.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "tipoEvento": {
+      "description": "Tipo del evento; coincide con el enum TipoEvento del dominio.",
+      "enum": [
+        "PASO_INICIO",
+        "PASO_FIN",
+        "VENTANA_ABIERTA",
+        "VENTANA_CERRADA",
+        "DIALOGO",
+        "SQL",
+        "FIRESTORE",
+        "ARCHIVO",
+        "COMANDO",
+        "EXCEPCION",
+        "CONSOLA",
+        "CAPTURA",
+        "ESTADO",
+        "SESION",
+        "TIEMPO",
+        "APP_TERMINADA"
+      ]
+    }
+  }
+}
