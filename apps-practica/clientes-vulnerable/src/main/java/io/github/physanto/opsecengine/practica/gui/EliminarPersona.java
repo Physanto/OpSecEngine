@@ -13,6 +13,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 /** Eliminación de una persona por su uid; es una ventana administrativa. */
 public final class EliminarPersona extends JFrame {
@@ -66,6 +67,29 @@ public final class EliminarPersona extends JFrame {
 
         pack();
         setLocationRelativeTo(null);
+    }
+
+    /**
+     * Abre esta ventana directamente, como hacen los estudiantes para probarla.
+     *
+     * <p>Con el fallo F3 activo la ventana se abre sin iniciar sesión y permite eliminar personas.
+     * Con F3 corregido se verifica la sesión: se muestra "Acceso denegado" y se abre la portada.
+     * Termina con código 2 o 1 por las mismas causas que {@link Portada#main(String[])}.
+     *
+     * @param args no se usan
+     */
+    public static void main(String[] args) {
+        ContextoApp contexto = Navegacion.iniciarContexto();
+        SwingUtilities.invokeLater(
+                () -> {
+                    if (contexto.control().eliminarPersonaSinSesion()) {
+                        // FALLO F3: la ventana administrativa se abre sin verificar la sesión
+                        new EliminarPersona(contexto, Sesion.sinIniciar()).setVisible(true);
+                    } else {
+                        Navegacion.abrirEliminarPersona(null, contexto, Sesion.sinIniciar());
+                        new Portada(contexto).setVisible(true);
+                    }
+                });
     }
 
     private void eliminar() {

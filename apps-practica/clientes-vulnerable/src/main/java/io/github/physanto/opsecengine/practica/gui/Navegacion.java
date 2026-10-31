@@ -3,6 +3,7 @@ package io.github.physanto.opsecengine.practica.gui;
 import io.github.physanto.opsecengine.practica.ContextoApp;
 import io.github.physanto.opsecengine.practica.servicio.Sesion;
 import java.awt.Component;
+import java.sql.SQLException;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
@@ -24,7 +25,7 @@ final class Navegacion {
 
     /** Vuelve al menú que corresponde a la sesión, o a la portada si no hay sesión. */
     static void abrirMenu(JFrame actual, ContextoApp contexto, Sesion sesion) {
-        if (sesion.esAdministrador()) {
+        if (sesion.esAdministrador() || sesion.esModoLocal()) {
             abrirMenuAdministrador(actual, contexto, sesion);
         } else if (sesion.estaIniciada()) {
             cambiar(actual, new MenuCliente(contexto, sesion));
@@ -45,6 +46,23 @@ final class Navegacion {
         if (permitido(actual, contexto, sesion)) {
             cambiar(actual, new EliminarPersona(contexto, sesion));
         }
+    }
+
+    /**
+     * Crea el contexto de la app al arrancar; si falla, escribe el motivo y termina la JVM con
+     * código 2 (fallo desconocido en la propiedad) o 1 (base de datos).
+     */
+    static ContextoApp iniciarContexto() {
+        try {
+            return ContextoApp.iniciar();
+        } catch (IllegalArgumentException e) {
+            System.err.println(e.getMessage());
+            System.exit(2);
+        } catch (SQLException e) {
+            System.err.println("No se pudo crear la base de datos: " + e.getMessage());
+            System.exit(1);
+        }
+        throw new IllegalStateException("La JVM no terminó");
     }
 
     private static boolean permitido(Component padre, ContextoApp contexto, Sesion sesion) {

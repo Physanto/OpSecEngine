@@ -3,6 +3,8 @@ package io.github.physanto.opsecengine.practica;
 import io.github.physanto.opsecengine.practica.datos.BaseDatos;
 import io.github.physanto.opsecengine.practica.datos.PersonaRepositorio;
 import io.github.physanto.opsecengine.practica.datos.UsuarioRepositorio;
+import io.github.physanto.opsecengine.practica.fallos.Fallo;
+import io.github.physanto.opsecengine.practica.fallos.Interruptores;
 import io.github.physanto.opsecengine.practica.servicio.ControlAcceso;
 import io.github.physanto.opsecengine.practica.servicio.LoginServicio;
 import java.io.PrintStream;
@@ -18,39 +20,51 @@ import java.util.Objects;
 public final class ContextoApp {
 
     private final BaseDatos base;
+    private final Interruptores interruptores;
     private final PersonaRepositorio personas;
     private final LoginServicio login;
     private final ControlAcceso control;
 
-    private ContextoApp(BaseDatos base, PrintStream consola) {
+    private ContextoApp(BaseDatos base, Interruptores interruptores, PrintStream consola) {
         this.base = base;
+        this.interruptores = interruptores;
         this.personas = new PersonaRepositorio(base);
-        this.login = new LoginServicio(new UsuarioRepositorio(base), consola);
-        this.control = new ControlAcceso();
+        UsuarioRepositorio usuarios =
+                new UsuarioRepositorio(base, interruptores.estaActivo(Fallo.F4));
+        this.login = new LoginServicio(usuarios, interruptores, consola);
+        this.control = new ControlAcceso(interruptores);
     }
 
     /**
-     * Crea el contexto de la app en ejecución: base {@value BaseDatos#NOMBRE_APP} con los datos
-     * semilla y consola {@code System.out}.
+     * Crea el contexto de la app en ejecución: interruptores leídos de la propiedad {@value
+     * Interruptores#PROPIEDAD}, base {@value BaseDatos#NOMBRE_APP} con los datos semilla y consola
+     * {@code System.out}. Escribe en la consola qué fallos quedaron activos.
      *
      * @return el contexto listo para abrir la primera ventana
+     * @throws IllegalArgumentException si la propiedad contiene un fallo desconocido
      * @throws SQLException si no se puede crear la base
      */
     public static ContextoApp iniciar() throws SQLException {
-        return crear(BaseDatos.enMemoria(BaseDatos.NOMBRE_APP), System.out);
+        Interruptores interruptores = Interruptores.desdeSistema();
+        System.out.println("App de práctica clientes-vulnerable. " + interruptores);
+        return crear(BaseDatos.enMemoria(BaseDatos.NOMBRE_APP), interruptores, System.out);
     }
 
     /**
      * Crea un contexto sobre una base ya abierta; lo usan las pruebas.
      *
      * @param base base abierta
+     * @param interruptores fallos activos y corregidos
      * @param consola salida donde se anotan los intentos de inicio de sesión
      * @return el contexto
      * @throws NullPointerException si algún argumento es {@code null}
      */
-    public static ContextoApp crear(BaseDatos base, PrintStream consola) {
+    public static ContextoApp crear(
+            BaseDatos base, Interruptores interruptores, PrintStream consola) {
         return new ContextoApp(
-                Objects.requireNonNull(base, "base"), Objects.requireNonNull(consola, "consola"));
+                Objects.requireNonNull(base, "base"),
+                Objects.requireNonNull(interruptores, "interruptores"),
+                Objects.requireNonNull(consola, "consola"));
     }
 
     /**
@@ -60,6 +74,15 @@ public final class ContextoApp {
      */
     public BaseDatos base() {
         return base;
+    }
+
+    /**
+     * Devuelve los interruptores de los fallos sembrados.
+     *
+     * @return interruptores
+     */
+    public Interruptores interruptores() {
+        return interruptores;
     }
 
     /**

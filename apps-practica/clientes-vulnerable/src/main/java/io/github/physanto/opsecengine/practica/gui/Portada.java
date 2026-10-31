@@ -5,7 +5,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
-import java.sql.SQLException;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -52,19 +51,16 @@ public final class Portada extends JFrame {
     }
 
     /**
-     * Punto de entrada de la app: crea la base con los datos semilla y muestra la portada.
+     * Punto de entrada de la app: lee los interruptores de los fallos, crea la base con los datos
+     * semilla y muestra la portada.
+     *
+     * <p>Si la propiedad {@code practica.corregir} contiene un fallo desconocido, termina con
+     * código 2; si no se puede crear la base, con código 1.
      *
      * @param args no se usan
      */
     public static void main(String[] args) {
-        ContextoApp contexto;
-        try {
-            contexto = ContextoApp.iniciar();
-        } catch (SQLException e) {
-            System.err.println("No se pudo crear la base de datos: " + e.getMessage());
-            System.exit(1);
-            return;
-        }
+        ContextoApp contexto = Navegacion.iniciarContexto();
         SwingUtilities.invokeLater(() -> new Portada(contexto).setVisible(true));
     }
 }

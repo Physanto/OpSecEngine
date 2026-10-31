@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.practica.gui;
 
 import io.github.physanto.opsecengine.practica.ContextoApp;
+import io.github.physanto.opsecengine.practica.servicio.Sesion;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import javax.swing.BorderFactory;
@@ -11,7 +12,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
-/** Selección del modo de trabajo: "Nube" o "Local". */
+/**
+ * Selección del modo de trabajo: "Nube" o "Local".
+ *
+ * <p>"Nube" lleva al inicio de sesión. "Local" abre el menú del administrador sin iniciar sesión si
+ * el fallo F2 está activo; si está corregido, avisa y lleva al inicio de sesión.
+ */
 public final class EscogerModo extends JFrame {
 
     private static final long serialVersionUID = 1L;
@@ -52,6 +58,11 @@ public final class EscogerModo extends JFrame {
     }
 
     private void abrirLocal(ContextoApp contexto) {
+        if (contexto.control().modoLocalSinSesion()) {
+            // FALLO F2: el modo local abre el menú del administrador sin iniciar sesión
+            Navegacion.abrirMenuAdministrador(this, contexto, Sesion.local());
+            return;
+        }
         JOptionPane.showMessageDialog(
                 this, MENSAJE_LOCAL_REQUIERE_SESION, "Modo local", JOptionPane.INFORMATION_MESSAGE);
         Navegacion.cambiar(this, new InicioSesion(contexto));

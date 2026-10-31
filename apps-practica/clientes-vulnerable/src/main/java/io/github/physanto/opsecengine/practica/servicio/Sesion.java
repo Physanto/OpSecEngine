@@ -11,14 +11,17 @@ import java.util.Optional;
  */
 public final class Sesion {
 
-    private static final Sesion SIN_INICIAR = new Sesion(null, null);
+    private static final Sesion SIN_INICIAR = new Sesion(null, null, false);
+    private static final Sesion LOCAL = new Sesion(null, null, true);
 
     private final String usuario;
     private final Rol rol;
+    private final boolean modoLocal;
 
-    private Sesion(String usuario, Rol rol) {
+    private Sesion(String usuario, Rol rol, boolean modoLocal) {
         this.usuario = usuario;
         this.rol = rol;
+        this.modoLocal = modoLocal;
     }
 
     /**
@@ -31,6 +34,18 @@ public final class Sesion {
     }
 
     /**
+     * Devuelve la sesión del modo "Local", que no tiene usuario autenticado.
+     *
+     * <p>Solo se usa con el fallo F2 activo, cuando "Local" abre el menú del administrador sin
+     * iniciar sesión.
+     *
+     * @return sesión del modo local, sin usuario ni rol
+     */
+    public static Sesion local() {
+        return LOCAL;
+    }
+
+    /**
      * Crea la sesión de un usuario que se autenticó.
      *
      * @param usuario nombre del usuario
@@ -40,7 +55,9 @@ public final class Sesion {
      */
     public static Sesion iniciada(String usuario, Rol rol) {
         return new Sesion(
-                Objects.requireNonNull(usuario, "usuario"), Objects.requireNonNull(rol, "rol"));
+                Objects.requireNonNull(usuario, "usuario"),
+                Objects.requireNonNull(rol, "rol"),
+                false);
     }
 
     /**
@@ -59,6 +76,15 @@ public final class Sesion {
      */
     public boolean esAdministrador() {
         return rol == Rol.ADMINISTRADOR;
+    }
+
+    /**
+     * Indica si es la sesión del modo "Local" (fallo F2).
+     *
+     * @return {@code true} si la sesión viene del botón "Local" sin iniciar sesión
+     */
+    public boolean esModoLocal() {
+        return modoLocal;
     }
 
     /**
@@ -81,6 +107,9 @@ public final class Sesion {
 
     @Override
     public String toString() {
-        return estaIniciada() ? "Sesion[" + usuario + ", " + rol + "]" : "Sesion[sin iniciar]";
+        if (estaIniciada()) {
+            return "Sesion[" + usuario + ", " + rol + "]";
+        }
+        return modoLocal ? "Sesion[modo local]" : "Sesion[sin iniciar]";
     }
 }
