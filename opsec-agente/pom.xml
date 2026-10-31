@@ -100,6 +100,7 @@
                                         <Premain-Class>${project.groupId}.agente.AgenteMain</Premain-Class>
                                         <Agent-Class>${project.groupId}.agente.AgenteMain</Agent-Class>
                                         <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
                                     </manifestEntries>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
