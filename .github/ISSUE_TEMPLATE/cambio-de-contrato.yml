@@ -1,0 +1,74 @@
+name: Solicitud de cambio de contrato
+description: Pide un cambio en un contrato congelado (dominio, protocolo, API del agente, esquemas, catálogos o dobles de prueba).
+title: "[Contrato] "
+labels: ["contrato"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Los contratos solo los modifica el líder. Los cambios aditivos se responden en un día hábil como máximo;
+        los que rompen compatibilidad se discuten en la reunión semanal y se aplican al inicio del siguiente sprint.
+        Mientras tanto, trabaja con un adaptador local en tu módulo y elimínalo cuando llegue el cambio.
+  - type: dropdown
+    id: contrato
+    attributes:
+      label: Contrato afectado
+      multiple: true
+      options:
+        - opsec-dominio (modelos e interfaces de extensión)
+        - opsec-protocolo (mensajes motor-agente)
+        - API del agente (paquete api de opsec-agente)
+        - contratos/esquemas (JSON Schema de los YAML)
+        - contratos/catalogos (eventos, oráculos, códigos de resultado, CWE)
+        - contratos/ejemplos o ejemplos del protocolo
+        - opsec-soporte-pruebas (dobles de prueba y datos de ejemplo)
+        - pom.xml raíz (versiones y módulos)
+    validations:
+      required: true
+  - type: textarea
+    id: cambio
+    attributes:
+      label: Cambio propuesto
+      description: Qué cambia exactamente (clase, campo, mensaje, esquema...). Si ayuda, incluye un ejemplo antes y después.
+    validations:
+      required: true
+  - type: textarea
+    id: motivo
+    attributes:
+      label: Motivo
+      description: Por qué hace falta y qué no se puede hacer con el contrato actual.
+    validations:
+      required: true
+  - type: dropdown
+    id: compatibilidad
+    attributes:
+      label: Tipo de cambio
+      options:
+        - Aditivo (agrega un campo, un tipo de evento, un mensaje...)
+        - Rompe compatibilidad (renombra, elimina o cambia un tipo)
+    validations:
+      required: true
+  - type: dropdown
+    id: modulos
+    attributes:
+      label: Módulos afectados
+      multiple: true
+      options:
+        - opsec-dominio
+        - opsec-protocolo
+        - opsec-agente
+        - opsec-nucleo
+        - opsec-oraculos
+        - opsec-ataques
+        - opsec-informes
+        - opsec-cli
+        - opsec-soporte-pruebas
+        - opsec-verificacion
+        - apps-practica/clientes-vulnerable
+    validations:
+      required: true
+  - type: textarea
+    id: adaptador
+    attributes:
+      label: Adaptador local mientras tanto
+      description: Cómo vas a seguir trabajando hasta que se apruebe y aplique el cambio (opcional).
