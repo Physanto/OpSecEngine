@@ -70,6 +70,7 @@
         <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
         <maven-wrapper-plugin.version>3.3.4</maven-wrapper-plugin.version>
+        <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -89,6 +90,13 @@
                 <groupId>${project.groupId}</groupId>
                 <artifactId>opsec-agente</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <!-- Jar sombreado del agente, el que se pasa con -javaagent -->
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-agente</artifactId>
+                <version>${project.version}</version>
+                <classifier>agente</classifier>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
@@ -242,6 +250,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-wrapper-plugin</artifactId>
                     <version>${maven-wrapper-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${maven-dependency-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
