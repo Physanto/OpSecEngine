@@ -1,0 +1,32 @@
+# Payloads de la categoría VACIOS: entradas vacías o que solo tienen espacios en blanco.
+# Formato: contratos/esquemas/payload.schema.json
+#
+# La app debe rechazarlas con un mensaje claro; no debe fallar ni mostrar detalles técnicos.
+
+- id: VACIO-CADENA
+  categoria: VACIOS
+  aplica_a: [CUALQUIERA]
+  payload: ""
+  oraculos: [EXCEPCION-NO-CAPTURADA, TRAZA-EN-DIALOGO]
+  descripcion: Campo vacío.
+
+- id: VACIO-ESPACIOS
+  categoria: VACIOS
+  aplica_a: [CUALQUIERA]
+  payload: "   "
+  oraculos: [EXCEPCION-NO-CAPTURADA, TRAZA-EN-DIALOGO]
+  descripcion: Solo espacios; una validación con isEmpty() en vez de isBlank() lo deja pasar.
+
+- id: VACIO-TABULACION
+  categoria: VACIOS
+  aplica_a: [CUALQUIERA]
+  payload: "\t"
+  oraculos: [EXCEPCION-NO-CAPTURADA, TRAZA-EN-DIALOGO]
+  descripcion: Una tabulación, que no se ve en el campo.
+
+- id: VACIO-SALTO-LINEA
+  categoria: VACIOS
+  aplica_a: [CUALQUIERA]
+  payload: "\n"
+  oraculos: [EXCEPCION-NO-CAPTURADA, TRAZA-EN-DIALOGO]
+  descripcion: Un salto de línea, que puede romper consultas o archivos de texto.

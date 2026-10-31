@@ -37,6 +37,18 @@
             <artifactId>json-schema-validator</artifactId>
         </dependency>
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-soporte-pruebas</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Jar del agente para las pruebas de integración; no entra en el classpath de pruebas -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-agente</artifactId>
+            <classifier>agente</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
@@ -47,4 +59,67 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <!-- version.properties recibe la versión del pom -->
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <!-- Esquemas de contratos/ con los que se validan proyectos y suites -->
+                <directory>${project.basedir}/../contratos/esquemas</directory>
+                <targetPath>io/github/physanto/opsecengine/nucleo/esquemas</targetPath>
+                <includes>
+                    <include>*.schema.json</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <!-- Publica la ruta de cada dependencia como propiedad, para ubicar el jar del agente -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>rutas-de-dependencias</id>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- Pruebas de integración (*IT): lanzan una JVM con el agente real -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                    <systemPropertyVariables>
+                        <opsec.agente.jar>${io.github.physanto.opsecengine:opsec-agente:jar:agente}</opsec.agente.jar>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
