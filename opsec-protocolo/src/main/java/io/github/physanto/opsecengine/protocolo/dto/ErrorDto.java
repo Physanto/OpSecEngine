@@ -23,6 +23,12 @@ public final class ErrorDto {
     /** El receptor no sabe atender ese tipo de mensaje. */
     public static final String TIPO_NO_SOPORTADO = "TIPO_NO_SOPORTADO";
 
+    /**
+     * El receptor reconoce el tipo de mensaje pero todavía no lo implementa, por ejemplo un agente
+     * en construcción.
+     */
+    public static final String NO_IMPLEMENTADO = "NO_IMPLEMENTADO";
+
     /** Ocurrió un error inesperado en el receptor. */
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 
