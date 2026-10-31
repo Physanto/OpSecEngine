@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.physanto.opsecengine</groupId>
         <artifactId>opsec-padre</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>0.0.1</version>
     </parent>
 
     <artifactId>opsec-ataques</artifactId>
@@ -29,6 +29,10 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
@@ -39,4 +43,20 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <!-- Esquema de contratos/ con el que se validan los archivos de payloads -->
+                <directory>${project.basedir}/../contratos/esquemas</directory>
+                <targetPath>io/github/physanto/opsecengine/ataques/esquemas</targetPath>
+                <includes>
+                    <include>payload.schema.json</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
 </project>

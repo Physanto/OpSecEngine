@@ -1,0 +1,112 @@
+# Catálogo de debilidades CWE usadas por los oráculos y los payloads (contrato v1).
+#
+# Cada entrada tiene el id con el formato CWE-<número>, un nombre en español, una
+# explicación sencilla para el informe y una recomendación de corrección.
+
+version: 1
+
+cwe:
+  - id: CWE-89
+    nombre: Inyección SQL
+    explicacion: >-
+      La app arma una consulta SQL pegando lo que escribe el usuario. Un atacante puede
+      escribir texto que cambia la consulta, por ejemplo para entrar sin contraseña o para
+      leer o borrar datos ajenos.
+    recomendacion: >-
+      Usar PreparedStatement con parámetros (?) para todo dato que venga del usuario y no
+      concatenar nunca texto en el SQL. En Firestore, no construir rutas de documentos con
+      texto del usuario sin validarlo.
+
+  - id: CWE-204
+    nombre: Respuestas distintas que revelan información
+    explicacion: >-
+      La app responde distinto cuando el usuario no existe y cuando la contraseña es
+      incorrecta. Así un atacante puede averiguar qué usuarios existen y concentrar sus
+      intentos en ellos.
+    recomendacion: >-
+      Mostrar el mismo mensaje genérico en ambos casos, por ejemplo "Usuario o contraseña
+      incorrectos", y tardar lo mismo en responder.
+
+  - id: CWE-209
+    nombre: Mensajes de error con información sensible
+    explicacion: >-
+      La app muestra al usuario el detalle técnico de un error, como la pila de llamadas o
+      el texto de una excepción. Eso revela clases, consultas o rutas internas que ayudan a
+      un atacante.
+    recomendacion: >-
+      Mostrar al usuario un mensaje corto y comprensible y guardar el detalle técnico solo
+      en un registro interno.
+
+  - id: CWE-306
+    nombre: Falta de autenticación en una función crítica
+    explicacion: >-
+      Una operación importante, como eliminar un registro, se puede hacer sin haber
+      iniciado sesión; por ejemplo, abriendo directamente la ventana o entrando por otra
+      ruta del menú.
+    recomendacion: >-
+      Comprobar que hay una sesión válida antes de abrir ventanas o ejecutar operaciones
+      sensibles, en la lógica de la app y no solo ocultando botones.
+
+  - id: CWE-307
+    nombre: Intentos de inicio de sesión sin límite
+    explicacion: >-
+      La app permite intentar contraseñas una y otra vez sin bloquear ni frenar. Un
+      atacante puede probar miles de contraseñas hasta acertar.
+    recomendacion: >-
+      Bloquear temporalmente la cuenta o aumentar el tiempo de espera después de varios
+      intentos fallidos seguidos, y registrar esos intentos.
+
+  - id: CWE-319
+    nombre: Datos sensibles enviados sin cifrar
+    explicacion: >-
+      La app se conecta a la base de datos sin cifrado. Cualquiera en la misma red puede
+      leer las consultas, los datos y a veces las credenciales.
+    recomendacion: >-
+      Activar TLS en la conexión JDBC (por ejemplo sslMode=VERIFY_IDENTITY en MySQL) y
+      rechazar conexiones sin cifrar.
+
+  - id: CWE-521
+    nombre: Contraseñas débiles permitidas
+    explicacion: >-
+      La app acepta contraseñas cortas, comunes o vacías, que un atacante adivina
+      fácilmente.
+    recomendacion: >-
+      Exigir una longitud mínima, rechazar contraseñas vacías y comunes, y no crear
+      usuarios con contraseñas por defecto.
+
+  - id: CWE-532
+    nombre: Información sensible en la consola o en los registros
+    explicacion: >-
+      La app escribe contraseñas u otros datos sensibles en la consola o en archivos de
+      registro, donde otras personas o programas pueden leerlos.
+    recomendacion: >-
+      No imprimir credenciales ni datos personales; si hace falta registrar algo, ocultar
+      los valores sensibles.
+
+  - id: CWE-549
+    nombre: Campo de contraseña sin ocultar
+    explicacion: >-
+      La contraseña se escribe en un campo de texto normal y queda visible en la pantalla
+      para quien esté cerca o en una captura.
+    recomendacion: >-
+      Usar JPasswordField para las contraseñas y leerlas con getPassword().
+
+  - id: CWE-798
+    nombre: Credenciales escritas en el código
+    explicacion: >-
+      El código de la app contiene usuarios y contraseñas fijos. Cualquiera que tenga el
+      JAR puede extraerlos, y cambiarlos exige recompilar.
+    recomendacion: >-
+      Guardar las credenciales fuera del código: los usuarios en la base de datos, con
+      las contraseñas guardadas como hash (por ejemplo bcrypt), y las claves de conexión
+      en configuración protegida.
+
+  - id: CWE-862
+    nombre: Falta de autorización
+    explicacion: >-
+      La app comprueba que hay sesión pero no que el rol tenga permiso. Un usuario sin
+      privilegios, como Cliente, puede hacer operaciones reservadas, como eliminar
+      registros.
+    recomendacion: >-
+      Comprobar el rol del usuario antes de cada operación sensible, en la lógica de la
+      app y no solo ocultando botones.

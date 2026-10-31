@@ -1,0 +1,22 @@
+# Catálogo de códigos de resultado de un paso (contrato v1).
+#
+# Coinciden con el enum CodigoResultado de opsec-protocolo (paquete protocolo.dto), que
+# viaja en el mensaje RESULTADO_PASO, y con el campo "codigo" del evento PASO_FIN.
+
+version: 1
+
+codigos:
+  - codigo: OK
+    significado: El agente encontró el componente y ejecutó la acción sin errores.
+
+  - codigo: NO_ENCONTRADO
+    significado: Ningún componente de las ventanas visibles cumple el localizador del paso.
+
+  - codigo: NO_ALCANZABLE
+    significado: El componente existe pero el usuario no podría usarlo, porque está oculto, deshabilitado, no editable o tapado por un diálogo modal.
+
+  - codigo: TIEMPO_AGOTADO
+    significado: El paso no terminó dentro de su tiempo máximo de espera; el caso queda NO_CONCLUYENTE salvo que un oráculo decida otra cosa.
+
+  - codigo: ERROR
+    significado: Falla del propio agente o de la acción, no de la app probada; el detalle explica la causa y el caso queda NO_CONCLUYENTE.

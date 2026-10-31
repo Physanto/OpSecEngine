@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "tipo": "EJECUTAR_PASO",
+  "id": "a1b2c3d4-0002-4000-8000-000000000002",
+  "cuerpo": {
+    "accion": "LLENAR",
+    "localizador": {
+      "criterios": [
+        { "estrategia": "ETIQUETA", "valor": "Usuario" },
+        { "estrategia": "NOMBRE_COMPONENTE", "valor": "txtUsuario" }
+      ]
+    },
+    "valor": "Admin",
+    "modo": "EVENTOS",
+    "esperaMaximaMs": 10000
+  }
+}

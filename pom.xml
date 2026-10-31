@@ -6,7 +6,7 @@
 
     <groupId>io.github.physanto.opsecengine</groupId>
     <artifactId>opsec-padre</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <packaging>pom</packaging>
 
     <name>OpSecEngine</name>
@@ -50,6 +50,8 @@
         <archunit.version>1.5.1</archunit.version>
         <picocli.version>4.7.7</picocli.version>
         <json-schema-validator.version>2.0.8</json-schema-validator.version>
+        <h2.version>2.5.252</h2.version>
+        <slf4j.version>2.0.20</slf4j.version>
 
         <!-- Versiones de herramientas usadas por plugins -->
         <google-java-format.version>1.35.0</google-java-format.version>
@@ -69,6 +71,7 @@
         <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
         <maven-wrapper-plugin.version>3.3.4</maven-wrapper-plugin.version>
+        <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -88,6 +91,13 @@
                 <groupId>${project.groupId}</groupId>
                 <artifactId>opsec-agente</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <!-- Jar sombreado del agente, el que se pasa con -javaagent -->
+                <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-agente</artifactId>
+                <version>${project.version}</version>
+                <classifier>agente</classifier>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
@@ -136,6 +146,14 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <!-- SLF4J llega con json-schema-validator; en la CLI se envía a java.util.logging -->
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-bom</artifactId>
+                <version>${slf4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
                 <version>${byte-buddy.version}</version>
@@ -159,6 +177,11 @@
                 <groupId>com.networknt</groupId>
                 <artifactId>json-schema-validator</artifactId>
                 <version>${json-schema-validator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${h2.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -236,6 +259,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-wrapper-plugin</artifactId>
                     <version>${maven-wrapper-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${maven-dependency-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

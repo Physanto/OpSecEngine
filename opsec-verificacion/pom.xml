@@ -7,13 +7,13 @@
     <parent>
         <groupId>io.github.physanto.opsecengine</groupId>
         <artifactId>opsec-padre</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>0.0.1</version>
     </parent>
 
     <artifactId>opsec-verificacion</artifactId>
 
     <name>OpSecEngine - Verificación</name>
-    <description>Pruebas de arquitectura que verifican las reglas de dependencia entre módulos; no contiene clases principales.</description>
+    <description>Pruebas de arquitectura que verifican las reglas de dependencia entre módulos y pruebas que validan los contratos de la carpeta contratos/; no contiene clases principales.</description>
 
     <properties>
         <!-- Sin código principal no existe target/classes y la compilación incremental lo reporta como error de lectura -->
@@ -69,6 +69,21 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

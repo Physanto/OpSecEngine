@@ -1,0 +1,52 @@
+name: Tarea
+description: Trabajo planificado sobre un módulo (funcionalidad, mejora, documentación o pruebas).
+title: "[Tarea] "
+labels: ["tarea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Una tarea toca un solo módulo. Si el trabajo afecta a módulos de dueños distintos, divídelo en varias tareas.
+        Si necesitas cambiar un contrato, usa la plantilla **Solicitud de cambio de contrato**.
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: Módulo
+      options:
+        - opsec-dominio
+        - opsec-protocolo
+        - opsec-agente
+        - opsec-nucleo
+        - opsec-oraculos
+        - opsec-ataques
+        - opsec-informes
+        - opsec-cli
+        - opsec-soporte-pruebas
+        - opsec-verificacion
+        - apps-practica/clientes-vulnerable
+        - contratos
+        - construcción, CI o proceso
+    validations:
+      required: true
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: Qué hay que hacer y para qué.
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Condiciones verificables para dar la tarea por terminada.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: dependencias
+    attributes:
+      label: Dependencias
+      description: Otras tareas, contratos o dobles de prueba que se necesitan (opcional).

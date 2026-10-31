@@ -1,0 +1,86 @@
+# Suite de ejemplo: casos de inicio de sesión de SEC-001 en el formato nuevo.
+# Formato: contratos/esquemas/suite.schema.json
+#
+# Los casos no tienen rol: empiezan sin sesión y hacen el login a mano con datos
+# inválidos. Los oráculos deciden el veredicto; no hay "esperado" escrito.
+
+suite: login
+version: "1"
+enfoques: [SEGURIDAD, VALIDACION]
+
+config:
+  modo: EVENTOS
+  oculto: true
+  esperaMaximaPasoMs: 10000
+  reintentos: 1
+  semilla: 42
+  paralelismo: 1
+
+casos:
+  - id: C01
+    descripcion: Usuario inexistente con una contraseña cualquiera.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: noexiste, Contraseña: "12345"}
+      - pulsar: {nombreComponente: btnIniciarSesion, texto: Iniciar Sesion}
+      - capturar:
+    oraculos: [ENUMERACION-USUARIOS]
+
+  - id: C02
+    descripcion: Usuario existente con contraseña incorrecta; su mensaje se compara con el de C01.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: Admin, Contraseña: incorrecta}
+      - pulsar: {nombreComponente: btnIniciarSesion, texto: Iniciar Sesion}
+      - capturar:
+    oraculos: [ENUMERACION-USUARIOS]
+
+  - id: C04
+    descripcion: Usuario y contraseña vacíos.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "", Contraseña: ""}
+      - pulsar: Iniciar Sesion
+      - capturar:
+    oraculos: [CREDENCIALES-DEBILES]
+
+  - id: C13
+    descripcion: Inyección SQL en el usuario; el payload lleva un canario para rastrearlo hasta el SQL.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "{payload}", Contraseña: cualquiera}
+      - pulsar: Iniciar Sesion
+        esperaMaximaMs: 15000
+      - capturar:
+    ataques: [SQLI-TAUTOLOGIA-CANARIO]
+    oraculos: [SQLI-CANARIO, TRAZA-EN-DIALOGO]
+
+  - id: C15
+    descripcion: Cinco intentos fallidos seguidos y luego la contraseña correcta; sin bloqueo, el último intento entra.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: Admin, Contraseña: mala1}
+      - pulsar: Iniciar Sesion
+      - cerrar_ventana: {claseVentana: javax.swing.JDialog}
+      - llenar: {Usuario: Admin, Contraseña: mala2}
+      - pulsar: Iniciar Sesion
+      - cerrar_ventana: {claseVentana: javax.swing.JDialog}
+      - llenar: {Usuario: Admin, Contraseña: mala3}
+      - pulsar: Iniciar Sesion
+      - cerrar_ventana: {claseVentana: javax.swing.JDialog}
+      - llenar: {Usuario: Admin, Contraseña: mala4}
+      - pulsar: Iniciar Sesion
+      - cerrar_ventana: {claseVentana: javax.swing.JDialog}
+      - llenar: {Usuario: Admin, Contraseña: mala5}
+      - pulsar: Iniciar Sesion
+      - cerrar_ventana: {claseVentana: javax.swing.JDialog}
+      - llenar: {Usuario: Admin, Contraseña: "12345"}
+      - pulsar: Iniciar Sesion
+      - esperar: {claseVentana: GUI_Admin.MenuAdministrador}
+      - capturar:
+    oraculos: [SIN-BLOQUEO]

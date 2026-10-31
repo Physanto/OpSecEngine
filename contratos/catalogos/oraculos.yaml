@@ -1,0 +1,81 @@
+# Catálogo de ids de oráculos reservados (contrato v1).
+#
+# Estos ids quedan reservados para los oráculos incluidos en el motor; ningún plugin ni
+# regla YAML puede usarlos para otra cosa.
+#
+# - momento: EVENTO, CASO o SUITE (enum Momento del dominio).
+# - cwe: debilidad asociada, que debe existir en cwe.yaml; null si el oráculo es implícito
+#   y no señala una debilidad de seguridad.
+
+version: 1
+
+oraculos:
+  - id: SIN-SESION
+    momento: CASO
+    cwe: CWE-306
+    descripcion: Una operación sensible (SQL o Firestore de escritura) ocurre sin una sesión iniciada.
+
+  - id: AUTORIZACION-DIFERENCIAL
+    momento: SUITE
+    cwe: CWE-862
+    descripcion: Un rol alcanza o ejecuta una operación que la política, o la comparación con otros roles, le niega.
+
+  - id: SQLI-CANARIO
+    momento: CASO
+    cwe: CWE-89
+    descripcion: El canario de un payload escrito en un campo aparece dentro del texto de una sentencia SQL de tipo STATEMENT.
+
+  - id: FIRESTORE-RUTA-CANARIO
+    momento: CASO
+    cwe: CWE-89
+    descripcion: El canario de un payload escrito en un campo aparece dentro de la ruta de una operación de Firestore.
+
+  - id: ENUMERACION-USUARIOS
+    momento: SUITE
+    cwe: CWE-204
+    descripcion: El login responde distinto a un usuario inexistente y a una contraseña incorrecta.
+
+  - id: SIN-BLOQUEO
+    momento: CASO
+    cwe: CWE-307
+    descripcion: Tras varios intentos fallidos de inicio de sesión seguidos, la app sigue aceptando intentos sin bloqueo ni retardo.
+
+  - id: CREDENCIALES-DEBILES
+    momento: CASO
+    cwe: CWE-521
+    descripcion: La app acepta iniciar sesión con contraseñas débiles o vacías.
+
+  - id: CONTRASENA-EN-CAMPO-VISIBLE
+    momento: CASO
+    cwe: CWE-549
+    descripcion: La contraseña se escribe en un campo que la muestra, como JTextField, en lugar de JPasswordField.
+
+  - id: CONTRASENA-EN-CONSOLA
+    momento: EVENTO
+    cwe: CWE-532
+    descripcion: Una contraseña de prueba aparece en la salida estándar o de error.
+
+  - id: TRAZA-EN-DIALOGO
+    momento: EVENTO
+    cwe: CWE-209
+    descripcion: Un diálogo muestra al usuario una pila de llamadas o el texto de una excepción.
+
+  - id: JDBC-SIN-CIFRADO
+    momento: EVENTO
+    cwe: CWE-319
+    descripcion: La app se conecta a la base de datos por JDBC sin cifrado (URL sin SSL o TLS).
+
+  - id: EXCEPCION-NO-CAPTURADA
+    momento: EVENTO
+    cwe: null
+    descripcion: Una excepción llega al manejador del hilo sin que la app la capture (EXCEPCION con capturada=false).
+
+  - id: APP-TERMINADA
+    momento: EVENTO
+    cwe: null
+    descripcion: La app termina sin que el motor lo pida, por ejemplo con System.exit o una caída.
+
+  - id: INTERFAZ-CONGELADA
+    momento: EVENTO
+    cwe: null
+    descripcion: El hilo de interfaz (EDT) queda bloqueado más tiempo que el umbral configurado.

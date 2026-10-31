@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Physanto/OpSecEngine/main/contratos/esquemas/payload.schema.json",
+  "title": "Archivo de payloads",
+  "description": "Formato de los archivos de la biblioteca de ataques (ataques/*.yaml): una lista de payloads. Los valores enumerados se escriben en MAYÚSCULAS.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "$ref": "#/$defs/payload"
+  },
+  "$defs": {
+    "payload": {
+      "type": "object",
+      "required": ["id", "categoria", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identificador único del payload en MAYÚSCULAS con guiones, por ejemplo SQLI-TAUTOLOGIA.",
+          "type": "string",
+          "pattern": "^[A-Z0-9]+(-[A-Z0-9]+)*$"
+        },
+        "categoria": {
+          "description": "Categoría de la biblioteca de ataques.",
+          "enum": [
+            "VACIOS",
+            "LONGITUD",
+            "UNICODE",
+            "NUMERICOS",
+            "INYECCION_SQL",
+            "FIRESTORE",
+            "HTML_SWING",
+            "CADENAS_FORMATO",
+            "RUTAS_ARCHIVO",
+            "FORMULAS_CSV",
+            "COMANDOS"
+          ]
+        },
+        "aplica_a": {
+          "description": "Tipos de campo en los que tiene sentido probar el payload. Si falta, aplica a cualquiera.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["CUALQUIERA", "TEXTO", "CONTRASENA", "NUMERO", "FECHA", "CORREO", "BUSQUEDA", "IDENTIFICADOR"]
+          }
+        },
+        "payload": {
+          "description": "Texto que se escribe en el campo. Puede estar vacío. Si usa_canario es true, debe contener {canario}.",
+          "type": "string"
+        },
+        "usa_canario": {
+          "description": "Si es true, el motor reemplaza {canario} por una marca única para rastrear el payload hasta SQL, Firestore o la consola.",
+          "type": "boolean",
+          "default": false
+        },
+        "oraculos": {
+          "description": "Ids de los oráculos que evalúan el efecto del payload.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z0-9]+(-[A-Z0-9]+)*$"
+          }
+        },
+        "cwe": {
+          "description": "Debilidad que el payload intenta revelar, con el formato CWE-<número>.",
+          "type": "string",
+          "pattern": "^CWE-[0-9]+$"
+        },
+        "descripcion": {
+          "type": "string"
+        },
+        "extensiones": {
+          "description": "Sección libre para agregar datos sin romper el contrato.",
+          "type": "object"
+        }
+      },
+      "if": {
+        "required": ["usa_canario"],
+        "properties": {
+          "usa_canario": { "const": true }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": { "pattern": "\\{canario\\}" }
+        }
+      }
+    }
+  }
+}

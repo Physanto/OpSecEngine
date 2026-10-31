@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "tipo": "CONFIG_GANCHOS",
+  "id": "a1b2c3d4-0009-4000-8000-000000000009",
+  "cuerpo": {
+    "sqlSensibles": ["DELETE", "UPDATE", "INSERT"],
+    "firestoreSensibles": ["delete", "set", "update"],
+    "canarios": ["OPSEC-CANARIO-5f2a"],
+    "fallosInyectados": []
+  }
+}

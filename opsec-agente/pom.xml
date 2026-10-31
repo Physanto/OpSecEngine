@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.physanto.opsecengine</groupId>
         <artifactId>opsec-padre</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>0.0.1</version>
     </parent>
 
     <artifactId>opsec-agente</artifactId>
@@ -32,6 +32,11 @@
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-soporte-pruebas</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -100,6 +105,7 @@
                                         <Premain-Class>${project.groupId}.agente.AgenteMain</Premain-Class>
                                         <Agent-Class>${project.groupId}.agente.AgenteMain</Agent-Class>
                                         <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
                                     </manifestEntries>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
@@ -107,6 +113,24 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
                             </transformers>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- Pruebas de integración (*IT): lanzan una JVM con el jar del agente ya empaquetado -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <opsec.agente.jar>${project.build.directory}/${project.build.finalName}-agente.jar</opsec.agente.jar>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Physanto/OpSecEngine/main/contratos/esquemas/proyecto.schema.json",
+  "title": "Proyecto de pruebas",
+  "description": "Formato del archivo proyecto.yaml: todo lo específico de la app probada. Las rutas se escriben con / y son relativas a la carpeta de proyecto.yaml.",
+  "type": "object",
+  "required": ["app"],
+  "additionalProperties": false,
+  "properties": {
+    "nombre": {
+      "description": "Nombre del proyecto. Si falta, se usa el nombre de la carpeta de proyecto.yaml.",
+      "$ref": "#/$defs/textoNoVacio"
+    },
+    "app": {
+      "description": "La aplicación probada.",
+      "type": "object",
+      "required": ["jar"],
+      "additionalProperties": false,
+      "properties": {
+        "jar": {
+          "description": "Ruta del JAR de la app.",
+          "$ref": "#/$defs/textoNoVacio"
+        },
+        "principal": {
+          "description": "Clase principal. Si falta, se lee del manifiesto del JAR.",
+          "$ref": "#/$defs/textoNoVacio"
+        },
+        "argumentosJvm": {
+          "description": "Argumentos adicionales para la JVM de la app.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "datos": {
+      "description": "Entorno de datos de prueba. Si falta, la app se prueba sin backend (tipo ninguno).",
+      "type": "object",
+      "required": ["tipo"],
+      "additionalProperties": false,
+      "properties": {
+        "tipo": {
+          "description": "Tipo del proveedor de datos, por ejemplo ninguno, firebase-emulador, mysql o h2. Los plugins pueden aportar otros.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "parametros": {
+          "description": "Parámetros del proveedor; el motor los lee como texto.",
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "boolean"]
+          }
+        }
+      }
+    },
+    "roles": {
+      "description": "Roles de prueba: nombre del rol → credenciales. Usar solo credenciales de prueba.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/nombreRol"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["usuario", "contrasena"],
+        "additionalProperties": false,
+        "properties": {
+          "usuario": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "login": {
+      "description": "Pasos para iniciar sesión con un rol. Admiten las variables {usuario} y {contrasena}.",
+      "type": "object",
+      "required": ["pasos"],
+      "additionalProperties": false,
+      "properties": {
+        "pasos": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "suite.schema.json#/$defs/paso"
+          }
+        }
+      }
+    },
+    "sensibles": {
+      "description": "Operaciones que cambian datos y que los oráculos vigilan. Si falta, se usan los valores por defecto.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sql": {
+          "description": "Primeras palabras de las sentencias SQL sensibles.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]+$"
+          },
+          "default": ["DELETE", "UPDATE", "INSERT"]
+        },
+        "firestore": {
+          "description": "Operaciones de Firestore sensibles.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][A-Za-z]*$"
+          },
+          "default": ["delete", "set", "update"]
+        }
+      }
+    },
+    "politica": {
+      "description": "Política de roles, opcional: operación → roles que pueden ejecutarla. Sin política, el oráculo diferencial solo marca candidatos.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "$ref": "#/$defs/nombreRol"
+        }
+      }
+    },
+    "extensiones": {
+      "description": "Sección libre para agregar datos sin romper el contrato. El motor la conserva y no la interpreta.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "textoNoVacio": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "nombreRol": {
+      "description": "Nombre de rol: letras, dígitos, guion o guion bajo, sin espacios.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    }
+  }
+}

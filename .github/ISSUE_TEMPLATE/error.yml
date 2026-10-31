@@ -1,0 +1,77 @@
+name: Error
+description: Algo no funciona como se espera en el motor, el agente, la CLI o la app de práctica.
+title: "[Error] "
+labels: ["error"]
+body:
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: Módulo
+      description: Dónde se observa el error (si no lo sabes, elige el más cercano).
+      options:
+        - opsec-dominio
+        - opsec-protocolo
+        - opsec-agente
+        - opsec-nucleo
+        - opsec-oraculos
+        - opsec-ataques
+        - opsec-informes
+        - opsec-cli
+        - opsec-soporte-pruebas
+        - opsec-verificacion
+        - apps-practica/clientes-vulnerable
+        - contratos
+        - construcción, CI o proceso
+    validations:
+      required: true
+  - type: textarea
+    id: que-paso
+    attributes:
+      label: Qué pasó
+      description: Describe el comportamiento observado.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué se esperaba
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema operativo
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: java
+    attributes:
+      label: Versión de Java
+      description: Salida de `java -version` (primera línea).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión o commit de OpSecEngine
+      placeholder: 0.0.1-SNAPSHOT o hash del commit
+  - type: textarea
+    id: registros
+    attributes:
+      label: Registros, trazas o capturas
+      description: Salida de consola, traza de la excepción o archivos de resultados relevantes (opcional).
+      render: text

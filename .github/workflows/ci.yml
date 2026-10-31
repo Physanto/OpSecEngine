@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "release/**"
+      - "hotfix/**"
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  construir:
+    name: Java ${{ matrix.java }} en ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            java: "17"
+          - os: windows-latest
+            java: "17"
+          - os: macos-latest
+            java: "17"
+          - os: ubuntu-latest
+            java: "21"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v7
+
+      - name: Instalar Temurin ${{ matrix.java }}
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+
+      - name: Instalar Xvfb
+        if: runner.os == 'Linux'
+        run: command -v xvfb-run || (sudo apt-get update && sudo apt-get install -y xvfb)
+
+      - name: Compilar y verificar (Linux, con pantalla virtual)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum ./mvnw -B verify
+
+      - name: Compilar y verificar
+        if: runner.os != 'Linux'
+        run: ./mvnw -B verify
+
+      - name: Generar la documentación Javadoc
+        if: matrix.os == 'ubuntu-latest' && matrix.java == '17'
+        run: ./mvnw -B -DskipTests javadoc:aggregate
+
+      - name: Subir los reportes de pruebas
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reportes-pruebas-${{ matrix.os }}-java${{ matrix.java }}
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+          if-no-files-found: ignore
+          retention-days: 7
