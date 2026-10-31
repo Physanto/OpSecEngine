@@ -1,0 +1,349 @@
+# Catálogo de eventos de la traza (contrato v1).
+#
+# Por cada valor de TipoEvento (opsec-dominio, paquete dominio.traza) se indican los
+# campos que lleva el mapa "datos" del evento.
+#
+# - origen: quién emite el evento (agente o motor).
+# - campos[].tipo: texto, entero, numero, booleano, lista u objeto.
+# - campos[].obligatorio: si el campo siempre está presente.
+# - campos[].valores: valores posibles, cuando el campo es un texto enumerado.
+#
+# Agregar un campo opcional es un cambio aditivo; quitar o renombrar uno rompe el contrato.
+
+version: 1
+
+eventos:
+  - tipo: PASO_INICIO
+    origen: [motor]
+    descripcion: Empieza la ejecución de un paso del caso.
+    campos:
+      - nombre: accion
+        tipo: texto
+        obligatorio: true
+        valores: [PULSAR, LLENAR, SELECCIONAR, MARCAR, ESPERAR, IR_A, CERRAR_VENTANA, CAPTURAR]
+        descripcion: Acción del paso.
+      - nombre: objetivo
+        tipo: texto
+        obligatorio: false
+        descripcion: Localizador del paso escrito como texto, por ejemplo "etiqueta=Usuario". Ausente si la acción no tiene objetivo.
+      - nombre: valor
+        tipo: texto
+        obligatorio: false
+        descripcion: Valor que se escribe o se selecciona, con las variables ya reemplazadas.
+      - nombre: modo
+        tipo: texto
+        obligatorio: true
+        valores: [SEMANTICO, EVENTOS, ROBOT]
+        descripcion: Modo con que se ejecuta la acción.
+
+  - tipo: PASO_FIN
+    origen: [motor]
+    descripcion: Termina un paso, con el resultado que respondió el agente.
+    campos:
+      - nombre: codigo
+        tipo: texto
+        obligatorio: true
+        valores: [OK, NO_ENCONTRADO, NO_ALCANZABLE, TIEMPO_AGOTADO, ERROR]
+        descripcion: Código de resultado del paso (ver codigos-resultado.yaml).
+      - nombre: detalle
+        tipo: texto
+        obligatorio: false
+        descripcion: Explicación del resultado cuando no es OK.
+      - nombre: duracionMs
+        tipo: entero
+        obligatorio: true
+        descripcion: Duración del paso en milisegundos.
+      - nombre: componente
+        tipo: texto
+        obligatorio: false
+        descripcion: Clase del componente sobre el que se actuó, si se conoce; por ejemplo javax.swing.JTextField.
+
+  - tipo: VENTANA_ABIERTA
+    origen: [agente]
+    descripcion: Se abre o se muestra una ventana (JFrame, JDialog u otra Window).
+    campos:
+      - nombre: ventanaId
+        tipo: texto
+        obligatorio: true
+        descripcion: Identificador de la ventana, estable durante la sesión.
+      - nombre: clase
+        tipo: texto
+        obligatorio: true
+        descripcion: Nombre completo de la clase de la ventana, por ejemplo GUI_Local.Portada.
+      - nombre: titulo
+        tipo: texto
+        obligatorio: false
+        descripcion: Título de la ventana, si tiene.
+      - nombre: modal
+        tipo: booleano
+        obligatorio: false
+        descripcion: Si la ventana es un diálogo modal.
+
+  - tipo: VENTANA_CERRADA
+    origen: [agente]
+    descripcion: Se cierra o se oculta una ventana.
+    campos:
+      - nombre: ventanaId
+        tipo: texto
+        obligatorio: true
+        descripcion: Identificador de la ventana, el mismo de VENTANA_ABIERTA.
+      - nombre: clase
+        tipo: texto
+        obligatorio: true
+        descripcion: Nombre completo de la clase de la ventana.
+      - nombre: titulo
+        tipo: texto
+        obligatorio: false
+        descripcion: Título de la ventana, si tiene.
+
+  - tipo: DIALOGO
+    origen: [agente]
+    descripcion: Aparece un diálogo con un mensaje para el usuario, por ejemplo un JOptionPane.
+    campos:
+      - nombre: texto
+        tipo: texto
+        obligatorio: true
+        descripcion: Mensaje que muestra el diálogo.
+      - nombre: titulo
+        tipo: texto
+        obligatorio: false
+        descripcion: Título del diálogo.
+      - nombre: tipoMensaje
+        tipo: texto
+        obligatorio: false
+        valores: [ERROR, INFORMACION, ADVERTENCIA, PREGUNTA, PLANO]
+        descripcion: Tipo de mensaje del JOptionPane.
+      - nombre: opciones
+        tipo: lista
+        obligatorio: false
+        descripcion: Textos de los botones del diálogo.
+      - nombre: ventanaId
+        tipo: texto
+        obligatorio: false
+        descripcion: Identificador de la ventana del diálogo.
+
+  - tipo: SQL
+    origen: [agente]
+    descripcion: La aplicación ejecuta una sentencia SQL por JDBC.
+    campos:
+      - nombre: sql
+        tipo: texto
+        obligatorio: true
+        descripcion: Texto de la sentencia tal como llegó al driver JDBC.
+      - nombre: tipoSentencia
+        tipo: texto
+        obligatorio: true
+        valores: [STATEMENT, PREPARED]
+        descripcion: STATEMENT si el SQL se armó como texto; PREPARED si se usó PreparedStatement con parámetros.
+      - nombre: operacion
+        tipo: texto
+        obligatorio: false
+        descripcion: Primera palabra de la sentencia en mayúsculas, por ejemplo SELECT o DELETE.
+      - nombre: parametros
+        tipo: lista
+        obligatorio: false
+        descripcion: Valores de los parámetros, en orden, como texto. Solo con PREPARED.
+      - nombre: filasAfectadas
+        tipo: entero
+        obligatorio: false
+        descripcion: Filas afectadas, si el driver las informa.
+      - nombre: conexion
+        tipo: texto
+        obligatorio: false
+        descripcion: URL JDBC de la conexión, sin usuario ni contraseña.
+      - nombre: error
+        tipo: texto
+        obligatorio: false
+        descripcion: Mensaje de la excepción, si la sentencia falló.
+
+  - tipo: FIRESTORE
+    origen: [agente]
+    descripcion: La aplicación ejecuta una operación de Firestore.
+    campos:
+      - nombre: operacion
+        tipo: texto
+        obligatorio: true
+        descripcion: Operación en minúsculas, por ejemplo get, set, update, delete, add o query.
+      - nombre: ruta
+        tipo: texto
+        obligatorio: true
+        descripcion: Ruta del documento o de la colección, por ejemplo personas/123.
+      - nombre: campos
+        tipo: objeto
+        obligatorio: false
+        descripcion: Datos escritos, en escrituras.
+      - nombre: lote
+        tipo: booleano
+        obligatorio: false
+        descripcion: Si la operación forma parte de un WriteBatch.
+      - nombre: error
+        tipo: texto
+        obligatorio: false
+        descripcion: Mensaje de la excepción, si la operación falló.
+
+  - tipo: ARCHIVO
+    origen: [agente]
+    descripcion: La aplicación lee, escribe, crea o borra un archivo.
+    campos:
+      - nombre: operacion
+        tipo: texto
+        obligatorio: true
+        valores: [LEER, ESCRIBIR, CREAR, BORRAR]
+        descripcion: Operación sobre el archivo.
+      - nombre: ruta
+        tipo: texto
+        obligatorio: true
+        descripcion: Ruta absoluta del archivo.
+      - nombre: bytes
+        tipo: entero
+        obligatorio: false
+        descripcion: Bytes leídos o escritos, si se conocen.
+
+  - tipo: COMANDO
+    origen: [agente]
+    descripcion: La aplicación ejecuta un comando del sistema operativo (Runtime.exec o ProcessBuilder).
+    campos:
+      - nombre: comando
+        tipo: lista
+        obligatorio: true
+        descripcion: Comando y argumentos, en orden.
+      - nombre: directorio
+        tipo: texto
+        obligatorio: false
+        descripcion: Directorio de trabajo del comando.
+
+  - tipo: EXCEPCION
+    origen: [agente]
+    descripcion: Ocurre una excepción en el EDT o en otro hilo de la aplicación.
+    campos:
+      - nombre: clase
+        tipo: texto
+        obligatorio: true
+        descripcion: Nombre completo de la clase de la excepción.
+      - nombre: mensaje
+        tipo: texto
+        obligatorio: false
+        descripcion: Mensaje de la excepción.
+      - nombre: hilo
+        tipo: texto
+        obligatorio: true
+        descripcion: Nombre del hilo, por ejemplo AWT-EventQueue-0.
+      - nombre: capturada
+        tipo: booleano
+        obligatorio: true
+        descripcion: false si nadie la capturó y llegó al manejador de excepciones del hilo.
+      - nombre: pila
+        tipo: lista
+        obligatorio: false
+        descripcion: Líneas de la pila de llamadas.
+
+  - tipo: CONSOLA
+    origen: [agente]
+    descripcion: La aplicación escribe una línea en la salida estándar o de error.
+    campos:
+      - nombre: flujo
+        tipo: texto
+        obligatorio: true
+        valores: [SALIDA, ERROR]
+        descripcion: SALIDA para System.out y ERROR para System.err.
+      - nombre: texto
+        tipo: texto
+        obligatorio: true
+        descripcion: Línea escrita, sin el salto de línea final.
+
+  - tipo: CAPTURA
+    origen: [motor]
+    descripcion: Se guarda una captura de pantalla de una ventana.
+    campos:
+      - nombre: archivo
+        tipo: texto
+        obligatorio: true
+        descripcion: Ruta de la imagen relativa a la carpeta de resultados, con /, por ejemplo capturas/C01-3.png.
+      - nombre: formato
+        tipo: texto
+        obligatorio: true
+        valores: [PNG]
+        descripcion: Formato de la imagen.
+      - nombre: ventanaId
+        tipo: texto
+        obligatorio: false
+        descripcion: Identificador de la ventana capturada.
+
+  - tipo: ESTADO
+    origen: [motor]
+    descripcion: Instantánea del estado de los datos de prueba, tomada por el proveedor de datos.
+    campos:
+      - nombre: momento
+        tipo: texto
+        obligatorio: true
+        valores: [ANTES, DESPUES]
+        descripcion: Si se tomó antes o después del caso.
+      - nombre: consulta
+        tipo: texto
+        obligatorio: true
+        descripcion: Consulta que se hizo al proveedor de datos.
+      - nombre: existe
+        tipo: booleano
+        obligatorio: false
+        descripcion: Si el registro consultado existe.
+      - nombre: resultado
+        tipo: objeto
+        obligatorio: false
+        descripcion: Valor devuelto por la consulta, si interesa conservarlo.
+
+  - tipo: SESION
+    origen: [motor]
+    descripcion: Cambia el estado de la sesión de la app, inferido por el motor o confirmado en la configuración.
+    campos:
+      - nombre: activa
+        tipo: booleano
+        obligatorio: true
+        descripcion: true si se inició sesión; false si se cerró.
+      - nombre: rol
+        tipo: texto
+        obligatorio: false
+        descripcion: Rol con el que se inició sesión.
+      - nombre: usuario
+        tipo: texto
+        obligatorio: false
+        descripcion: Usuario con el que se inició sesión.
+      - nombre: criterio
+        tipo: texto
+        obligatorio: false
+        descripcion: Cómo se decidió el cambio, por ejemplo "credenciales escritas y ventana MenuAdministrador abierta".
+
+  - tipo: TIEMPO
+    origen: [agente, motor]
+    descripcion: Medida de tiempo de una acción o del EDT.
+    campos:
+      - nombre: medida
+        tipo: texto
+        obligatorio: true
+        valores: [RESPUESTA_ACCION, EDT_BLOQUEADO]
+        descripcion: Qué se midió.
+      - nombre: duracionMs
+        tipo: entero
+        obligatorio: true
+        descripcion: Duración medida en milisegundos.
+      - nombre: umbralMs
+        tipo: entero
+        obligatorio: false
+        descripcion: Umbral configurado que se superó, si aplica.
+
+  - tipo: APP_TERMINADA
+    origen: [agente, motor]
+    descripcion: La aplicación probada termina, de forma ordenada o inesperada.
+    campos:
+      - nombre: esperada
+        tipo: booleano
+        obligatorio: true
+        descripcion: true si terminó porque el motor envió CERRAR.
+      - nombre: causa
+        tipo: texto
+        obligatorio: false
+        valores: [CERRAR, SYSTEM_EXIT, FIN_NORMAL, PROCESO_TERMINADO]
+        descripcion: Cómo terminó la app.
+      - nombre: codigoSalida
+        tipo: entero
+        obligatorio: false
+        descripcion: Código de salida del proceso, si se conoce.
