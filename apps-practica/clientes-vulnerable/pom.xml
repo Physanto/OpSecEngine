@@ -17,11 +17,19 @@
     <description>Aplicación Swing de práctica con fallos sembrados, para evaluación y docencia.</description>
 
     <properties>
+        <!-- H2 2.x se publica compilado para Java 11, así que la app no puede bajar a Java 8 -->
+        <maven.compiler.release>11</maven.compiler.release>
+        <!-- JUnit 6 requiere Java 17 para compilar las pruebas -->
+        <maven.compiler.testRelease>17</maven.compiler.testRelease>
         <!-- Este módulo sí puede escribir en la consola -->
         <checkstyle.consola.severidad>ignore</checkstyle.consola.severidad>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
