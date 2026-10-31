@@ -66,7 +66,7 @@ class EjecucionServiceIT {
         assertThat(caso.traza().eventos())
                 .extracting(evento -> evento.tipo())
                 .containsExactly(TipoEvento.PASO_INICIO, TipoEvento.PASO_FIN);
-        assertThat(resultado.manifiesto().hashJar()).hasSize(64);
+        assertThat(resultado.manifiesto().hashJar()).startsWith("sha256:").hasSize(71);
         assertThat(resultados.resolve(LanzadorProceso.ARCHIVO_ERRORES)).isRegularFile();
         assertThat(
                         Files.readString(

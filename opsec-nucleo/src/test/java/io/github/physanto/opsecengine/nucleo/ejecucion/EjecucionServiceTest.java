@@ -183,7 +183,7 @@ class EjecucionServiceTest {
         assertThat(resultado.nombreSuite()).isEqualTo("suite-prueba");
         assertThat(resultado.manifiesto().versionMotor()).isEqualTo(VersionMotor.motor());
         assertThat(resultado.manifiesto().hashJar()).isEqualTo(EjecucionService.HASH_NO_DISPONIBLE);
-        assertThat(resultado.manifiesto().hashSuite()).hasSize(64);
+        assertThat(resultado.manifiesto().hashSuite()).startsWith("sha256:").hasSize(71);
         assertThat(resultado.fin()).isAfterOrEqualTo(resultado.inicio());
     }
 

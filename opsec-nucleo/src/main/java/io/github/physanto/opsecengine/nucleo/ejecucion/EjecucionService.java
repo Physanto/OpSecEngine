@@ -95,10 +95,14 @@ import java.util.logging.Logger;
  */
 public final class EjecucionService {
 
-    /** Valor del manifiesto cuando no se puede calcular el hash del JAR. */
+    /**
+     * Valor del manifiesto cuando no se puede calcular el hash del JAR. Los hashes calculados se
+     * escriben como {@code sha256:<hex>}.
+     */
     public static final String HASH_NO_DISPONIBLE = "no-disponible";
 
     private static final Logger REGISTRO = Logger.getLogger(EjecucionService.class.getName());
+    private static final String PREFIJO_HASH = "sha256:";
 
     private final Proyecto proyecto;
     private final SesionService sesiones;
@@ -259,7 +263,7 @@ public final class EjecucionService {
             REGISTRO.log(Level.WARNING, "No se pudo calcular el hash de " + jar, e);
             return HASH_NO_DISPONIBLE;
         }
-        return HexFormat.of().formatHex(digest.digest());
+        return PREFIJO_HASH + HexFormat.of().formatHex(digest.digest());
     }
 
     /** Hash del contenido traducido de la suite, con un orden estable. */
@@ -280,8 +284,10 @@ public final class EjecucionService {
                 texto.append('\n');
             }
         }
-        return HexFormat.of()
-                .formatHex(sha256().digest(texto.toString().getBytes(StandardCharsets.UTF_8)));
+        return PREFIJO_HASH
+                + HexFormat.of()
+                        .formatHex(
+                                sha256().digest(texto.toString().getBytes(StandardCharsets.UTF_8)));
     }
 
     private static MessageDigest sha256() {
