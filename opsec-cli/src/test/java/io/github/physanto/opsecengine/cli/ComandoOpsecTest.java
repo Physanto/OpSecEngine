@@ -107,6 +107,8 @@ class ComandoOpsecTest {
 
     private int ejecutar(String... argumentos) {
         CommandLine linea = ComandoOpsec.linea();
+        // Sin colores: en Windows picocli los activa si detecta una terminal tipo xterm
+        linea.setColorScheme(CommandLine.Help.defaultColorScheme(CommandLine.Help.Ansi.OFF));
         linea.setOut(new PrintWriter(salida, true));
         linea.setErr(new PrintWriter(errores, true));
         return linea.execute(argumentos);
