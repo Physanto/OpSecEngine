@@ -50,6 +50,7 @@
         <archunit.version>1.5.1</archunit.version>
         <picocli.version>4.7.7</picocli.version>
         <json-schema-validator.version>2.0.8</json-schema-validator.version>
+        <h2.version>2.5.252</h2.version>
 
         <!-- Versiones de herramientas usadas por plugins -->
         <google-java-format.version>1.35.0</google-java-format.version>
@@ -159,6 +160,11 @@
                 <groupId>com.networknt</groupId>
                 <artifactId>json-schema-validator</artifactId>
                 <version>${json-schema-validator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${h2.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

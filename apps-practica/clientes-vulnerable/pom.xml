@@ -17,11 +17,19 @@
     <description>Aplicación Swing de práctica con fallos sembrados, para evaluación y docencia.</description>
 
     <properties>
+        <!-- H2 2.x se publica compilado para Java 11, así que la app no puede bajar a Java 8 -->
+        <maven.compiler.release>11</maven.compiler.release>
+        <!-- JUnit 6 requiere Java 17 para compilar las pruebas -->
+        <maven.compiler.testRelease>17</maven.compiler.testRelease>
         <!-- Este módulo sí puede escribir en la consola -->
         <checkstyle.consola.severidad>ignore</checkstyle.consola.severidad>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -33,4 +41,50 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <!-- target/clientes-vulnerable.jar: jar ejecutable que incluye la base H2 -->
+        <finalName>clientes-vulnerable</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>jar-ejecutable</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${project.groupId}.practica.gui.Portada</mainClass>
+                                    <manifestEntries>
+                                        <!-- H2 trae clases para versiones nuevas de Java en META-INF/versions -->
+                                        <Multi-Release>true</Multi-Release>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
+                                    </manifestEntries>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
