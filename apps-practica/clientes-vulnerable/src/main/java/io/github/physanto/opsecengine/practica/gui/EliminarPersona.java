@@ -21,7 +21,11 @@ public final class EliminarPersona extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private final transient ContextoApp contexto;
+
+    /** Campo con el uid de la persona a eliminar. */
     private final JTextField campoUid = new JTextField(10);
+
+    /** Área donde se muestra el resultado de la eliminación. */
     private final JTextArea areaResultado = new JTextArea(4, 32);
 
     /**

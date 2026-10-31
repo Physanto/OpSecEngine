@@ -22,7 +22,11 @@ public final class BuscarPersona extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private final transient ContextoApp contexto;
+
+    /** Campo con el uid de la persona a buscar. */
     private final JTextField campoUid = new JTextField(10);
+
+    /** Área donde se muestran los datos encontrados. */
     private final JTextArea resultado = new JTextArea(5, 32);
 
     /**

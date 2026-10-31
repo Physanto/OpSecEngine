@@ -21,7 +21,11 @@ public final class InicioSesion extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private final transient ContextoApp contexto;
+
+    /** Campo con el nombre de usuario. */
     private final JTextField campoUsuario = new JTextField(16);
+
+    /** Campo con la contraseña. */
     private final JPasswordField campoContrasena = new JPasswordField(16);
 
     /**
