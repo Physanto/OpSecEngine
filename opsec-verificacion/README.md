@@ -5,6 +5,7 @@ Pruebas que hacen fallar el build si se rompe un contrato. No contiene clases pr
 - `ReglasDependenciaTest`: reglas de dependencia entre módulos, con ArchUnit.
 - `EsquemasTest`: los esquemas de `contratos/esquemas/` son JSON Schema 2020-12 válidos, sus valores enumerados coinciden con el dominio y rechazan los errores típicos.
 - `EjemplosTest`: cada archivo de `contratos/ejemplos/` cumple su esquema y sus referencias (roles, oráculos, ataques, CWE, campos de eventos) existen.
+- `TrazasSoporteTest`: las trazas de ejemplo de `opsec-soporte-pruebas` cumplen el esquema de línea de traza y el catálogo de eventos.
 - `CatalogosTest`: los catálogos de `contratos/catalogos/` se leen sin errores y coinciden con el dominio (`TipoEvento`, `Accion`, `ModoAccion`, `Momento`) y con el protocolo (`CodigoResultado`).
 
 - **Dueño:** líder (L).

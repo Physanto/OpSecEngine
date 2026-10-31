@@ -1,8 +1,12 @@
 package io.github.physanto.opsecengine.verificacion;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /** Lectura de las entradas de los catálogos de {@code contratos/catalogos/} para las pruebas. */
 final class Catalogos {
@@ -60,5 +64,44 @@ final class Catalogos {
         List<String> textos = new ArrayList<>();
         entradas.forEach(entrada -> textos.add(entrada.path(campo).asText()));
         return textos;
+    }
+
+    /**
+     * Verifica una traza contra el catálogo de eventos: secuencias crecientes, campos obligatorios
+     * presentes, ningún campo desconocido y valores enumerados dentro de los permitidos.
+     *
+     * @param eventos eventos de la traza, uno por línea, en orden
+     * @param origen nombre de la traza para los mensajes de error
+     */
+    static void verificarTraza(List<JsonNode> eventos, String origen) {
+        Map<String, JsonNode> catalogo = new TreeMap<>();
+        eventos().forEach(evento -> catalogo.put(evento.path("tipo").asText(), evento));
+        long anterior = -1;
+        for (JsonNode evento : eventos) {
+            long secuencia = evento.path("secuencia").asLong();
+            String ubicacion = "evento " + secuencia + " de " + origen;
+            assertThat(secuencia).as("secuencia creciente en %s", origen).isGreaterThan(anterior);
+            anterior = secuencia;
+
+            JsonNode datos = evento.path("datos");
+            List<String> presentes = new ArrayList<>();
+            datos.fieldNames().forEachRemaining(presentes::add);
+            List<String> conocidos = new ArrayList<>();
+            for (JsonNode campo : catalogo.get(evento.path("tipo").asText()).path("campos")) {
+                String nombre = campo.path("nombre").asText();
+                conocidos.add(nombre);
+                if (campo.path("obligatorio").asBoolean()) {
+                    assertThat(presentes).as("campo obligatorio en %s", ubicacion).contains(nombre);
+                }
+                if (campo.has("valores") && datos.has(nombre)) {
+                    List<String> valores = new ArrayList<>();
+                    campo.path("valores").forEach(valor -> valores.add(valor.asText()));
+                    assertThat(valores)
+                            .as("valor de %s en %s", nombre, ubicacion)
+                            .contains(datos.path(nombre).asText());
+                }
+            }
+            assertThat(conocidos).as("campos conocidos en %s", ubicacion).containsAll(presentes);
+        }
     }
 }

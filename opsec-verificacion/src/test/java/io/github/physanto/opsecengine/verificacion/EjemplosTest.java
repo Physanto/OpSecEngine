@@ -8,9 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -111,35 +109,8 @@ class EjemplosTest {
 
     @Test
     void lasTrazasSiguenElCatalogoDeEventos() {
-        Map<String, JsonNode> catalogo = new TreeMap<>();
-        Catalogos.eventos().forEach(evento -> catalogo.put(evento.path("tipo").asText(), evento));
-
         for (Path archivo : ejemplos().filter(EjemplosTest::esTraza).collect(Collectors.toList())) {
-            long anterior = -1;
-            for (JsonNode evento : Contratos.leerJsonLineas(archivo)) {
-                long secuencia = evento.path("secuencia").asLong();
-                assertThat(secuencia)
-                        .as("secuencia creciente en %s", archivo)
-                        .isGreaterThan(anterior);
-                anterior = secuencia;
-
-                JsonNode campos = catalogo.get(evento.path("tipo").asText()).path("campos");
-                List<String> conocidos = textos(campos, "nombre");
-                List<String> obligatorios = new ArrayList<>();
-                campos.forEach(
-                        campo -> {
-                            if (campo.path("obligatorio").asBoolean()) {
-                                obligatorios.add(campo.path("nombre").asText());
-                            }
-                        });
-                List<String> presentes = campos(evento.path("datos"));
-                assertThat(presentes)
-                        .as("datos del evento %s en %s", secuencia, archivo)
-                        .containsAll(obligatorios);
-                assertThat(conocidos)
-                        .as("datos del evento %s en %s", secuencia, archivo)
-                        .containsAll(presentes);
-            }
+            Catalogos.verificarTraza(Contratos.leerJsonLineas(archivo), archivo.toString());
         }
     }
 

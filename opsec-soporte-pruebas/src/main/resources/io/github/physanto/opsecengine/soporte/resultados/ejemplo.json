@@ -1,0 +1,275 @@
+{
+  "nombreSuite": "ejemplo",
+  "manifiesto": {
+    "hashJar": "sha256:3f5a9c0e7b1d4a8e2c6f0b9d3e7a1c5f8b2d6e0a4c8f1b5d9e3a7c0f4b8d2e6a",
+    "versionMotor": "0.0.1-SNAPSHOT",
+    "versionJava": "17.0.13",
+    "sistemaOperativo": "Linux 6.8 amd64",
+    "semilla": 42,
+    "hashSuite": "sha256:9b1e5d3a7c0f4b8d2e6a3f5a9c0e7b1d4a8e2c6f0b9d3e7a1c5f8b2d6e0a4c8f",
+    "fecha": "2026-10-30T10:00:00Z"
+  },
+  "casos": [
+    {
+      "casoId": "N3",
+      "veredicto": {
+        "estado": "NO_CUMPLE",
+        "hallazgos": [
+          {
+            "oraculoId": "SIN-SESION",
+            "cwe": "CWE-306",
+            "confianza": "CONFIRMADO",
+            "titulo": "Eliminación de una persona sin iniciar sesión",
+            "explicacion": "La sentencia DELETE se ejecutó sin una sesión iniciada y el registro ya no existe en la base de datos.",
+            "evidencia": [
+              2,
+              3,
+              5
+            ]
+          }
+        ],
+        "motivo": null
+      },
+      "traza": {
+        "casoId": "N3",
+        "eventos": [
+          {
+            "secuencia": 0,
+            "instante": "2026-10-30T10:00:00.005Z",
+            "tipo": "ESTADO",
+            "contexto": {
+              "casoId": "N3",
+              "numeroPaso": 0,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "momento": "ANTES",
+              "consulta": "SELECT id FROM persona WHERE id = 3",
+              "existe": true
+            }
+          },
+          {
+            "secuencia": 1,
+            "instante": "2026-10-30T10:00:02.300Z",
+            "tipo": "PASO_INICIO",
+            "contexto": {
+              "casoId": "N3",
+              "numeroPaso": 6,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "accion": "PULSAR",
+              "objetivo": "texto=Eliminar",
+              "modo": "EVENTOS"
+            }
+          },
+          {
+            "secuencia": 2,
+            "instante": "2026-10-30T10:00:02.325Z",
+            "tipo": "SQL",
+            "contexto": {
+              "casoId": "N3",
+              "numeroPaso": 6,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "sql": "DELETE FROM persona WHERE id = 3",
+              "tipoSentencia": "STATEMENT",
+              "operacion": "DELETE",
+              "filasAfectadas": 1,
+              "conexion": "jdbc:h2:mem:clientes"
+            }
+          },
+          {
+            "secuencia": 3,
+            "instante": "2026-10-30T10:00:02.385Z",
+            "tipo": "DIALOGO",
+            "contexto": {
+              "casoId": "N3",
+              "numeroPaso": 6,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "texto": "Persona eliminada",
+              "titulo": "Mensaje",
+              "tipoMensaje": "INFORMACION"
+            }
+          },
+          {
+            "secuencia": 4,
+            "instante": "2026-10-30T10:00:02.525Z",
+            "tipo": "PASO_FIN",
+            "contexto": {
+              "casoId": "N3",
+              "numeroPaso": 6,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "codigo": "OK",
+              "duracionMs": 140,
+              "componente": "javax.swing.JButton"
+            }
+          },
+          {
+            "secuencia": 5,
+            "instante": "2026-10-30T10:00:02.725Z",
+            "tipo": "ESTADO",
+            "contexto": {
+              "casoId": "N3",
+              "numeroPaso": 6,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "momento": "DESPUES",
+              "consulta": "SELECT id FROM persona WHERE id = 3",
+              "existe": false
+            }
+          }
+        ]
+      },
+      "duracion": "PT2.8S",
+      "intentos": 1,
+      "inestable": false
+    },
+    {
+      "casoId": "A1",
+      "veredicto": {
+        "estado": "CUMPLE",
+        "hallazgos": [],
+        "motivo": null
+      },
+      "traza": {
+        "casoId": "A1",
+        "eventos": [
+          {
+            "secuencia": 0,
+            "instante": "2026-10-30T10:00:05.100Z",
+            "tipo": "SESION",
+            "contexto": {
+              "casoId": "A1",
+              "numeroPaso": 5,
+              "rol": "admin",
+              "sesionActiva": true
+            },
+            "datos": {
+              "activa": true,
+              "rol": "admin",
+              "usuario": "Admin"
+            }
+          },
+          {
+            "secuencia": 1,
+            "instante": "2026-10-30T10:00:06.300Z",
+            "tipo": "PASO_INICIO",
+            "contexto": {
+              "casoId": "A1",
+              "numeroPaso": 8,
+              "rol": "admin",
+              "sesionActiva": true
+            },
+            "datos": {
+              "accion": "PULSAR",
+              "objetivo": "texto=Eliminar",
+              "modo": "EVENTOS"
+            }
+          },
+          {
+            "secuencia": 2,
+            "instante": "2026-10-30T10:00:06.325Z",
+            "tipo": "SQL",
+            "contexto": {
+              "casoId": "A1",
+              "numeroPaso": 8,
+              "rol": "admin",
+              "sesionActiva": true
+            },
+            "datos": {
+              "sql": "DELETE FROM persona WHERE id = 3",
+              "tipoSentencia": "STATEMENT",
+              "operacion": "DELETE",
+              "filasAfectadas": 1,
+              "conexion": "jdbc:h2:mem:clientes"
+            }
+          },
+          {
+            "secuencia": 3,
+            "instante": "2026-10-30T10:00:06.465Z",
+            "tipo": "PASO_FIN",
+            "contexto": {
+              "casoId": "A1",
+              "numeroPaso": 8,
+              "rol": "admin",
+              "sesionActiva": true
+            },
+            "datos": {
+              "codigo": "OK",
+              "duracionMs": 140,
+              "componente": "javax.swing.JButton"
+            }
+          }
+        ]
+      },
+      "duracion": "PT6.6S",
+      "intentos": 2,
+      "inestable": true
+    },
+    {
+      "casoId": "C15",
+      "veredicto": {
+        "estado": "NO_CONCLUYENTE",
+        "hallazgos": [],
+        "motivo": "El paso 3 terminó con TIEMPO_AGOTADO: no apareció el campo Usuario en 10000 ms"
+      },
+      "traza": {
+        "casoId": "C15",
+        "eventos": [
+          {
+            "secuencia": 0,
+            "instante": "2026-10-30T10:00:09.000Z",
+            "tipo": "PASO_INICIO",
+            "contexto": {
+              "casoId": "C15",
+              "numeroPaso": 3,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "accion": "LLENAR",
+              "objetivo": "etiqueta=Usuario",
+              "valor": "Admin",
+              "modo": "EVENTOS"
+            }
+          },
+          {
+            "secuencia": 1,
+            "instante": "2026-10-30T10:00:19.000Z",
+            "tipo": "PASO_FIN",
+            "contexto": {
+              "casoId": "C15",
+              "numeroPaso": 3,
+              "rol": null,
+              "sesionActiva": false
+            },
+            "datos": {
+              "codigo": "TIEMPO_AGOTADO",
+              "detalle": "No apareció el campo Usuario en 10000 ms",
+              "duracionMs": 10000
+            }
+          }
+        ]
+      },
+      "duracion": "PT10.2S",
+      "intentos": 1,
+      "inestable": false
+    }
+  ],
+  "hallazgosSuite": [],
+  "inicio": "2026-10-30T10:00:00Z",
+  "fin": "2026-10-30T10:00:20Z"
+}

@@ -1,0 +1,280 @@
+{
+  "ventanas": [
+    {
+      "id": "Portada",
+      "titulo": "Portada",
+      "clase": "GUI_Local.Portada"
+    },
+    {
+      "id": "EscogerBD",
+      "titulo": "Escoger base de datos",
+      "clase": "GUI_Local.EscogerBD"
+    },
+    {
+      "id": "MenuLocal",
+      "titulo": "Menú local",
+      "clase": "GUI_Local.MenuLocal"
+    },
+    {
+      "id": "EliminarPersona",
+      "titulo": "Eliminar persona",
+      "clase": "GUI_Local.EliminarPersona"
+    },
+    {
+      "id": "InicioSesion",
+      "titulo": "Iniciar sesión",
+      "clase": "GUI_Nube.InicioSesion"
+    },
+    {
+      "id": "MenuCliente",
+      "titulo": "Menú cliente",
+      "clase": "GUI_Cliente.MenuCliente"
+    },
+    {
+      "id": "BuscarPersona",
+      "titulo": "Buscar persona",
+      "clase": "GUI_Cliente.BuscarPersona"
+    },
+    {
+      "id": "MenuAdministrador",
+      "titulo": "Menú administrador",
+      "clase": "GUI_Admin.MenuAdministrador"
+    },
+    {
+      "id": "EliminarPersonaAdministrador",
+      "titulo": "Eliminar persona",
+      "clase": "GUI_Admin.EliminarPersonaAdministrador"
+    },
+    {
+      "id": "DialogoMensaje",
+      "titulo": "Mensaje",
+      "clase": "javax.swing.JDialog"
+    }
+  ],
+  "transiciones": [
+    {
+      "origen": "Portada",
+      "destino": "EscogerBD",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Avanzar"
+          }
+        ]
+      },
+      "contexto": "sin-sesion"
+    },
+    {
+      "origen": "EscogerBD",
+      "destino": "MenuLocal",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Local"
+          }
+        ]
+      },
+      "contexto": "sin-sesion"
+    },
+    {
+      "origen": "EscogerBD",
+      "destino": "InicioSesion",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Nube"
+          }
+        ]
+      },
+      "contexto": "sin-sesion"
+    },
+    {
+      "origen": "MenuLocal",
+      "destino": "EliminarPersona",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Eliminar Persona"
+          }
+        ]
+      },
+      "contexto": "sin-sesion"
+    },
+    {
+      "origen": "EliminarPersona",
+      "destino": "DialogoMensaje",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Eliminar"
+          }
+        ]
+      },
+      "contexto": "sin-sesion"
+    },
+    {
+      "origen": "Portada",
+      "destino": "EscogerBD",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Avanzar"
+          }
+        ]
+      },
+      "contexto": "rol:cliente"
+    },
+    {
+      "origen": "EscogerBD",
+      "destino": "InicioSesion",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Nube"
+          }
+        ]
+      },
+      "contexto": "rol:cliente"
+    },
+    {
+      "origen": "InicioSesion",
+      "destino": "MenuCliente",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Iniciar Sesion"
+          }
+        ]
+      },
+      "contexto": "rol:cliente"
+    },
+    {
+      "origen": "MenuCliente",
+      "destino": "BuscarPersona",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Buscar Persona"
+          }
+        ]
+      },
+      "contexto": "rol:cliente"
+    },
+    {
+      "origen": "Portada",
+      "destino": "EscogerBD",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Avanzar"
+          }
+        ]
+      },
+      "contexto": "rol:admin"
+    },
+    {
+      "origen": "EscogerBD",
+      "destino": "InicioSesion",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Nube"
+          }
+        ]
+      },
+      "contexto": "rol:admin"
+    },
+    {
+      "origen": "InicioSesion",
+      "destino": "MenuAdministrador",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Iniciar Sesion"
+          }
+        ]
+      },
+      "contexto": "rol:admin"
+    },
+    {
+      "origen": "MenuAdministrador",
+      "destino": "BuscarPersona",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Buscar Persona"
+          }
+        ]
+      },
+      "contexto": "rol:admin"
+    },
+    {
+      "origen": "MenuAdministrador",
+      "destino": "EliminarPersonaAdministrador",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Eliminar Persona"
+          }
+        ]
+      },
+      "contexto": "rol:admin"
+    },
+    {
+      "origen": "EliminarPersonaAdministrador",
+      "destino": "DialogoMensaje",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Eliminar"
+          }
+        ]
+      },
+      "contexto": "rol:admin"
+    },
+    {
+      "origen": "EliminarPersonaAdministrador",
+      "destino": "DialogoMensaje",
+      "accion": "PULSAR",
+      "control": {
+        "criterios": [
+          {
+            "estrategia": "TEXTO",
+            "valor": "Eliminar"
+          }
+        ]
+      },
+      "contexto": "entrada:GUI_Admin.EliminarPersonaAdministrador"
+    }
+  ]
+}
