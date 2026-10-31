@@ -1,0 +1,39 @@
+# Responsables de revisión de OpSecEngine.
+#
+# GitHub aplica la ÚLTIMA regla que coincide con cada archivo. Por eso las
+# reglas generales van arriba y los archivos protegidos (contratos y proceso)
+# al final, para que siempre los apruebe el líder.
+#
+# Roles: líder = @Physanto. Los usuarios de P1, P2 y P3 todavía no están
+# definidos; cuando se conozcan, agregarlos delante de @Physanto en las
+# líneas marcadas con su rol.
+
+# Por defecto, el líder revisa todo
+*                                       @Physanto
+
+# Módulos con dueño
+# P1
+/opsec-agente/                          @Physanto
+# P2
+/opsec-oraculos/                        @Physanto
+# P2
+/opsec-ataques/                         @Physanto
+# P3
+/opsec-informes/                        @Physanto
+# P3
+/opsec-cli/                             @Physanto
+# P3
+/apps-practica/                         @Physanto
+/opsec-nucleo/                          @Physanto
+
+# Contratos y archivos protegidos: solo el líder
+/pom.xml                                @Physanto
+/opsec-dominio/                         @Physanto
+/opsec-protocolo/                       @Physanto
+/opsec-soporte-pruebas/                 @Physanto
+/opsec-verificacion/                    @Physanto
+/opsec-agente/src/main/java/**/api/     @Physanto
+/contratos/                             @Physanto
+/build-tools/                           @Physanto
+/.github/                               @Physanto
+/CONTRIBUTING.md                        @Physanto
