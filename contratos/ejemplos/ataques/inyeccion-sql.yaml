@@ -1,0 +1,20 @@
+# Payloads de ejemplo de la categoría INYECCION_SQL.
+# Formato: contratos/esquemas/payload.schema.json
+
+- id: SQLI-TAUTOLOGIA-CANARIO
+  categoria: INYECCION_SQL
+  aplica_a: [TEXTO, BUSQUEDA, IDENTIFICADOR]
+  payload: "' OR '1'='1' -- {canario}"
+  usa_canario: true
+  oraculos: [SQLI-CANARIO, TRAZA-EN-DIALOGO]
+  cwe: CWE-89
+  descripcion: Tautología clásica que convierte la condición del WHERE en verdadera.
+
+- id: SQLI-COMILLA-CANARIO
+  categoria: INYECCION_SQL
+  aplica_a: [CUALQUIERA]
+  payload: "{canario}'"
+  usa_canario: true
+  oraculos: [SQLI-CANARIO, TRAZA-EN-DIALOGO]
+  cwe: CWE-89
+  descripcion: Una comilla suelta; si el SQL se concatena, suele producir un error de sintaxis.

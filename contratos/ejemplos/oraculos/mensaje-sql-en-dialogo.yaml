@@ -1,0 +1,25 @@
+# Regla de oráculo de ejemplo escrita en YAML, sin compilar nada.
+# Formato: contratos/esquemas/oraculo-regla.schema.json
+
+- id: MENSAJE-SQL-EN-DIALOGO
+  descripcion: Un diálogo muestra al usuario un error de la base de datos.
+  momento: EVENTO
+  si:
+    tipo: DIALOGO
+    campo: texto
+    texto_contiene: ["SQLException", "SQL syntax", "ORA-"]
+  entonces:
+    titulo: Error de la base de datos mostrado al usuario
+    explicacion: El mensaje del diálogo incluye el texto de un error SQL.
+    cwe: CWE-209
+    confianza: CONFIRMADO
+
+- id: CONSOLA-ERROR-SQL
+  momento: CASO
+  si:
+    tipo: CONSOLA
+    campo: flujo
+    igual_a: ERROR
+  entonces:
+    titulo: La app escribe en la salida de error
+    confianza: INFO

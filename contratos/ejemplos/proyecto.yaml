@@ -1,0 +1,32 @@
+# Proyecto de ejemplo: la app de clientes original (login, Firestore y MySQL).
+# Formato: contratos/esquemas/proyecto.schema.json
+
+nombre: clientes
+
+app:
+  jar: ../MiApp/dist/MiApp.jar
+  principal: GUI_Local.Portada
+
+datos:
+  tipo: firebase-emulador
+  parametros:
+    proyectoId: demo-clientes
+    puerto: 8080
+
+roles:
+  cliente: {usuario: Cliente, contrasena: "12345"}
+  admin: {usuario: Admin, contrasena: "12345"}
+
+login:
+  pasos:
+    - pulsar: Avanzar
+    - pulsar: Nube
+    - llenar: {Usuario: "{usuario}", Contraseña: "{contrasena}"}
+    - pulsar: Iniciar Sesion
+
+sensibles:
+  sql: [DELETE, UPDATE, INSERT]
+  firestore: [delete, set, update]
+
+politica:
+  Eliminar Persona: [admin]
