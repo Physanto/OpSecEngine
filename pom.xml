@@ -37,7 +37,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
 
         <!-- Severidad de la regla de Checkstyle que prohíbe System.out y System.err -->
         <checkstyle.consola.severidad>error</checkstyle.consola.severidad>
@@ -54,7 +54,6 @@
         <slf4j.version>2.0.20</slf4j.version>
 
         <!-- Versiones de herramientas usadas por plugins -->
-        <!-- 1.28.0 es la última versión que corre en Java 17; las siguientes exigen Java 21 -->
         <google-java-format.version>1.28.0</google-java-format.version>
         <checkstyle.version>12.3.1</checkstyle.version>
 
@@ -282,8 +281,8 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[17,)</version>
-                                    <message>Se necesita Java 17 o superior para construir OpSecEngine.</message>
+                                    <version>[21,)</version>
+                                    <message>Se necesita Java 21 o superior para construir OpSecEngine.</message>
                                 </requireJavaVersion>
                                 <requireMavenVersion>
                                     <version>[3.9,)</version>
