@@ -31,6 +31,25 @@
             <artifactId>picocli</artifactId>
         </dependency>
         <dependency>
+            <!-- Oráculos y reporteros: el núcleo los descubre con ServiceLoader; la CLI no los usa en el código -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-oraculos</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-informes</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <!-- Jar del agente: se copia como recurso dentro de la CLI. Se declara solo para que el
+                 reactor lo construya antes; se excluye del classpath de las pruebas -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-agente</artifactId>
+            <classifier>agente</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <!-- Envía los mensajes de SLF4J de las librerías a java.util.logging -->
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
@@ -50,6 +69,32 @@
 
     <build>
         <plugins>
+            <plugin>
+                <!-- Copia el jar del agente como recurso de la CLI, antes de empaquetar -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>agente-como-recurso</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>${project.groupId}</groupId>
+                                    <artifactId>opsec-agente</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>agente</classifier>
+                                    <destFileName>opsec-agente.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${project.build.outputDirectory}/io/github/physanto/opsecengine/cli</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <!-- Jar ejecutable con todas las dependencias: java -jar target/opsec-<versión>.jar -->
                 <groupId>org.apache.maven.plugins</groupId>
@@ -94,10 +139,22 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                </configuration>
+            </plugin>
+            <plugin>
                 <!-- Pruebas de integración (*IT): ejecutan el jar empaquetado en otra JVM -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
                     <systemPropertyVariables>
                         <opsec.cli.jar>${opsec.cli.jar}</opsec.cli.jar>
                     </systemPropertyVariables>
