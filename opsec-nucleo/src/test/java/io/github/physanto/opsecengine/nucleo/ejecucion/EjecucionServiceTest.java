@@ -103,11 +103,10 @@ class EjecucionServiceTest {
                 .extracting(Evento::secuencia)
                 .containsExactly(0L, 1L, 2L);
         assertThat(primero.traza().eventos())
-                .allSatisfy(
-                        evento -> {
-                            assertThat(evento.contexto().casoId()).isEqualTo("OK");
-                            assertThat(evento.contexto().numeroPaso()).isEqualTo(1);
-                        });
+                .allSatisfy(evento -> {
+                    assertThat(evento.contexto().casoId()).isEqualTo("OK");
+                    assertThat(evento.contexto().numeroPaso()).isEqualTo(1);
+                });
         Evento inicio = primero.traza().eventos().get(0);
         assertThat(inicio.datos())
                 .containsEntry("accion", "PULSAR")
@@ -232,15 +231,14 @@ class EjecucionServiceTest {
         @Override
         public List<Hallazgo> evaluar(Traza traza, Contexto ctx) {
             return traza.deTipo(TipoEvento.VENTANA_ABIERTA).stream()
-                    .map(
-                            evento ->
-                                    new Hallazgo(
-                                            id(),
-                                            null,
-                                            Confianza.CONFIRMADO,
-                                            "Ventana abierta",
-                                            "Se abrió una ventana",
-                                            List.of(evento.secuencia())))
+                    .map(evento ->
+                            new Hallazgo(
+                                    id(),
+                                    null,
+                                    Confianza.CONFIRMADO,
+                                    "Ventana abierta",
+                                    "Se abrió una ventana",
+                                    List.of(evento.secuencia())))
                     .toList();
         }
     }

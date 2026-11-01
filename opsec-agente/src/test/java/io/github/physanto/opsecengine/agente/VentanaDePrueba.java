@@ -41,25 +41,23 @@ public final class VentanaDePrueba {
         JTextField campo = new JTextField(12);
         etiqueta.setLabelFor(campo);
         JButton saludar = new JButton("Saludar");
-        saludar.addActionListener(
-                e -> {
-                    String saludo = "Hola, " + campo.getText();
-                    System.out.println(saludo);
-                    JOptionPane.showOptionDialog(
-                            marco,
-                            saludo,
-                            "Saludo",
-                            JOptionPane.DEFAULT_OPTION,
-                            JOptionPane.INFORMATION_MESSAGE,
-                            null,
-                            new Object[] {"Cerrar"},
-                            "Cerrar");
-                });
+        saludar.addActionListener(e -> {
+            String saludo = "Hola, " + campo.getText();
+            System.out.println(saludo);
+            JOptionPane.showOptionDialog(
+                    marco,
+                    saludo,
+                    "Saludo",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE,
+                    null,
+                    new Object[] {"Cerrar"},
+                    "Cerrar");
+        });
         JButton fallar = new JButton("Fallar");
-        fallar.addActionListener(
-                e -> {
-                    throw new IllegalStateException("Fallo sembrado");
-                });
+        fallar.addActionListener(e -> {
+            throw new IllegalStateException("Fallo sembrado");
+        });
         JButton bloqueado = new JButton("Bloqueado");
         bloqueado.setEnabled(false);
         marco.setLayout(new GridLayout(0, 2));

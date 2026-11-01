@@ -108,17 +108,15 @@ public record Proyecto(
             return Map.of();
         }
         Map<String, List<String>> copia = new HashMap<>();
-        politica.forEach(
-                (operacion, rolesAutorizados) ->
-                        copia.put(
+        politica.forEach((operacion, rolesAutorizados) ->
+                copia.put(
+                        Objects.requireNonNull(operacion, "La política no admite operaciones null"),
+                        List.copyOf(
                                 Objects.requireNonNull(
-                                        operacion, "La política no admite operaciones null"),
-                                List.copyOf(
-                                        Objects.requireNonNull(
-                                                rolesAutorizados,
-                                                "La operación "
-                                                        + operacion
-                                                        + " de la política no tiene roles"))));
+                                        rolesAutorizados,
+                                        "La operación "
+                                                + operacion
+                                                + " de la política no tiene roles"))));
         return Map.copyOf(copia);
     }
 }

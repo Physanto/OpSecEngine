@@ -99,12 +99,9 @@ class CargadorTrazasTest {
         assertThat(traza.deTipo(TipoEvento.PASO_INICIO))
                 .anyMatch(evento -> evento.texto("valor").orElse("").contains("K7Q2"));
         assertThat(traza.deTipo(TipoEvento.SQL))
-                .anyMatch(
-                        evento ->
-                                evento.texto("sql").orElse("").contains("K7Q2")
-                                        && evento.texto("tipoSentencia")
-                                                .orElse("")
-                                                .equals("STATEMENT"));
+                .anyMatch(evento ->
+                        evento.texto("sql").orElse("").contains("K7Q2")
+                                && evento.texto("tipoSentencia").orElse("").equals("STATEMENT"));
     }
 
     @Test

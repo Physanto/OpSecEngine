@@ -82,10 +82,8 @@ class ResultadoSuiteTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ResultadoCaso("A1", cumple, traza, duracion, 1, true))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(
-                        () ->
-                                new ResultadoCaso(
-                                        "A1", cumple, traza, Duration.ofSeconds(-1), 1, false))
+        assertThatThrownBy(() ->
+                        new ResultadoCaso("A1", cumple, traza, Duration.ofSeconds(-1), 1, false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

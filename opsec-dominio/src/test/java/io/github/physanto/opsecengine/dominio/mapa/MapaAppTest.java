@@ -81,11 +81,10 @@ class MapaAppTest {
         assertThatThrownBy(() -> new MapaApp(Set.of(PORTADA, otraPortada), null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("portada");
-        assertThatThrownBy(
-                        () ->
-                                new MapaApp(
-                                        Set.of(PORTADA),
-                                        List.of(pulsar(PORTADA, LOGIN, MapaApp.SIN_SESION))))
+        assertThatThrownBy(() ->
+                        new MapaApp(
+                                Set.of(PORTADA),
+                                List.of(pulsar(PORTADA, LOGIN, MapaApp.SIN_SESION))))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -95,10 +94,8 @@ class MapaAppTest {
                 .isNull();
         assertThatThrownBy(() -> new Transicion("a", "b", Accion.PULSAR, null, ADMIN))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(
-                        () ->
-                                new Transicion(
-                                        "a", "b", Accion.PULSAR, Localizador.porTexto("x"), " "))
+        assertThatThrownBy(() ->
+                        new Transicion("a", "b", Accion.PULSAR, Localizador.porTexto("x"), " "))
                 .isInstanceOf(IllegalArgumentException.class);
 
         assertThat(Objetivo.todaLaApp().esTodaLaApp()).isTrue();

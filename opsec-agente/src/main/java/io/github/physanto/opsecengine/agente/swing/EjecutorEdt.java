@@ -72,12 +72,11 @@ final class EjecutorEdt {
             throws ExecutionException, InterruptedException {
         AtomicReference<Set<Window>> modalesAntes = new AtomicReference<>();
         FutureTask<Void> futura =
-                new FutureTask<>(
-                        () -> {
-                            modalesAntes.set(modalesVisibles());
-                            accion.run();
-                            return null;
-                        });
+                new FutureTask<>(() -> {
+                    modalesAntes.set(modalesVisibles());
+                    accion.run();
+                    return null;
+                });
         EventQueue.invokeLater(futura);
         long limite = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(esperaMs);
         while (true) {
