@@ -1,6 +1,6 @@
 # Contratos de OpSecEngine
 
-Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman la versión 1 de los contratos.
+Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman los contratos, hoy en la versión 1.1.
 
 Todo lo que hay aquí es un contrato: se usa tal como está y los cambios se piden con una solicitud de cambio de contrato (ver más abajo). El módulo `opsec-verificacion` valida en cada build que los ejemplos cumplan sus esquemas y que los catálogos coincidan con el código.
 
@@ -12,7 +12,7 @@ JSON Schema (draft 2020-12) de cada formato. Los archivos se escriben en YAML o 
 
 | Archivo | Qué describe |
 |---|---|
-| `proyecto.schema.json` | `proyecto.yaml`: la app (JAR, clase principal, argumentos de la JVM), los datos de prueba, los roles con sus credenciales, los pasos de login, las operaciones sensibles, la política de roles. |
+| `proyecto.schema.json` | `proyecto.yaml`: la app (JAR, clase principal, Java con que se lanza, argumentos de la JVM), los datos de prueba, los roles con sus credenciales, los pasos de login, las operaciones sensibles, la política de roles. |
 | `suite.schema.json` | `suites/*.yaml`: nombre, versión, enfoques, configuración de ejecución y casos con sus pasos, ataques y oráculos. También define el formato de un paso y de un localizador. |
 | `payload.schema.json` | `ataques/*.yaml`: una lista de payloads de la biblioteca de ataques. |
 | `oraculo-regla.schema.json` | `oraculos/*.yaml`: una lista de reglas de oráculo simples, sin compilar nada. |
@@ -79,6 +79,13 @@ Un proyecto de pruebas completo de la app de clientes original, con la misma est
 ### `protocolo/`
 
 Un ejemplo JSON por tipo de mensaje del protocolo motor ↔ agente. Ver `protocolo/README.md`.
+
+## Versiones
+
+| Versión | Etiqueta | Cambios |
+|---|---|---|
+| 1 | `contratos-v1` | Versión inicial. |
+| 1.1 | `contratos-v1.1` | Aditivo: campo opcional `app.java` en `proyecto.yaml` (carpeta del JDK o JRE con que se lanza la app) y componente `javaApp` del record `Proyecto`, que conserva el constructor de la v1. |
 
 ## Cambiar un contrato
 

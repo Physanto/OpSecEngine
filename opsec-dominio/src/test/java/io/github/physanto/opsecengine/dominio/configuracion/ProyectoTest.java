@@ -31,6 +31,17 @@ class ProyectoTest {
         assertThat(proyecto.pasosLogin()).isEmpty();
         assertThat(proyecto.politica()).isEmpty();
         assertThat(proyecto.extensiones()).isEmpty();
+        assertThat(proyecto.javaApp()).isNull();
+    }
+
+    @Test
+    void conservaLaCarpetaDeJavaDeLaApp() {
+        Path jdk8 = Path.of("jdk8");
+
+        Proyecto proyecto =
+                new Proyecto("clientes", JAR, null, null, jdk8, null, null, null, null, null, null);
+
+        assertThat(proyecto.javaApp()).isEqualTo(jdk8);
     }
 
     @Test
