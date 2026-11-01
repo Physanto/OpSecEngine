@@ -6,6 +6,7 @@ nombre: clientes
 app:
   jar: ../MiApp/dist/MiApp.jar
   principal: GUI_Local.Portada
+  # java: C:/Program Files/Java/jdk1.8.0_401   # opcional (v1.1): JDK o JRE con que se lanza la app
 
 datos:
   tipo: firebase-emulador

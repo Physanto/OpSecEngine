@@ -87,11 +87,24 @@ class EjecucionServiceIT {
     }
 
     @Test
-    void elLanzadorArrancaLaAplicacionYLaDetiene() throws Exception {
+    void elLanzadorArrancaLaAplicacionConElJavaDelProyectoYLaDetiene() throws Exception {
         LanzadorProceso lanzador = new LanzadorProceso(jarAgente(), resultados);
 
         try (ClienteAgente cliente = new ClienteAgente()) {
-            Process proceso = lanzador.lanzar(proyecto(), cliente.puerto(), cliente.token());
+            Proyecto conJavaPropio =
+                    new Proyecto(
+                            "eco",
+                            proyecto().jar(),
+                            AplicacionDePrueba.class.getName(),
+                            null,
+                            Path.of(System.getProperty("java.home")),
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null);
+            Process proceso = lanzador.lanzar(conJavaPropio, cliente.puerto(), cliente.token());
             try {
                 HolaDto hola = cliente.esperarHola(ESPERA);
 

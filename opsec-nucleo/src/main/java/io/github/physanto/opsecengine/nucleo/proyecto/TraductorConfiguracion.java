@@ -90,6 +90,7 @@ final class TraductorConfiguracion {
                     carpeta.resolve(app.get("jar").asText()).normalize(),
                     app.has("principal") ? app.get("principal").asText() : null,
                     textos(app.path("argumentosJvm")),
+                    app.has("java") ? carpeta.resolve(app.get("java").asText()).normalize() : null,
                     datos(raiz.get("datos")),
                     roles,
                     login,

@@ -141,6 +141,15 @@ class ProyectoServiceTest {
     }
 
     @Test
+    void resuelveLaCarpetaDeJavaDeLaAppRespectoAlProyecto() throws Exception {
+        Path archivo = escribir("proyecto.yaml", "app:\n  jar: dist/app.jar\n  java: jdks/jdk8\n");
+
+        Proyecto proyecto = servicio.cargarProyecto(archivo);
+
+        assertThat(proyecto.javaApp()).isEqualTo(carpeta.resolve("jdks").resolve("jdk8"));
+    }
+
+    @Test
     void usaValoresPorDefectoYElNombreDeLaCarpeta() throws Exception {
         Path archivo = escribir("proyecto.yaml", "app:\n  jar: dist/app.jar\n");
         Path suite =
@@ -154,6 +163,7 @@ class ProyectoServiceTest {
         assertThat(proyecto.nombre()).isEqualTo(carpeta.getFileName().toString());
         assertThat(proyecto.jar()).isEqualTo(carpeta.resolve("dist").resolve("app.jar"));
         assertThat(proyecto.clasePrincipal()).isNull();
+        assertThat(proyecto.javaApp()).isNull();
         assertThat(proyecto.sensibles()).isEqualTo(OperacionesSensibles.porDefecto());
         assertThat(cargada.config().esperaMaximaPaso()).isEqualTo(Duration.ofSeconds(10));
         Paso esperar = cargada.casos().get(0).pasos().get(0);
