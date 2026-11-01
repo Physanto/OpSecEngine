@@ -26,8 +26,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Pruebas de integración: lanzan una aplicación en otra JVM con {@code -javaagent} apuntando al jar
@@ -41,7 +42,12 @@ class AgenteIT {
 
     private static final Duration ESPERA = Duration.ofSeconds(30);
 
-    @TempDir Path carpeta;
+    private Path carpeta;
+
+    @BeforeEach
+    void crearCarpeta(TestInfo prueba) throws IOException {
+        carpeta = carpetaRegistros(prueba);
+    }
 
     @Test
     void elAgenteSaludaYEnviaLaConsolaDeLaAplicacion() throws Exception {
@@ -194,5 +200,17 @@ class AgenteIT {
         if (!proceso.waitFor(10, TimeUnit.SECONDS)) {
             proceso.destroyForcibly();
         }
+    }
+
+    /**
+     * Carpeta para la salida de la aplicación lanzada, dentro de {@code target/registros-it}.
+     *
+     * <p>No se usa {@code @TempDir}: en Windows el archivo de salida puede seguir bloqueado unos
+     * instantes después de detener el proceso, y JUnit falla al borrar la carpeta temporal.
+     */
+    private static Path carpetaRegistros(TestInfo prueba) throws IOException {
+        String nombre = prueba.getTestMethod().map(metodo -> metodo.getName()).orElse("prueba");
+        return Files.createDirectories(
+                Path.of("target", "registros-it", nombre + "-" + System.nanoTime()));
     }
 }

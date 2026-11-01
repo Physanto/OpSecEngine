@@ -21,13 +21,15 @@ import io.github.physanto.opsecengine.nucleo.sesion.LanzadorProceso;
 import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import io.github.physanto.opsecengine.soporte.AplicacionDePrueba;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Prueba de integración: lanza {@link AplicacionDePrueba} en otra JVM con el agente real.
@@ -41,7 +43,12 @@ class EjecucionServiceIT {
 
     private static final Duration ESPERA = Duration.ofSeconds(30);
 
-    @TempDir Path resultados;
+    private Path resultados;
+
+    @BeforeEach
+    void crearCarpeta(TestInfo prueba) throws IOException {
+        resultados = carpetaRegistros(prueba);
+    }
 
     @Test
     void ejecutaUnaSuiteContraLaAplicacionConElAgente() throws Exception {
@@ -123,5 +130,17 @@ class EjecucionServiceIT {
                 null,
                 null,
                 null);
+    }
+
+    /**
+     * Carpeta para la salida de la aplicación lanzada, dentro de {@code target/registros-it}.
+     *
+     * <p>No se usa {@code @TempDir}: en Windows el archivo de salida puede seguir bloqueado unos
+     * instantes después de detener el proceso, y JUnit falla al borrar la carpeta temporal.
+     */
+    private static Path carpetaRegistros(TestInfo prueba) throws IOException {
+        String nombre = prueba.getTestMethod().map(metodo -> metodo.getName()).orElse("prueba");
+        return Files.createDirectories(
+                Path.of("target", "registros-it", nombre + "-" + System.nanoTime()));
     }
 }
