@@ -13,7 +13,7 @@ import picocli.CommandLine.Spec;
  *
  * <pre>
  * OpSecEngine 0.0.1-SNAPSHOT
- * Java 17.0.12 (Eclipse Adoptium) en Linux 6.8.0 (amd64)
+ * Java 21.0.9 (Eclipse Adoptium) en Linux 6.8.0 (amd64)
  * </pre>
  */
 @Command(
