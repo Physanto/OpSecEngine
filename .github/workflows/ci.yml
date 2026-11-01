@@ -70,5 +70,6 @@ jobs:
           path: |
             **/target/surefire-reports/
             **/target/failsafe-reports/
+            **/target/registros-it/
           if-no-files-found: ignore
           retention-days: 7
