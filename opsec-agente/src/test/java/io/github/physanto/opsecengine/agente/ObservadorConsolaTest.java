@@ -30,7 +30,7 @@ class ObservadorConsolaTest {
                         original, ObservadorConsola.SALIDA, StandardCharsets.UTF_8, emisor);
 
         observada.print("usuario=Admin, ");
-        observada.println("contraseña=Admin#2026");
+        observada.print("contraseña=Admin#2026\n");
         observada.print("línea con retorno\r\n");
         observada.print("sin salto final");
 
@@ -40,9 +40,7 @@ class ObservadorConsolaTest {
                         Map.of("flujo", "SALIDA", "texto", "línea con retorno"));
         assertThat(bytes.toString(StandardCharsets.UTF_8))
                 .isEqualTo(
-                        "usuario=Admin, contraseña=Admin#2026"
-                                + System.lineSeparator()
-                                + "línea con retorno\r\nsin salto final");
+                        "usuario=Admin, contraseña=Admin#2026\nlínea con retorno\r\nsin salto final");
     }
 
     @Test
