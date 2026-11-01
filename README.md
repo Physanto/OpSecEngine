@@ -41,7 +41,7 @@ Hoja de ruta:
 
 ## Requisitos
 
-Solo se necesita un **JDK 17 o superior** (probado con 17 y 21). No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
+Solo se necesita un **JDK 21 o superior** (probado con 21 y 25). Las aplicaciones que se prueban pueden ser de Java 8 en adelante: corren en su propia JVM y el agente se compila para Java 8. No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
 
 ## Compilar y probar
 
@@ -90,16 +90,16 @@ java -jar opsec-cli/target/opsec-0.0.1-SNAPSHOT.jar validar contratos/ejemplos/p
 
 | Módulo | Responsabilidad | Java | Rol dueño |
 |---|---|---|---|
-| `opsec-dominio` | Modelos inmutables e interfaces de extensión (`Oraculo`, `GeneradorCasos`, `Reportero`, `ProveedorDatos`, `ProveedorIA`). Sin dependencias. | 17 | Líder |
+| `opsec-dominio` | Modelos inmutables e interfaces de extensión (`Oraculo`, `GeneradorCasos`, `Reportero`, `ProveedorDatos`, `ProveedorIA`). Sin dependencias. | 21 | Líder |
 | `opsec-protocolo` | Mensajes motor-agente (JSON por líneas sobre socket local) y su serialización. | 8 | Líder |
 | `opsec-agente` | Agente que corre dentro de la app probada: driver Swing, observadores, ganchos y capturas. Dependencias reubicadas. | 8 | P1 (el paquete `api`, el líder) |
-| `opsec-nucleo` | Servicios de aplicación: proyectos, sesiones, ejecución, evaluación, informes; cliente del agente y lanzador de procesos. | 17 | Líder |
-| `opsec-oraculos` | Oráculos incluidos, descubiertos con `ServiceLoader`. | 17 | P2 |
-| `opsec-ataques` | Biblioteca de payloads en YAML y su cargador. | 17 | P2 |
-| `opsec-informes` | Reporteros: HTML, JSON, JUnit XML y SARIF. | 17 | P3 |
-| `opsec-cli` | Línea de comandos `opsec`. | 17 | P3 |
-| `opsec-soporte-pruebas` | Dobles de prueba compartidos y datos de ejemplo. Solo se usa en pruebas. | 17 | Líder |
-| `opsec-verificacion` | Pruebas de arquitectura (ArchUnit) y de contratos. Sin código principal. | 17 | Líder |
+| `opsec-nucleo` | Servicios de aplicación: proyectos, sesiones, ejecución, evaluación, informes; cliente del agente y lanzador de procesos. | 21 | Líder |
+| `opsec-oraculos` | Oráculos incluidos, descubiertos con `ServiceLoader`. | 21 | P2 |
+| `opsec-ataques` | Biblioteca de payloads en YAML y su cargador. | 21 | P2 |
+| `opsec-informes` | Reporteros: HTML, JSON, JUnit XML y SARIF. | 21 | P3 |
+| `opsec-cli` | Línea de comandos `opsec`. | 21 | P3 |
+| `opsec-soporte-pruebas` | Dobles de prueba compartidos y datos de ejemplo. Solo se usa en pruebas. | 21 | Líder |
+| `opsec-verificacion` | Pruebas de arquitectura (ArchUnit) y de contratos. Sin código principal. | 21 | Líder |
 | `apps-practica/clientes-vulnerable` | App Swing con fallos sembrados, para evaluar el motor y para docencia. | 11 | P3 |
 
 Reglas de dependencia: `opsec-dominio` no depende de nada; `opsec-agente` solo depende de `opsec-protocolo`; oráculos, ataques e informes dependen solo del dominio; las presentaciones (como la CLI) solo hablan con el núcleo, y ningún módulo depende de una presentación. Las reglas se comprueban en cada build.

@@ -84,16 +84,15 @@ public final class EliminarPersona extends JFrame {
      */
     public static void main(String[] args) {
         ContextoApp contexto = Navegacion.iniciarContexto();
-        SwingUtilities.invokeLater(
-                () -> {
-                    if (contexto.control().eliminarPersonaSinSesion()) {
-                        // FALLO F3: la ventana administrativa se abre sin verificar la sesión
-                        new EliminarPersona(contexto, Sesion.sinIniciar()).setVisible(true);
-                    } else {
-                        Navegacion.abrirEliminarPersona(null, contexto, Sesion.sinIniciar());
-                        new Portada(contexto).setVisible(true);
-                    }
-                });
+        SwingUtilities.invokeLater(() -> {
+            if (contexto.control().eliminarPersonaSinSesion()) {
+                // FALLO F3: la ventana administrativa se abre sin verificar la sesión
+                new EliminarPersona(contexto, Sesion.sinIniciar()).setVisible(true);
+            } else {
+                Navegacion.abrirEliminarPersona(null, contexto, Sesion.sinIniciar());
+                new Portada(contexto).setVisible(true);
+            }
+        });
     }
 
     private void eliminar() {

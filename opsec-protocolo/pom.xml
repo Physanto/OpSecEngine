@@ -17,8 +17,8 @@
 
     <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- JUnit 6 requiere Java 17 para compilar las pruebas -->
-        <maven.compiler.testRelease>17</maven.compiler.testRelease>
+        <!-- Las pruebas se compilan para Java 21, como el motor -->
+        <maven.compiler.testRelease>21</maven.compiler.testRelease>
     </properties>
 
     <dependencies>

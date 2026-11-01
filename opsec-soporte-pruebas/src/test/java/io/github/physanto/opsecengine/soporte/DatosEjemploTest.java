@@ -52,18 +52,13 @@ class DatosEjemploTest {
         ResultadoCaso n3 = resultado.casos().get(0);
         assertThat(n3.veredicto().hallazgos())
                 .singleElement()
-                .satisfies(
-                        hallazgo -> {
-                            assertThat(hallazgo.oraculoId()).isEqualTo("SIN-SESION");
-                            assertThat(hallazgo.evidencia())
-                                    .allMatch(
-                                            secuencia ->
-                                                    n3.traza().eventos().stream()
-                                                            .anyMatch(
-                                                                    e ->
-                                                                            e.secuencia()
-                                                                                    == secuencia));
-                        });
+                .satisfies(hallazgo -> {
+                    assertThat(hallazgo.oraculoId()).isEqualTo("SIN-SESION");
+                    assertThat(hallazgo.evidencia())
+                            .allMatch(secuencia ->
+                                    n3.traza().eventos().stream()
+                                            .anyMatch(e -> e.secuencia() == secuencia));
+                });
         assertThat(n3.duracion()).isEqualTo(Duration.ofMillis(2800));
         assertThat(resultado.casos()).anyMatch(ResultadoCaso::inestable);
     }

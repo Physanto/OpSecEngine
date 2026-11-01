@@ -22,13 +22,12 @@ class CargadorPayloadsTest {
                         "VACIO-CADENA", "VACIO-ESPACIOS", "VACIO-TABULACION", "VACIO-SALTO-LINEA");
         assertThat(vacios).extracting(Payload::texto).containsExactly("", "   ", "\t", "\n");
         assertThat(vacios)
-                .allSatisfy(
-                        payload -> {
-                            assertThat(payload.categoria()).isEqualTo(CategoriaPayload.VACIOS);
-                            assertThat(payload.usaCanario()).isFalse();
-                            assertThat(payload.sirvePara(TipoCampo.CONTRASENA)).isTrue();
-                            assertThat(payload.oraculos()).contains("EXCEPCION-NO-CAPTURADA");
-                        });
+                .allSatisfy(payload -> {
+                    assertThat(payload.categoria()).isEqualTo(CategoriaPayload.VACIOS);
+                    assertThat(payload.usaCanario()).isFalse();
+                    assertThat(payload.sirvePara(TipoCampo.CONTRASENA)).isTrue();
+                    assertThat(payload.oraculos()).contains("EXCEPCION-NO-CAPTURADA");
+                });
     }
 
     @Test

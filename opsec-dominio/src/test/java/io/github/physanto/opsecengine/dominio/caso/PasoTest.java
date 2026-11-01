@@ -56,15 +56,8 @@ class PasoTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new Paso(1, Accion.PULSAR, objetivo, null, Duration.ZERO, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(
-                        () ->
-                                new Paso(
-                                        1,
-                                        Accion.PULSAR,
-                                        objetivo,
-                                        null,
-                                        Duration.ofSeconds(-1),
-                                        null))
+        assertThatThrownBy(() ->
+                        new Paso(1, Accion.PULSAR, objetivo, null, Duration.ofSeconds(-1), null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

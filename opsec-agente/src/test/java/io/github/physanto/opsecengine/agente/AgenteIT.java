@@ -98,13 +98,12 @@ class AgenteIT {
                                 e -> assertThat(e.getDatos()).containsEntry("texto", "Hola, Ana"));
                 assertThat(eventos(motor, "DIALOGO"))
                         .singleElement()
-                        .satisfies(
-                                e ->
-                                        assertThat(e.getDatos())
-                                                .containsEntry("texto", "Hola, Ana")
-                                                .containsEntry("titulo", "Saludo")
-                                                .containsEntry("tipoMensaje", "INFORMACION")
-                                                .containsEntry("opciones", List.of("Cerrar")));
+                        .satisfies(e ->
+                                assertThat(e.getDatos())
+                                        .containsEntry("texto", "Hola, Ana")
+                                        .containsEntry("titulo", "Saludo")
+                                        .containsEntry("tipoMensaje", "INFORMACION")
+                                        .containsEntry("opciones", List.of("Cerrar")));
 
                 assertThat(paso(motor, "PULSAR", criterio("TEXTO", "Fallar"), null))
                         .as("un diálogo modal tapa la ventana")
@@ -117,13 +116,11 @@ class AgenteIT {
                         .isEqualTo(CodigoResultado.OK);
                 assertThat(eventos(motor, "EXCEPCION"))
                         .singleElement()
-                        .satisfies(
-                                e ->
-                                        assertThat(e.getDatos())
-                                                .containsEntry(
-                                                        "clase", "java.lang.IllegalStateException")
-                                                .containsEntry("mensaje", "Fallo sembrado")
-                                                .containsEntry("capturada", false));
+                        .satisfies(e ->
+                                assertThat(e.getDatos())
+                                        .containsEntry("clase", "java.lang.IllegalStateException")
+                                        .containsEntry("mensaje", "Fallo sembrado")
+                                        .containsEntry("capturada", false));
 
                 List<NodoArbolDto> ventanas = motor.pedirArbol().getVentanas();
                 assertThat(ventanas)

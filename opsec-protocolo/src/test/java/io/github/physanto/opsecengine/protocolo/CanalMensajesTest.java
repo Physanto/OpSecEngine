@@ -72,28 +72,27 @@ class CanalMensajesTest {
     @Test
     void saludoComandoRespuestaYEventos() throws Exception {
         Future<String> agente =
-                enHilo(
-                        () -> {
-                            try (CanalMensajes canal = new CanalMensajes(conectar(), codec)) {
-                                canal.enviar(
-                                        codec.crear(
-                                                TipoMensaje.HOLA,
-                                                new HolaDto(TOKEN, "0.0.1", "1.8.0", "Linux")));
-                                Mensaje comando = recibirObligatorio(canal);
-                                PasoDto paso = codec.leerCuerpo(comando, PasoDto.class);
-                                canal.enviar(
-                                        codec.crear(
-                                                TipoMensaje.EVENTO,
-                                                new EventoDto(1, 0, "VENTANA_ABIERTA", Map.of())));
-                                canal.enviar(
-                                        codec.responder(
-                                                comando,
-                                                TipoMensaje.RESULTADO_PASO,
-                                                new ResultadoPasoDto(
-                                                        CodigoResultado.OK, paso.getValor(), 5)));
-                                return recibirObligatorio(canal).getTipo().name();
-                            }
-                        });
+                enHilo(() -> {
+                    try (CanalMensajes canal = new CanalMensajes(conectar(), codec)) {
+                        canal.enviar(
+                                codec.crear(
+                                        TipoMensaje.HOLA,
+                                        new HolaDto(TOKEN, "0.0.1", "1.8.0", "Linux")));
+                        Mensaje comando = recibirObligatorio(canal);
+                        PasoDto paso = codec.leerCuerpo(comando, PasoDto.class);
+                        canal.enviar(
+                                codec.crear(
+                                        TipoMensaje.EVENTO,
+                                        new EventoDto(1, 0, "VENTANA_ABIERTA", Map.of())));
+                        canal.enviar(
+                                codec.responder(
+                                        comando,
+                                        TipoMensaje.RESULTADO_PASO,
+                                        new ResultadoPasoDto(
+                                                CodigoResultado.OK, paso.getValor(), 5)));
+                        return recibirObligatorio(canal).getTipo().name();
+                    }
+                });
 
         try (CanalMensajes motor = new CanalMensajes(servidor.accept(), codec)) {
             Mensaje hola = recibirObligatorio(motor);
@@ -174,20 +173,19 @@ class CanalMensajesTest {
                 CanalMensajes motor = new CanalMensajes(servidor.accept(), codec)) {
             for (int h = 0; h < hilosEmisores; h++) {
                 int base = h * porHilo;
-                enHilo(
-                        () -> {
-                            for (int i = 0; i < porHilo; i++) {
-                                agente.enviar(
-                                        codec.crear(
-                                                TipoMensaje.EVENTO,
-                                                new EventoDto(
-                                                        base + i,
-                                                        0,
-                                                        "CONSOLA",
-                                                        Map.of("texto", "x".repeat(2_000)))));
-                            }
-                            return null;
-                        });
+                enHilo(() -> {
+                    for (int i = 0; i < porHilo; i++) {
+                        agente.enviar(
+                                codec.crear(
+                                        TipoMensaje.EVENTO,
+                                        new EventoDto(
+                                                base + i,
+                                                0,
+                                                "CONSOLA",
+                                                Map.of("texto", "x".repeat(2_000)))));
+                    }
+                    return null;
+                });
             }
 
             Set<Long> secuencias = new HashSet<>();

@@ -17,8 +17,8 @@
 
     <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- JUnit 6 requiere Java 17 para compilar las pruebas -->
-        <maven.compiler.testRelease>17</maven.compiler.testRelease>
+        <!-- Las pruebas se compilan para Java 21, como el motor -->
+        <maven.compiler.testRelease>21</maven.compiler.testRelease>
         <agente.paquete.interno>${project.groupId}.agente.interno</agente.paquete.interno>
         <!-- Este módulo sí puede escribir en la consola -->
         <checkstyle.consola.severidad>ignore</checkstyle.consola.severidad>
