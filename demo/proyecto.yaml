@@ -1,0 +1,14 @@
+# Demo de OpSecEngine: la app de práctica clientes-vulnerable con todos sus fallos activos.
+# Formato: contratos/esquemas/proyecto.schema.json
+#
+# Antes de ejecutar, construya el proyecto desde la raíz del repositorio: ./mvnw -B package
+# (en Windows: mvnw.cmd -B package). Las rutas son relativas a esta carpeta.
+
+nombre: demo-clientes-vulnerable
+
+app:
+  jar: ../apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
+
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}
+  cliente: {usuario: Cliente, contrasena: "Cliente#2026"}

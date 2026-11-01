@@ -121,6 +121,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>opsec-clientes-vulnerable</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>opsec-cli</artifactId>
                 <version>${project.version}</version>
             </dependency>

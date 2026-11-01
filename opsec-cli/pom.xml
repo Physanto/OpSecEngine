@@ -50,6 +50,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- App de práctica para DemoIT, que ejecuta la demo de demo/. Se declara solo para que
+                 el reactor la construya antes; se excluye del classpath de las pruebas -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-clientes-vulnerable</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <!-- Envía los mensajes de SLF4J de las librerías a java.util.logging -->
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
@@ -144,6 +151,7 @@
                 <configuration>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                        <classpathDependencyExclude>${project.groupId}:opsec-clientes-vulnerable</classpathDependencyExclude>
                     </classpathDependencyExcludes>
                 </configuration>
             </plugin>
@@ -154,9 +162,11 @@
                 <configuration>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                        <classpathDependencyExclude>${project.groupId}:opsec-clientes-vulnerable</classpathDependencyExclude>
                     </classpathDependencyExcludes>
                     <systemPropertyVariables>
                         <opsec.cli.jar>${opsec.cli.jar}</opsec.cli.jar>
+                        <opsec.demo>${project.basedir}/../demo</opsec.demo>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

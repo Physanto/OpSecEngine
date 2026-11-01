@@ -50,3 +50,6 @@ logs/
 *.bak
 *.swp
 *~
+
+# Resultados de la demo
+demo/resultados/

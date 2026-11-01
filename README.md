@@ -17,14 +17,16 @@ Ideas principales:
 
 ## Estado del proyecto
 
-En construcción: **Fase 0 (base del proyecto)**, versión `0.0.1-SNAPSHOT`. Todavía no hay versiones publicadas.
+En construcción: base del proyecto terminada (versión `0.0.4`) y desarrollo de la v0.1 en curso. Ya se puede ver una primera demo de punta a punta: [`demo/`](demo/README.md) detecta una contraseña escrita en la consola (CWE-532) en la app de práctica.
 
 Ya está disponible:
 
-- Contratos versión 1: modelos del dominio, interfaces de extensión, protocolo motor-agente, esquemas JSON de los YAML y catálogos (eventos, oráculos, códigos de resultado, CWE).
+- Contratos versión 1.1: modelos del dominio, interfaces de extensión, protocolo motor-agente, esquemas JSON de los YAML y catálogos (eventos, oráculos, códigos de resultado, CWE).
 - Dobles de prueba (`AgenteFalso`, `MotorFalso`) y trazas, mapas y resultados de ejemplo.
 - Núcleo mínimo: carga y validación de proyectos y suites, sesiones, ejecución, evaluación e informes.
-- Un ejemplo de referencia por módulo: un oráculo, un archivo de payloads, el reportero JSON y la CLI con `version` y `validar`.
+- Agente mínimo: pulsa, llena y espera en modo semántico, y observa consola, ventanas, diálogos y excepciones.
+- Oráculos `EXCEPCION-NO-CAPTURADA` y `CONTRASENA-EN-CONSOLA` (CWE-532), un archivo de payloads y el reportero JSON.
+- CLI con `version`, `validar` y `ejecutar`, que trae dentro el agente, los oráculos y los reporteros.
 - App de práctica `clientes-vulnerable` con fallos sembrados.
 - Verificaciones automáticas de formato, estilo, Javadoc, dependencias entre módulos y contratos, e integración continua en Windows, macOS y Linux.
 
@@ -82,9 +84,12 @@ En Windows, reemplaza `./mvnw` por `mvnw.cmd`.
 Después de `verify`, la CLI `opsec` queda empaquetada con todas sus dependencias:
 
 ```sh
-java -jar opsec-cli/target/opsec-0.0.1-SNAPSHOT.jar version
-java -jar opsec-cli/target/opsec-0.0.1-SNAPSHOT.jar validar contratos/ejemplos/proyecto.yaml
+java -jar opsec-cli/target/opsec-<versión>.jar version
+java -jar opsec-cli/target/opsec-<versión>.jar validar contratos/ejemplos/proyecto.yaml
+java -jar opsec-cli/target/opsec-<versión>.jar ejecutar demo/proyecto.yaml
 ```
+
+Ver [`demo/README.md`](demo/README.md) para la demo completa.
 
 ## Módulos
 
