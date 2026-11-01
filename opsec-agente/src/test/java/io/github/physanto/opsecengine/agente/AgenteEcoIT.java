@@ -8,6 +8,7 @@ import io.github.physanto.opsecengine.soporte.AplicacionDePrueba;
 import io.github.physanto.opsecengine.soporte.ExcepcionErrorRemoto;
 import io.github.physanto.opsecengine.soporte.MotorFalso;
 import java.io.File;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -16,7 +17,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Prueba de integración: lanza {@link AplicacionDePrueba} en otra JVM con {@code -javaagent}
@@ -30,7 +31,8 @@ class AgenteEcoIT {
     private static final Duration ESPERA = Duration.ofSeconds(30);
 
     @Test
-    void elAgenteEmpaquetadoSaludaDesdeOtroProceso(@TempDir Path carpeta) throws Exception {
+    void elAgenteEmpaquetadoSaludaDesdeOtroProceso(TestInfo prueba) throws Exception {
+        Path carpeta = carpetaRegistros(prueba);
         Path jarAgente = Path.of(System.getProperty("opsec.agente.jar"));
         assertThat(jarAgente).isRegularFile();
         Path java = Path.of(System.getProperty("java.home"), "bin", "java");
@@ -81,5 +83,17 @@ class AgenteEcoIT {
                                         .getLocation()
                                         .toURI())
                         .toString());
+    }
+
+    /**
+     * Carpeta para la salida de la aplicación lanzada, dentro de {@code target/registros-it}.
+     *
+     * <p>No se usa {@code @TempDir}: en Windows el archivo de salida puede seguir bloqueado unos
+     * instantes después de detener el proceso, y JUnit falla al borrar la carpeta temporal.
+     */
+    private static Path carpetaRegistros(TestInfo prueba) throws IOException {
+        String nombre = prueba.getTestMethod().map(metodo -> metodo.getName()).orElse("prueba");
+        return Files.createDirectories(
+                Path.of("target", "registros-it", nombre + "-" + System.nanoTime()));
     }
 }
