@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.ConfigEjecucion;
 import io.github.physanto.opsecengine.dominio.caso.Localizador;
+import io.github.physanto.opsecengine.dominio.caso.ModoAccion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
@@ -17,7 +19,6 @@ import io.github.physanto.opsecengine.nucleo.extensiones.RegistroExtensiones;
 import io.github.physanto.opsecengine.nucleo.sesion.ClienteAgente;
 import io.github.physanto.opsecengine.nucleo.sesion.LanzadorProceso;
 import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
-import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import io.github.physanto.opsecengine.soporte.AplicacionDePrueba;
 import java.nio.charset.StandardCharsets;
@@ -29,11 +30,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Prueba de integración: lanza {@link AplicacionDePrueba} en otra JVM con el agente eco real.
+ * Prueba de integración: lanza {@link AplicacionDePrueba} en otra JVM con el agente real.
  *
  * <p>La ejecuta failsafe en la fase {@code integration-test}. La ruta del jar del agente llega en
- * la propiedad del sistema {@code opsec.agente.jar}. El agente eco saluda pero responde {@code
- * ERROR} con {@code NO_IMPLEMENTADO} a cada paso, así que el caso queda {@code NO_CONCLUYENTE}.
+ * la propiedad del sistema {@code opsec.agente.jar}. {@link AplicacionDePrueba} no tiene ventanas,
+ * así que el agente no encuentra el botón del paso y el caso queda {@code NO_CONCLUYENTE}; la línea
+ * que la aplicación escribe al arrancar llega a la traza como evento {@code CONSOLA}.
  */
 class EjecucionServiceIT {
 
@@ -42,15 +44,16 @@ class EjecucionServiceIT {
     @TempDir Path resultados;
 
     @Test
-    void ejecutaUnaSuiteContraLaAplicacionConElAgenteEco() throws Exception {
+    void ejecutaUnaSuiteContraLaAplicacionConElAgente() throws Exception {
         Paso pulsar = new Paso(1, Accion.PULSAR, Localizador.porTexto("Avanzar"), null, null, null);
         Suite suite =
                 new Suite(
-                        "eco",
+                        "humo",
                         null,
                         null,
-                        null,
-                        List.of(new Caso("ECO", null, null, List.of(pulsar), null, null, null)),
+                        new ConfigEjecucion(
+                                ModoAccion.SEMANTICO, false, Duration.ofSeconds(1), 0, 0L, 1),
+                        List.of(new Caso("HUMO", null, null, List.of(pulsar), null, null, null)),
                         null);
         EvaluacionService evaluacion = new EvaluacionService(RegistroExtensiones.descubrir());
 
@@ -62,10 +65,11 @@ class EjecucionServiceIT {
 
         ResultadoCaso caso = resultado.casos().get(0);
         assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
-        assertThat(caso.veredicto().motivo()).contains(ErrorDto.NO_IMPLEMENTADO);
+        assertThat(caso.veredicto().motivo()).contains("NO_ENCONTRADO", "Avanzar");
         assertThat(caso.traza().eventos())
                 .extracting(evento -> evento.tipo())
-                .containsExactly(TipoEvento.PASO_INICIO, TipoEvento.PASO_FIN);
+                .containsSubsequence(TipoEvento.PASO_INICIO, TipoEvento.PASO_FIN)
+                .contains(TipoEvento.CONSOLA);
         assertThat(resultado.manifiesto().hashJar()).startsWith("sha256:").hasSize(71);
         assertThat(resultados.resolve(LanzadorProceso.ARCHIVO_ERRORES)).isRegularFile();
         assertThat(
@@ -109,7 +113,7 @@ class EjecucionServiceIT {
                                 .getLocation()
                                 .toURI());
         return new Proyecto(
-                "eco",
+                "humo",
                 clases,
                 AplicacionDePrueba.class.getName(),
                 null,

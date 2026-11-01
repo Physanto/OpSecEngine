@@ -1,5 +1,9 @@
 package io.github.physanto.opsecengine.agente;
 
+import io.github.physanto.opsecengine.agente.swing.AdaptadorSwing;
+import io.github.physanto.opsecengine.agente.swing.ObservadorVentanas;
+import io.github.physanto.opsecengine.protocolo.CodecMensajes;
+import java.awt.AWTError;
 import java.lang.instrument.Instrumentation;
 
 /**
@@ -9,14 +13,18 @@ import java.lang.instrument.Instrumentation;
  * aplicación cuando se arranca con {@code
  * -javaagent:opsec-agente.jar=puerto=<puerto>,token=<token>}.
  *
- * <p><b>Esqueleto temporal ("agente eco").</b> Por ahora solo hace el saludo: lee los argumentos,
- * se conecta al motor, envía {@code HOLA}, responde {@code ERROR} con el código {@code
- * NO_IMPLEMENTADO} a cualquier otro mensaje y termina la conversación con {@code CERRAR}. Todo
- * ocurre en un hilo daemon, así que no bloquea ni retrasa la aplicación. El dueño del módulo
- * reemplazará este esqueleto por el agente real (servidor del protocolo, adaptador Swing,
- * observadores y ganchos).
+ * <p>Arranque, en el hilo principal y antes del {@code main} de la aplicación:
  *
- * <p>La clase no tiene estado y no se instancia.
+ * <ol>
+ *   <li>Lee los argumentos.
+ *   <li>Instala el {@link ObservadorConsola}, para que la aplicación tome las salidas observadas.
+ *   <li>Registra el {@link ObservadorVentanas}.
+ *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} en un hilo daemon, que
+ *       se conecta con el motor sin retrasar a la aplicación.
+ * </ol>
+ *
+ * <p>Los eventos anteriores a la conexión se guardan y se envían después del saludo. La clase no
+ * tiene estado y no se instancia.
  */
 public final class AgenteMain {
 
@@ -31,23 +39,44 @@ public final class AgenteMain {
      * <p>Lo invoca la JVM en el hilo principal, una sola vez, antes del {@code main} de la
      * aplicación. Vuelve enseguida: la conversación con el motor corre en un hilo daemon. Si los
      * argumentos no son válidos, escribe el motivo en la salida de error y deja que la aplicación
-     * arranque sin agente; nunca lanza excepciones.
+     * arranque sin agente. Si no se puede observar alguna parte de la interfaz, lo registra y sigue
+     * con el resto; nunca lanza excepciones.
      *
      * @param argumentos cadena de argumentos que sigue al signo {@code =} en la opción {@code
      *     -javaagent}, con el formato {@code puerto=<puerto>,token=<token>}; puede ser {@code null}
-     * @param instrumentacion servicio de instrumentación que entrega la JVM; el agente eco no lo
-     *     usa
+     * @param instrumentacion servicio de instrumentación que entrega la JVM; todavía no se usa
      */
     public static void premain(String argumentos, Instrumentation instrumentacion) {
+        ArgumentosAgente leidos;
+        try {
+            leidos = ArgumentosAgente.leer(argumentos);
+        } catch (RuntimeException e) {
+            RegistroAgente.error("El agente no se inició: " + e.getMessage());
+            return;
+        }
+        CodecMensajes codec = new CodecMensajes();
+        EmisorProtocolo emisor = new EmisorProtocolo(codec);
+        RegistroAgente.fijarSalida(System.err);
+        try {
+            ObservadorConsola.instalar(emisor);
+        } catch (RuntimeException e) {
+            RegistroAgente.error("No se pudo observar la consola: " + e);
+        }
+        try {
+            ObservadorVentanas.instalar(emisor, RegistroAgente::error);
+        } catch (RuntimeException | AWTError | LinkageError e) {
+            RegistroAgente.error("No se pudieron observar las ventanas: " + e);
+        }
         try {
             Thread hilo =
                     new Thread(
-                            new AgenteEco(ArgumentosAgente.leer(argumentos), version()),
+                            new ServidorProtocolo(
+                                    leidos, version(), new AdaptadorSwing(emisor), emisor, codec),
                             NOMBRE_HILO);
             hilo.setDaemon(true);
             hilo.start();
         } catch (RuntimeException e) {
-            System.err.println("[opsec-agente] El agente no se inició: " + e.getMessage());
+            RegistroAgente.error("El agente no se inició: " + e);
         }
     }
 
