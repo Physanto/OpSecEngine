@@ -25,13 +25,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            java: "17"
-          - os: windows-latest
-            java: "17"
-          - os: macos-latest
-            java: "17"
-          - os: ubuntu-latest
             java: "21"
+          - os: windows-latest
+            java: "21"
+          - os: macos-latest
+            java: "21"
+          - os: ubuntu-latest
+            java: "25"
     defaults:
       run:
         shell: bash
@@ -59,7 +59,7 @@ jobs:
         run: ./mvnw -B verify
 
       - name: Generar la documentación Javadoc
-        if: matrix.os == 'ubuntu-latest' && matrix.java == '17'
+        if: matrix.os == 'ubuntu-latest' && matrix.java == '21'
         run: ./mvnw -B -DskipTests javadoc:aggregate
 
       - name: Subir los reportes de pruebas
