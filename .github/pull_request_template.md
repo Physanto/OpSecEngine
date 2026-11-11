@@ -4,6 +4,8 @@
 
 Cierra #
 
+<!-- Una línea "Cierra #número" por cada issue terminada. -->
+
 ## Cómo probarlo
 
 <!-- Comandos o pasos para comprobar el cambio. -->
@@ -19,7 +21,7 @@ Cierra #
 
 ## Definición de Terminado
 
-- [ ] El PR apunta a `develop` (o a `main` solo desde `release/*` o `hotfix/*`).
+- [ ] El PR va de la rama del módulo (`modulo/*`) hacia `main`, y la rama ya trae lo último de `main`.
 - [ ] Tiene pruebas unitarias; si agrega un oráculo, incluye al menos una traza que lo activa y una que no.
 - [ ] `./mvnw -B verify` pasa y la CI está en verde, incluidos el formato y las reglas de dependencia.
 - [ ] No modifica archivos protegidos sin una solicitud de cambio de contrato aprobada.

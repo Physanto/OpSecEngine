@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.physanto.opsecengine</groupId>
         <artifactId>opsec-padre</artifactId>
-        <version>0.0.6</version>
+        <version>0.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>opsec-dominio</artifactId>
