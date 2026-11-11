@@ -16,8 +16,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -88,6 +91,11 @@ public final class BancoEvaluacion {
 
     private static void ejecutar(Path archivo, Path salida) throws Exception {
         Configuracion configuracion = leerConfiguracion(archivo);
+        Path inventario =
+                configuracion.inventario() == null
+                        ? null
+                        : archivo.getParent().resolve(configuracion.inventario()).normalize();
+        if (inventario != null) leerInventario(inventario, configuracion);
         List<Preparado> preparados = new ArrayList<>();
         ProyectoService servicio = new ProyectoService();
         for (Escenario escenario : configuracion.escenarios()) {
@@ -134,6 +142,7 @@ public final class BancoEvaluacion {
             Files.createDirectories(salida);
         }
         Files.copy(archivo, salida.resolve("banco.json"));
+        if (inventario != null) Files.copy(inventario, salida.resolve("inventario.json"));
         List<Registro> registros = new ArrayList<>();
         String inicio = Instant.now().toString();
         int limite =
@@ -152,6 +161,7 @@ public final class BancoEvaluacion {
                             System.getProperty("os.name") + " " + System.getProperty("os.version"),
                             hash(cli),
                             hash(salida.resolve("banco.json")),
+                            inventario == null ? null : hash(salida.resolve("inventario.json")),
                             registros));
         }
     }
@@ -239,6 +249,12 @@ public final class BancoEvaluacion {
         exigir(
                 ejecucion.registros().size() == configuracion.escenarios().size(),
                 "La ejecución quedó incompleta; no se imputan resultados a los escenarios ausentes");
+        if (configuracion.inventario() != null) {
+            exigir(
+                    hash(salida.resolve("inventario.json")).equals(ejecucion.sha256Inventario()),
+                    "El inventario cambió después de ejecutar");
+            leerInventario(salida.resolve("inventario.json"), configuracion);
+        }
         List<List<String>> filas = new ArrayList<>();
         int codigoBanco = 0;
         for (int indice = 0; indice < configuracion.escenarios().size(); indice++) {
@@ -302,7 +318,194 @@ public final class BancoEvaluacion {
                             error == null ? "" : error));
         }
         escribirTablas(salida, filas);
+        if (configuracion.inventario() != null && codigoBanco != 1)
+            escribirCobertura(salida, configuracion, ejecucion, codigoBanco);
         return codigoBanco;
+    }
+
+    private static Inventario leerInventario(Path archivo, Configuracion configuracion)
+            throws IOException {
+        Inventario inventario =
+                JSON.readValue(Files.readString(archivo, StandardCharsets.UTF_8), Inventario.class);
+        exigir(
+                inventario.version() == 1
+                        && inventario.aplicaciones() != null
+                        && !inventario.aplicaciones().isEmpty(),
+                "Inventario vacío o versión no admitida");
+        Set<String> ids = new HashSet<>();
+        for (Aplicacion app : inventario.aplicaciones()) {
+            exigir(
+                    app.id() != null && !app.id().isBlank() && ids.add(app.id()),
+                    "Aplicación vacía o repetida en inventario");
+            exigir(
+                    app.origen() != null
+                            && !app.origen().isBlank()
+                            && app.permiso() != null
+                            && !app.permiso().isBlank(),
+                    "Declare origen y referencia del permiso de cada aplicación");
+            exigir(
+                    app.alcance() != null && !app.alcance().isBlank(),
+                    "Declare el alcance del inventario de GUI");
+            validarListaInventario(app.ventanas(), "ventanas");
+            validarListaInventario(app.acciones(), "acciones");
+        }
+        for (Escenario escenario : configuracion.escenarios())
+            exigir(
+                    ids.contains(escenario.aplicacion()),
+                    "Aplicación sin inventario o permiso: " + escenario.aplicacion());
+        return inventario;
+    }
+
+    private static void validarListaInventario(List<String> valores, String campo) {
+        exigir(
+                valores != null && !valores.isEmpty(),
+                "Declare un denominador no vacío de " + campo);
+        Set<String> unicos = new HashSet<>();
+        for (String valor : valores)
+            exigir(
+                    valor != null && !valor.isBlank() && unicos.add(valor),
+                    "Inventario de " + campo + " con valores vacíos o repetidos");
+    }
+
+    private static void escribirCobertura(
+            Path salida, Configuracion configuracion, Ejecucion ejecucion, int codigoBanco)
+            throws Exception {
+        Inventario inventario = leerInventario(salida.resolve("inventario.json"), configuracion);
+        Map<String, GrupoCobertura> grupos = new TreeMap<>();
+        for (int indice = 0; indice < configuracion.escenarios().size(); indice++) {
+            Escenario escenario = configuracion.escenarios().get(indice);
+            String clave =
+                    JSON.writeValueAsString(List.of(escenario.aplicacion(), escenario.version()));
+            GrupoCobertura grupo =
+                    grupos.computeIfAbsent(
+                            clave,
+                            k ->
+                                    new GrupoCobertura(
+                                            escenario.aplicacion(),
+                                            escenario.version(),
+                                            new TreeSet<>(),
+                                            new TreeSet<>(),
+                                            new TreeSet<>()));
+            Registro registro = ejecucion.registros().get(indice);
+            JsonNode informe =
+                    JSON.readTree(
+                            Files.readString(
+                                    salida.resolve(registro.informe()), StandardCharsets.UTF_8));
+            for (JsonNode caso : informe.path("casos")) {
+                Map<Integer, String> inicios = new TreeMap<>();
+                for (JsonNode evento : caso.path("traza").path("eventos")) {
+                    String tipo = evento.path("tipo").asText();
+                    JsonNode datos = evento.path("datos");
+                    int paso = evento.path("contexto").path("numeroPaso").asInt(-1);
+                    if (tipo.equals("VENTANA_ABIERTA") && !datos.path("titulo").asText().isBlank())
+                        grupo.ventanas().add(datos.path("titulo").asText());
+                    if (tipo.equals("PASO_INICIO") && paso >= 0) {
+                        String accion = datos.path("accion").asText();
+                        // Las esperas/capturas no cuentan como acciones de interacción.
+                        if (Set.of(
+                                        "PULSAR",
+                                        "LLENAR",
+                                        "SELECCIONAR",
+                                        "MARCAR",
+                                        "IR_A",
+                                        "CERRAR_VENTANA")
+                                .contains(accion)) {
+                            grupo.tiposObservados().add("ACCIONES");
+                            inicios.put(paso, accion + "|" + datos.path("objetivo").asText());
+                        }
+                    }
+                    if (tipo.equals("PASO_FIN")) {
+                        String accion = inicios.remove(paso);
+                        if (accion != null && datos.path("codigo").asText().equals("OK"))
+                            grupo.acciones().add(accion);
+                    }
+                }
+            }
+        }
+        var documento =
+                JSON.createObjectNode()
+                        .put("version", 1)
+                        .put("codigoBanco", codigoBanco)
+                        .put("sha256Inventario", ejecucion.sha256Inventario());
+        documento.putNull("coberturaCodigo"); // No existe instrumentación JaCoCo integrada.
+        var filasJson = documento.putArray("resultados");
+        List<List<String>> filas = new ArrayList<>();
+        for (Aplicacion app : inventario.aplicaciones()) {
+            List<GrupoCobertura> deApp =
+                    grupos.values().stream().filter(g -> g.aplicacion().equals(app.id())).toList();
+            if (deApp.isEmpty())
+                deApp =
+                        List.of(
+                                new GrupoCobertura(
+                                        app.id(), "SIN_EJECUCION", Set.of(), Set.of(), Set.of()));
+            for (GrupoCobertura grupo : deApp) {
+                Set<String> ventanas = new TreeSet<>(grupo.ventanas());
+                ventanas.retainAll(app.ventanas());
+                Set<String> acciones = new TreeSet<>(grupo.acciones());
+                acciones.retainAll(app.acciones());
+                Set<String> fueraVentanas = new TreeSet<>(grupo.ventanas());
+                fueraVentanas.removeAll(app.ventanas());
+                Set<String> fueraAcciones = new TreeSet<>(grupo.acciones());
+                fueraAcciones.removeAll(app.acciones());
+                boolean hayVentanas = !grupo.ventanas().isEmpty();
+                boolean hayAcciones = grupo.tiposObservados().contains("ACCIONES");
+                var fila =
+                        filasJson
+                                .addObject()
+                                .put("aplicacion", app.id())
+                                .put("version", grupo.version())
+                                .put("origen", app.origen())
+                                .put("permiso", app.permiso())
+                                .put("alcance", app.alcance())
+                                .put("ventanasInventariadas", app.ventanas().size())
+                                .put("accionesInventariadas", app.acciones().size());
+                fila.set("ventanasEjercitadas", JSON.valueToTree(ventanas));
+                fila.set("accionesEjercitadas", JSON.valueToTree(acciones));
+                fila.set("ventanasFueraInventario", JSON.valueToTree(fueraVentanas));
+                fila.set("accionesFueraInventario", JSON.valueToTree(fueraAcciones));
+                String pv = porcentaje(ventanas.size(), app.ventanas().size(), hayVentanas);
+                String pa = porcentaje(acciones.size(), app.acciones().size(), hayAcciones);
+                if (hayVentanas) fila.put("ventanasPorcentaje", Double.parseDouble(pv));
+                else fila.putNull("ventanasPorcentaje");
+                if (hayAcciones) fila.put("accionesPorcentaje", Double.parseDouble(pa));
+                else fila.putNull("accionesPorcentaje");
+                filas.add(
+                        List.of(
+                                app.id(),
+                                grupo.version(),
+                                String.valueOf(ventanas.size()),
+                                String.valueOf(app.ventanas().size()),
+                                pv,
+                                String.valueOf(acciones.size()),
+                                String.valueOf(app.acciones().size()),
+                                pa,
+                                hayVentanas && hayAcciones
+                                        ? "OBSERVADA"
+                                        : "SIN_EVENTOS_SUFICIENTES"));
+            }
+        }
+        Files.writeString(
+                salida.resolve("cobertura.json"),
+                JSON.writeValueAsString(documento) + "\n",
+                StandardCharsets.UTF_8);
+        escribirTablas(
+                salida,
+                "cobertura",
+                List.of(
+                        "aplicacion",
+                        "version",
+                        "ventanas_ejercitadas",
+                        "ventanas_inventariadas",
+                        "ventanas_pct",
+                        "acciones_ejercitadas",
+                        "acciones_inventariadas",
+                        "acciones_pct",
+                        "estado"),
+                filas);
+    }
+
+    private static String porcentaje(int observados, int total, boolean disponible) {
+        return disponible ? String.format(Locale.ROOT, "%.2f", observados * 100.0 / total) : "";
     }
 
     private static Medidas medir(JsonNode informe, Escenario escenario, Registro registro) {
@@ -456,8 +659,14 @@ public final class BancoEvaluacion {
     }
 
     private static void escribirTablas(Path salida, List<List<String>> filas) throws IOException {
+        escribirTablas(salida, "tabla", CABECERA, filas);
+    }
+
+    private static void escribirTablas(
+            Path salida, String prefijo, List<String> cabecera, List<List<String>> filas)
+            throws IOException {
         List<List<String>> todas = new ArrayList<>();
-        todas.add(CABECERA);
+        todas.add(cabecera);
         todas.addAll(filas);
         StringBuilder csv = new StringBuilder();
         StringBuilder md = new StringBuilder();
@@ -481,13 +690,13 @@ public final class BancoEvaluacion {
             if (indice == 0)
                 md.append("| ")
                         .append(
-                                CABECERA.stream()
+                                cabecera.stream()
                                         .map(valor -> "---")
                                         .collect(Collectors.joining(" | ")))
                         .append(" |\n");
         }
-        Files.writeString(salida.resolve("tabla.csv"), csv, StandardCharsets.UTF_8);
-        Files.writeString(salida.resolve("tabla.md"), md, StandardCharsets.UTF_8);
+        Files.writeString(salida.resolve(prefijo + ".csv"), csv, StandardCharsets.UTF_8);
+        Files.writeString(salida.resolve(prefijo + ".md"), md, StandardCharsets.UTF_8);
     }
 
     private static void exigir(boolean condicion, String mensaje) {
@@ -495,7 +704,24 @@ public final class BancoEvaluacion {
     }
 
     private record Configuracion(
-            int version, int tiempoMaximoSegundos, List<Escenario> escenarios) {}
+            int version, int tiempoMaximoSegundos, List<Escenario> escenarios, String inventario) {}
+
+    private record Inventario(int version, List<Aplicacion> aplicaciones) {}
+
+    private record Aplicacion(
+            String id,
+            String origen,
+            String permiso,
+            String alcance,
+            List<String> ventanas,
+            List<String> acciones) {}
+
+    private record GrupoCobertura(
+            String aplicacion,
+            String version,
+            Set<String> ventanas,
+            Set<String> acciones,
+            Set<String> tiposObservados) {}
 
     private record Escenario(
             String id,
@@ -534,6 +760,7 @@ public final class BancoEvaluacion {
             String sistema,
             String sha256Cli,
             String sha256Configuracion,
+            String sha256Inventario,
             List<Registro> registros) {}
 
     private record Medidas(

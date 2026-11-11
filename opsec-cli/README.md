@@ -56,6 +56,9 @@ prueba. Véase el [alcance y la verificación del laboratorio](../apps-practica/
 `BancoEvaluacionIT` verifica el [banco de métricas del laboratorio](../apps-practica/laboratorio/BANCO.md):
 ejecuciones reales, conteos de detecciones y falsos positivos, datos incompletos o
 alterados y reproducción idéntica de sus tablas desde los informes guardados.
+También comprueba el [banco con inventario de GUI](../apps-practica/laboratorio/AMPLIACION-BANCO.md):
+pasos fallidos, eventos duplicados, datos ausentes, referencia de permisos e
+integridad y reproducción de las métricas de cobertura.
 
 `IntegracionV03IT` valida la [matriz completa de integración](../apps-practica/laboratorio/INTEGRACION-V03.md).
 Su aceptación de los veinte perfiles solo se activa con `-Dopsec.integracion.v03=true`;

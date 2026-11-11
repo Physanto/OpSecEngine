@@ -114,7 +114,10 @@ class BancoEvaluacionIT {
     @Test
     void ejecutaLasVersionesRealesYReproduceLasTablasByteAByte() throws Exception {
         assumeThat(GraphicsEnvironment.isHeadless()).as("necesita pantalla").isFalse();
-        Path banco = raiz().resolve("apps-practica").resolve("laboratorio").resolve("banco.json");
+        Path banco =
+                raiz().resolve("apps-practica")
+                        .resolve("laboratorio")
+                        .resolve("banco-ampliado.json");
         Path salida = temporal.resolve("mediciones con espacios");
 
         Ejecucion ejecucion = ejecutar("ejecutar", banco.toString(), "--salida", salida.toString());
@@ -137,13 +140,140 @@ class BancoEvaluacionIT {
                         "\"f8-corregido\",\"clientes-vulnerable\",\"F8 corregido\",\"0\",\"0\",\"0\",\"0\",\"0\",");
         byte[] csv = Files.readAllBytes(salida.resolve("tabla.csv"));
         byte[] markdown = Files.readAllBytes(salida.resolve("tabla.md"));
+        byte[] cobertura = Files.readAllBytes(salida.resolve("cobertura.json"));
+        assertThat(JSON.readTree(cobertura).path("resultados").size()).isEqualTo(4);
         assertThat(ejecutar("resumir", salida.toString()).codigo()).isZero();
         assertThat(Files.readAllBytes(salida.resolve("tabla.csv"))).isEqualTo(csv);
         assertThat(Files.readAllBytes(salida.resolve("tabla.md"))).isEqualTo(markdown);
+        assertThat(Files.readAllBytes(salida.resolve("cobertura.json"))).isEqualTo(cobertura);
         Ejecucion repetida = ejecutar("ejecutar", banco.toString(), "--salida", salida.toString());
         assertThat(repetida.codigo()).isEqualTo(1);
         assertThat(repetida.salida()).contains("carpeta de salida debe estar vacía");
         assertThat(Files.readAllBytes(salida.resolve("tabla.csv"))).isEqualTo(csv);
+    }
+
+    @Test
+    void coberturaDeduplicaYNoCuentaPasosFallidosNiElementosFueraDeInventario() throws Exception {
+        Path salida = prepararCobertura(true);
+        Ejecucion resumen = ejecutar("resumir", salida.toString());
+        assertThat(resumen.codigo()).as(resumen.salida()).isZero();
+        var fila =
+                JSON.readTree(Files.readString(salida.resolve("cobertura.json")))
+                        .path("resultados")
+                        .get(0);
+        assertThat(fila.path("ventanasPorcentaje").asDouble()).isEqualTo(50.0);
+        assertThat(fila.path("accionesPorcentaje").asDouble()).isEqualTo(50.0);
+        assertThat(fila.path("ventanasEjercitadas").size()).isEqualTo(1);
+        assertThat(fila.path("accionesEjercitadas").size()).isEqualTo(1);
+        assertThat(fila.path("ventanasFueraInventario").get(0).asText()).isEqualTo("Extra");
+        for (String nombre : List.of("cobertura.json", "cobertura.csv", "cobertura.md")) {
+            byte[] antes = Files.readAllBytes(salida.resolve(nombre));
+            assertThat(ejecutar("resumir", salida.toString()).codigo()).isZero();
+            assertThat(Files.readAllBytes(salida.resolve(nombre))).isEqualTo(antes);
+        }
+    }
+
+    @Test
+    void coberturaSinEventosQuedaSinDatoEnVezDeInventarCero() throws Exception {
+        Path salida = prepararCobertura(false);
+        assertThat(ejecutar("resumir", salida.toString()).codigo()).isZero();
+        var fila =
+                JSON.readTree(Files.readString(salida.resolve("cobertura.json")))
+                        .path("resultados")
+                        .get(0);
+        assertThat(fila.path("ventanasPorcentaje").isNull()).isTrue();
+        assertThat(fila.path("accionesPorcentaje").isNull()).isTrue();
+        assertThat(Files.readString(salida.resolve("cobertura.csv")))
+                .contains("SIN_EVENTOS_SUFICIENTES");
+    }
+
+    @Test
+    void rechazaUnInventarioAlteradoDespuesDeEjecutar() throws Exception {
+        Path salida = prepararCobertura(true);
+        Files.writeString(salida.resolve("inventario.json"), "{}", StandardCharsets.UTF_8);
+        Ejecucion resumen = ejecutar("resumir", salida.toString());
+        assertThat(resumen.codigo()).isEqualTo(1);
+        assertThat(resumen.salida()).contains("El inventario cambió después de ejecutar");
+    }
+
+    @Test
+    void exigeReferenciaDePermisoAntesDeIntentarAbrirUnaAplicacion() throws Exception {
+        Path salida = prepararCobertura(true);
+        Path inventario = salida.resolve("inventario.json");
+        ObjectNode contenido = (ObjectNode) JSON.readTree(Files.readString(inventario));
+        ((ObjectNode) contenido.path("aplicaciones").get(0)).put("permiso", "");
+        Files.writeString(inventario, contenido.toString(), StandardCharsets.UTF_8);
+        Path destino = temporal.resolve("no debe crearse");
+        Ejecucion resultado =
+                ejecutar(
+                        "ejecutar",
+                        salida.resolve("banco.json").toString(),
+                        "--salida",
+                        destino.toString());
+        assertThat(resultado.codigo()).isEqualTo(1);
+        assertThat(resultado.salida()).contains("Declare origen y referencia del permiso");
+        assertThat(destino).doesNotExist();
+    }
+
+    private Path prepararCobertura(boolean eventos) throws Exception {
+        Path salida = crearResultadosControlados();
+        Path archivoBanco = salida.resolve("banco.json");
+        ObjectNode banco = (ObjectNode) JSON.readTree(Files.readString(archivoBanco));
+        var primero = banco.path("escenarios").get(0).deepCopy();
+        banco.putArray("escenarios").add(primero);
+        banco.put("inventario", "inventario.json");
+        Files.writeString(archivoBanco, banco.toString(), StandardCharsets.UTF_8);
+        Path informe = salida.resolve("tp").resolve("resultado.json");
+        ObjectNode resultado = (ObjectNode) JSON.readTree(Files.readString(informe));
+        if (eventos) {
+            ArrayNode traza =
+                    ((ObjectNode) resultado.path("casos").get(0))
+                            .putObject("traza")
+                            .putArray("eventos");
+            evento(traza, "VENTANA_ABIERTA", 0).putObject("datos").put("titulo", "Portada");
+            evento(traza, "VENTANA_ABIERTA", 0).putObject("datos").put("titulo", "Portada");
+            evento(traza, "VENTANA_ABIERTA", 0).putObject("datos").put("titulo", "Extra");
+            evento(traza, "PASO_INICIO", 1)
+                    .putObject("datos")
+                    .put("accion", "PULSAR")
+                    .put("objetivo", "boton1");
+            evento(traza, "PASO_FIN", 1).putObject("datos").put("codigo", "OK");
+            evento(traza, "PASO_FIN", 1).putObject("datos").put("codigo", "OK");
+            evento(traza, "PASO_INICIO", 2)
+                    .putObject("datos")
+                    .put("accion", "PULSAR")
+                    .put("objetivo", "boton2");
+            evento(traza, "PASO_FIN", 2).putObject("datos").put("codigo", "ERROR");
+        }
+        Files.writeString(informe, resultado.toString(), StandardCharsets.UTF_8);
+        ObjectNode inventario = JSON.createObjectNode().put("version", 1);
+        ObjectNode app =
+                inventario
+                        .putArray("aplicaciones")
+                        .addObject()
+                        .put("id", "Aplicación, \"A\"")
+                        .put("origen", "Fixture de prueba")
+                        .put("permiso", "Referencia simulada solo para esta prueba")
+                        .put("alcance", "Dos ventanas y dos acciones controladas");
+        app.putArray("ventanas").add("Portada").add("Otra");
+        app.putArray("acciones").add("PULSAR|boton1").add("PULSAR|boton2");
+        Path archivoInventario = salida.resolve("inventario.json");
+        Files.writeString(archivoInventario, inventario.toString(), StandardCharsets.UTF_8);
+        Path archivoEjecucion = salida.resolve("ejecucion.json");
+        ObjectNode ejecucion = (ObjectNode) JSON.readTree(Files.readString(archivoEjecucion));
+        ObjectNode registro = (ObjectNode) ejecucion.path("registros").get(0).deepCopy();
+        registro.put("sha256Informe", hash(informe));
+        ejecucion.putArray("registros").add(registro);
+        ejecucion.put("sha256Configuracion", hash(archivoBanco));
+        ejecucion.put("sha256Inventario", hash(archivoInventario));
+        Files.writeString(archivoEjecucion, ejecucion.toString(), StandardCharsets.UTF_8);
+        return salida;
+    }
+
+    private static ObjectNode evento(ArrayNode traza, String tipo, int paso) {
+        ObjectNode evento = traza.addObject().put("tipo", tipo);
+        evento.putObject("contexto").put("numeroPaso", paso);
+        return evento;
     }
 
     private Path crearResultadosControlados() throws Exception {

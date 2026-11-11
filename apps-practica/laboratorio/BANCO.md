@@ -10,6 +10,8 @@ variantes evaluables: F6 y F8, vulnerables y corregidas. El registro admite otra
 apps y versiones mediante más escenarios; no se han incorporado apps externas
 ni se atribuyen resultados a oráculos todavía no implementados. La ampliación del
 conjunto de apps corresponde a #70 y la detección completa de v0.3 a #67.
+La [preparación de #70](AMPLIACION-BANCO.md) añade el campo opcional `inventario`
+y las tablas de cobertura GUI, conservando los escenarios y métricas originales.
 
 ## Ejecutar en Windows, Linux y macOS
 

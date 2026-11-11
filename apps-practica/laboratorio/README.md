@@ -13,6 +13,9 @@ El informe actual es `resultado.json`, con traza y hallazgos; no se genera HTML.
 
 El [banco de evaluación (#66)](BANCO.md) ejecuta listas de aplicaciones y versiones
 desde Java y genera tablas CSV/Markdown de detecciones, falsos positivos y tiempos.
+La [preparación del banco ampliado (#70)](AMPLIACION-BANCO.md) añade un inventario
+de GUI, procedencia/permisos y cobertura reproducible por aplicación y versión.
+La incorporación de apps externas autorizadas sigue pendiente.
 
 La [preparación de integración v0.3 (#67)](INTEGRACION-V03.md) contiene los veinte
 perfiles de F1–F10 y una aceptación optativa que exige todas las dependencias.
