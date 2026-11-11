@@ -30,8 +30,6 @@ jobs:
             java: "21"
           - os: macos-latest
             java: "21"
-          - os: ubuntu-latest
-            java: "25"
     defaults:
       run:
         shell: bash
@@ -59,8 +57,9 @@ jobs:
         run: ./mvnw -B verify
 
       - name: Generar la documentación Javadoc
-        if: matrix.os == 'ubuntu-latest' && matrix.java == '21'
-        run: ./mvnw -B -DskipTests javadoc:aggregate
+        # package en la misma ejecución: la CLI copia el jar del agente, que no está en ~/.m2
+        if: runner.os == 'Linux'
+        run: ./mvnw -B -DskipTests package javadoc:aggregate
 
       - name: Subir los reportes de pruebas
         if: failure()

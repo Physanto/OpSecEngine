@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/imagenes/logo.png" alt="OpSecEngine: Opcode Security Engine" width="100%">
+</p>
+
 # OpSecEngine
 
 [![CI](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml)
@@ -17,7 +21,7 @@ Ideas principales:
 
 ## Estado del proyecto
 
-En construcción: base del proyecto terminada (versión `0.0.5`) y desarrollo de la v0.1 en curso. Ya se puede ver una primera demo de punta a punta: [`demo/`](demo/README.md) detecta una contraseña escrita en la consola (CWE-532) en la app de práctica.
+En construcción: base del proyecto terminada (versión `0.0.6`) y desarrollo de la v0.1 en curso. Ya se puede ver una primera demo de punta a punta: [`demo/`](demo/README.md) detecta una contraseña escrita en la consola (CWE-532) en la app de práctica.
 
 Ya está disponible:
 
@@ -43,7 +47,7 @@ Hoja de ruta:
 
 ## Requisitos
 
-Solo se necesita un **JDK 21 o superior** (probado con 21 y 25). Las aplicaciones que se prueban pueden ser de Java 8 en adelante: corren en su propia JVM y el agente se compila para Java 8. No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
+Solo se necesita un **JDK 21**, la versión con la que trabaja el equipo y prueba la CI. Las aplicaciones que se prueban pueden ser de Java 8 en adelante: corren en su propia JVM y el agente se compila para Java 8. No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
 
 ## Compilar y probar
 
@@ -75,7 +79,7 @@ Otros comandos útiles:
 
 ```sh
 ./mvnw spotless:apply                       # aplica el formato automático
-./mvnw -B -DskipTests javadoc:aggregate     # documentación en target/reports/apidocs/
+./mvnw -B -DskipTests package javadoc:aggregate   # documentación en target/reports/apidocs/
 ./mvnw -B verify -pl opsec-oraculos -am     # un solo módulo y sus dependencias
 ```
 
@@ -120,6 +124,7 @@ OpSecEngine/
 ├── pom.xml                       pom padre: módulos y versiones fijas
 ├── mvnw, mvnw.cmd, .mvn/         Maven Wrapper
 ├── build-tools/                  configuración de calidad (Checkstyle)
+├── docs/imagenes/                imágenes del README
 ├── contratos/
 │   ├── esquemas/                 JSON Schema de proyecto, suite, payload, regla de oráculo y traza
 │   ├── catalogos/                eventos, oráculos, códigos de resultado y CWE

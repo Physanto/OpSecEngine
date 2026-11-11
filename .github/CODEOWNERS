@@ -8,11 +8,10 @@
 #   Líder y P1 (agente) ....................... @Physanto
 #   P2 (oráculos y ataques) ................... @marlon890
 #   P3, salidas (informes y CLI) .............. @hiTimmyy
-#   P3, laboratorio (app de práctica) ......... usuario pendiente
+#   P3, laboratorio (app de práctica) ......... @felipegalindez5-hue
 #
-# Cuando se conozca el usuario de P3 (laboratorio), agregarlo delante de
-# @Physanto en la línea de /apps-practica/. Cada usuario listado aquí debe
-# ser colaborador del repositorio con permiso Write.
+# Cada usuario listado aquí debe ser colaborador del repositorio con permiso
+# Write; si no, GitHub ignora la regla.
 
 # Por defecto, el líder revisa todo
 *                                       @Physanto
@@ -26,8 +25,8 @@
 # P3, salidas
 /opsec-informes/                        @hiTimmyy @Physanto
 /opsec-cli/                             @hiTimmyy @Physanto
-# P3, laboratorio (usuario pendiente)
-/apps-practica/                         @Physanto
+# P3, laboratorio
+/apps-practica/                         @felipegalindez5-hue @Physanto
 /opsec-nucleo/                          @Physanto
 
 # Contratos y archivos protegidos: solo el líder
