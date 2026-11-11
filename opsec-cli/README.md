@@ -2,7 +2,7 @@
 
 Interfaz de línea de comandos del motor (comando `opsec`). Hoy tiene `version`, `validar` y una primera versión de `ejecutar`; `explorar`, `generar`, `informe` y `verificar` llegan desde la v0.1. Solo habla con los servicios del núcleo.
 
-- **Dueño:** P3.
+- **Dueño:** P3 (salidas).
 - **Paquete raíz:** `io.github.physanto.opsecengine.cli`
 
 ## Uso
@@ -25,7 +25,7 @@ El jar trae dentro el jar del agente (recurso `opsec-agente.jar`, que se copia a
 
 Códigos de salida: 0 si todo salió bien (en `ejecutar`, si todos los casos cumplen), 1 si hay errores en los archivos o no se pudo ejecutar, 2 si los argumentos no son válidos, 3 si algún caso no cumple y 4 si ninguno falla pero alguno quedó no concluyente. Los códigos 3 y 4 permiten usar `opsec ejecutar` en una CI.
 
-## Pendiente para el dueño del módulo (P3)
+## Pendiente para el dueño del módulo (P3, salidas)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 

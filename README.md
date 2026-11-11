@@ -103,11 +103,11 @@ Ver [`demo/README.md`](demo/README.md) para la demo completa.
 | `opsec-nucleo` | Servicios de aplicación: proyectos, sesiones, ejecución, evaluación, informes; cliente del agente y lanzador de procesos. | 21 | Líder |
 | `opsec-oraculos` | Oráculos incluidos, descubiertos con `ServiceLoader`. | 21 | P2 |
 | `opsec-ataques` | Biblioteca de payloads en YAML y su cargador. | 21 | P2 |
-| `opsec-informes` | Reporteros: HTML, JSON, JUnit XML y SARIF. | 21 | P3 |
-| `opsec-cli` | Línea de comandos `opsec`. | 21 | P3 |
+| `opsec-informes` | Reporteros: HTML, JSON, JUnit XML y SARIF. | 21 | P3 (salidas) |
+| `opsec-cli` | Línea de comandos `opsec`. | 21 | P3 (salidas) |
 | `opsec-soporte-pruebas` | Dobles de prueba compartidos y datos de ejemplo. Solo se usa en pruebas. | 21 | Líder |
 | `opsec-verificacion` | Pruebas de arquitectura (ArchUnit) y de contratos. Sin código principal. | 21 | Líder |
-| `apps-practica/clientes-vulnerable` | App Swing con fallos sembrados, para evaluar el motor y para docencia. | 11 | P3 |
+| `apps-practica/clientes-vulnerable` | App Swing con fallos sembrados, para evaluar el motor y para docencia. | 11 | P3 (laboratorio) |
 
 Reglas de dependencia: `opsec-dominio` no depende de nada; `opsec-agente` solo depende de `opsec-protocolo`; oráculos, ataques e informes dependen solo del dominio; las presentaciones (como la CLI) solo hablan con el núcleo, y ningún módulo depende de una presentación. Las reglas se comprueban en cada build.
 
