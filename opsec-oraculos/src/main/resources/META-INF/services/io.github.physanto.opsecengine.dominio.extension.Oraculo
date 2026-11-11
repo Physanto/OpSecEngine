@@ -1,3 +1,4 @@
 io.github.physanto.opsecengine.oraculos.OraculoExcepcionNoCapturada
 io.github.physanto.opsecengine.oraculos.OraculoContrasenaEnConsola
 io.github.physanto.opsecengine.oraculos.OraculoTrazaEnDialogo
+io.github.physanto.opsecengine.oraculos.OraculoAppTerminada
