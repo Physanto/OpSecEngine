@@ -33,6 +33,26 @@ El prefijo conserva la detección de contraseñas obtenidas de `PASO_INICIO`, au
 trabajo cuadrático con trazas largas. El núcleo todavía debe conectar estas llamadas a su ejecución;
 esta implementación no modifica `EvaluacionService` ni `EjecucionService`.
 
+## Evaluación temporal de validación (#38)
+
+`EvaluadorValidacionTemporal.evaluar(traza, politica)` evalúa al terminar el caso una
+`PoliticaValidacionTemporal`: caso, paso `LLENAR`, paso posterior `PULSAR`, valor declarado
+inválido y señales explícitas de aceptación y rechazo. Cada `Senal` combina un tipo de evento
+(`DIALOGO`, `SESION` o `ESTADO`) con igualdades sobre sus datos. Las señales deben describir la
+semántica de la app; un `PASO_FIN` con `OK` no demuestra aceptación de la entrada.
+
+Exige que la escritura termine correctamente y considera solo respuestas del caso y paso de envío,
+posteriores a este y anteriores a la siguiente acción. La aceptación produce `NO_CUMPLE` con un
+hallazgo `PROBABLE`; el rechazo explícito con envío terminado produce `CUMPLE`. La falta de
+evidencia produce `NO_CONCLUYENTE`. No copia el valor probado ni los mensajes de la app al hallazgo.
+Una señal de aceptación tardía atribuida al envío, después de comenzar otra acción, también deja
+el resultado no concluyente si todavía no se había observado una aceptación dentro del intervalo.
+
+Esta evaluación no se registra con `ServiceLoader` ni se conecta automáticamente a la CLI, al
+generador de la #37 o al núcleo. El llamador debe conservar el `Veredicto` completo y combinarlo
+con los oráculos implícitos existentes. La solicitud [solicitud-contrato-38.md](solicitud-contrato-38.md)
+propone el id, el CWE y la ampliación necesaria para preservar los tres estados en el contrato.
+
 ## Generación de validación con adaptador temporal
 
 `GeneradorValidacion` implementa `GeneradorCasos` para el enfoque `VALIDACION`. El constructor
