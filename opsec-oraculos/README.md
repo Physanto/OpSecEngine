@@ -18,7 +18,17 @@ Su prueba, `OraculoExcepcionNoCapturadaTest`, carga con `CargadorTrazas` de `ops
 | `EXCEPCION-NO-CAPTURADA` | `OraculoExcepcionNoCapturada` | `EVENTO` | — | Un evento `EXCEPCION` con `capturada=false`. |
 | `APP-TERMINADA` | `OraculoAppTerminada` | `EVENTO` | — | Un evento `APP_TERMINADA` con el booleano `esperada=false`, incluso con código de salida cero. Ignora cierres esperados, el cierre de ventanas y campos ausentes o mal tipados. El agente o el núcleo deben emitir el evento; el oráculo no observa procesos directamente. |
 | `TRAZA-EN-DIALOGO` | `OraculoTrazaEnDialogo` | `EVENTO` | CWE-209 | El campo `texto` de un `DIALOGO` contiene una firma de excepción o una línea de pila Java. Detecta clases calificadas, excepciones sin paquete seguidas de dos puntos y marcos con archivo y línea, `Native Method` o `Unknown Source`. No copia el mensaje al hallazgo ni marca palabras genéricas como «error». |
-| `CONTRASENA-EN-CONSOLA` | `OraculoContrasenaEnConsola` | `EVENTO` | CWE-532 | Una línea `CONSOLA` que contiene una contraseña de prueba: la de un rol del proyecto o la escrita con `LLENAR` en un campo cuyo localizador menciona contraseña, password, clave o pass. Ignora contraseñas de menos de 4 caracteres y nunca copia la contraseña en el hallazgo. Lo activa el fallo F6 de la app de práctica. |
+| `CONTRASENA-EN-CONSOLA` | `OraculoContrasenaEnConsola` | `EVENTO` | CWE-532 | Una contraseña de un rol, un valor escrito en un campo de contraseña o el canario asociado a ese valor aparece en `CONSOLA`. Reconoce palabras del localizador y `JPasswordField` en `PASO_FIN.componente`. Ignora valores y marcas de menos de 4 caracteres. No copia valores, marcas, localizadores ni líneas de consola al hallazgo. Lo activa el fallo F6 de la app de práctica. |
+
+Para los payloads generados por la #37, el canario se obtiene de
+`Caso.extensiones().get("validacion")`, campo `canario`. Solo se rastrea tras observarlo dentro
+del valor de un `LLENAR` sensible del mismo caso. Un canario escrito únicamente en usuario o
+búsqueda no activa este oráculo. La evidencia del rastreo incluye las secuencias de escritura
+y consola; los valores completos de contraseña conservan la secuencia de consola como evidencia.
+Los nombres se separan por palabras y camelCase: `txtPassword` cuenta como sensible y `bypass`
+no. Un `PASO_FIN` con `OK` y componente `JPasswordField` identifica también campos de nombre opaco.
+Las variables deben llegar materializadas desde la ejecución; el oráculo no carga ni expande
+la biblioteca de ataques. El rastreo por canario requiere los metadatos indicados.
 
 ## Evaluación por momento
 
@@ -97,8 +107,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. `CONTRASENA-EN-CONSOLA`: buscar también los payloads con `{contrasena}` y los canarios cuando lleguen los ataques (v0.2).
-2. Oráculos de seguridad del catálogo (v0.3): `SIN-SESION`, `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos de seguridad del catálogo (v0.3): `SIN-SESION`, `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
 ## Dependencias permitidas
 
