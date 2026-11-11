@@ -1,0 +1,36 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "NUMERICO-NEGATIVO"
+  categoria: "NUMERICOS"
+  aplica_a: ["NUMERO", "IDENTIFICADOR"]
+  payload: "-1"
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Entero negativo."
+
+- id: "NUMERICO-DESBORDE"
+  categoria: "NUMERICOS"
+  aplica_a: ["NUMERO", "IDENTIFICADOR"]
+  payload: "9223372036854775808"
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Valor superior al máximo de un entero con signo de 64 bits."
+
+- id: "NUMERICO-COMA"
+  categoria: "NUMERICOS"
+  aplica_a: ["NUMERO", "IDENTIFICADOR"]
+  payload: "1,5"
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Decimal escrito con coma."
+
+- id: "NUMERICO-NAN"
+  categoria: "NUMERICOS"
+  aplica_a: ["NUMERO", "IDENTIFICADOR"]
+  payload: "NaN"
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Valor no numérico admitido por algunos conversores de punto flotante."
+
+- id: "NUMERICO-CEROS"
+  categoria: "NUMERICOS"
+  aplica_a: ["NUMERO", "IDENTIFICADOR"]
+  payload: "000123"
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Entero con ceros iniciales; permite comprobar si se conserva su representación."

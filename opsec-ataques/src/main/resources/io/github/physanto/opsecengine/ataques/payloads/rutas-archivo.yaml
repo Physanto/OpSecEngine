@@ -1,0 +1,17 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "RUTA-RELATIVA-UNIX-CANARIO"
+  categoria: "RUTAS_ARCHIVO"
+  aplica_a: ["TEXTO", "IDENTIFICADOR"]
+  payload: "../../{canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Recorrido de carpetas con separadores de Unix."
+
+- id: "RUTA-RELATIVA-WINDOWS-CANARIO"
+  categoria: "RUTAS_ARCHIVO"
+  aplica_a: ["TEXTO", "IDENTIFICADOR"]
+  payload: "..\\..\\{canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Recorrido de carpetas con separadores de Windows."
