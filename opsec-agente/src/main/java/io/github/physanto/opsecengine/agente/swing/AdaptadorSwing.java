@@ -28,11 +28,11 @@ import javax.swing.text.JTextComponent;
 /**
  * Implementación mínima de {@link AdaptadorToolkit} para Swing.
  *
- * <p><b>Alcance actual (demo).</b> Ejecuta en modo {@code SEMANTICO} las acciones:
+ * <p>Ejecuta en los modos {@code SEMANTICO} y {@code EVENTOS} las acciones:
  *
  * <ul>
- *   <li>{@code PULSAR}: {@code doClick()} sobre un botón.
- *   <li>{@code LLENAR}: {@code setText(valor)} sobre un campo de texto editable.
+ *   <li>{@code PULSAR}: {@code doClick()} o eventos de ratón sobre un botón.
+ *   <li>{@code LLENAR}: {@code setText(valor)} o eventos de teclado sobre un campo editable.
  *   <li>{@code ESPERAR}: sin objetivo, espera los milisegundos del valor; con objetivo, espera a
  *       que el componente o la ventana aparezca.
  * </ul>
@@ -52,6 +52,9 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
 
     /** Modo de acción soportado. */
     public static final String MODO_SEMANTICO = "SEMANTICO";
+
+    /** Modo de eventos sintéticos de ratón y teclado, sin depender del foco nativo. */
+    public static final String MODO_EVENTOS = "EVENTOS";
 
     /** Tiempo máximo de las lecturas en el EDT, como la del árbol. */
     private static final long ESPERA_LECTURA_MS = 5_000;
@@ -154,13 +157,15 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
 
     private Resultado ejecutarPaso(PasoDto paso, long inicio) throws InterruptedException {
         String accion = paso.getAccion();
-        if (!MODO_SEMANTICO.equals(paso.getModo())) {
+        if (!MODO_SEMANTICO.equals(paso.getModo()) && !MODO_EVENTOS.equals(paso.getModo())) {
             return new Resultado(
                     CodigoResultado.ERROR,
                     "El modo "
                             + paso.getModo()
                             + " todavía no está implementado en el agente; use el modo "
-                            + MODO_SEMANTICO);
+                            + MODO_SEMANTICO
+                            + " o "
+                            + MODO_EVENTOS);
         }
         long limite = inicio + TimeUnit.MILLISECONDS.toNanos(paso.getEsperaMaximaMs());
         switch (accion) {
@@ -190,15 +195,31 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
         if (!encontrado.isEncontrado()) {
             return new Resultado(encontrado.getCodigo(), encontrado.getDetalle());
         }
+        AtomicReference<Resultado> rechazo = new AtomicReference<>();
+        Resultado resultado = ejecutarAccion(() -> rechazo.set(actuarEnEdt(paso)), limite);
+        return rechazo.get() == null ? resultado : rechazo.get();
+    }
+
+    /** Revalida el objetivo y actúa en el EDT, sin leer propiedades Swing desde el servidor. */
+    private Resultado actuarEnEdt(PasoDto paso) {
+        Busqueda busqueda = BuscadorComponentes.buscar(paso.getLocalizador());
+        if (!busqueda.resultado().isEncontrado()) {
+            return new Resultado(
+                    busqueda.resultado().getCodigo(), busqueda.resultado().getDetalle());
+        }
         Component componente = busqueda.componente();
-        Runnable accion;
+        boolean eventos = MODO_EVENTOS.equals(paso.getModo());
         if ("PULSAR".equals(paso.getAccion())) {
             if (!(componente instanceof AbstractButton)) {
                 return new Resultado(
                         CodigoResultado.ERROR,
                         "No se puede pulsar un " + componente.getClass().getName());
             }
-            accion = ((AbstractButton) componente)::doClick;
+            if (eventos) {
+                AccionesEventos.pulsar((AbstractButton) componente);
+            } else {
+                ((AbstractButton) componente).doClick();
+            }
         } else {
             if (!(componente instanceof JTextComponent)) {
                 return new Resultado(
@@ -211,9 +232,13 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
                         CodigoResultado.NO_ALCANZABLE, "El campo de texto no es editable");
             }
             String valor = paso.getValor() == null ? "" : paso.getValor();
-            accion = () -> campo.setText(valor);
+            if (eventos) {
+                AccionesEventos.llenar(campo, valor);
+            } else {
+                campo.setText(valor);
+            }
         }
-        return ejecutarAccion(accion, limite);
+        return null;
     }
 
     private Resultado ejecutarAccion(Runnable accion, long limite) throws InterruptedException {
