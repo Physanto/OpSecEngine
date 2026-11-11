@@ -1,0 +1,16 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f1
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F1-CASO
+    oraculos: [CREDENCIALES-DEBILES]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "soporte", Contraseña: "soporte123"}
+      - pulsar: Iniciar Sesion
+      - esperar: {tituloVentana: Menú administrador}

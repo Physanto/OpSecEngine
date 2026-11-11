@@ -57,6 +57,11 @@ prueba. Véase el [alcance y la verificación del laboratorio](../apps-practica/
 ejecuciones reales, conteos de detecciones y falsos positivos, datos incompletos o
 alterados y reproducción idéntica de sus tablas desde los informes guardados.
 
+`IntegracionV03IT` valida la [matriz completa de integración](../apps-practica/laboratorio/INTEGRACION-V03.md).
+Su aceptación de los veinte perfiles solo se activa con `-Dopsec.integracion.v03=true`;
+la ejecución normal comprueba la preparación y registra los bloqueos. Una omisión
+de la aceptación completa no significa que #67 esté terminada.
+
 Desde la raíz del repositorio:
 
 ```sh

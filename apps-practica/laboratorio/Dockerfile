@@ -32,6 +32,7 @@ COPY --from=compilacion /fuentes/opsec-cli/target/opsec-[0-9]*.jar ./opsec.jar
 COPY --from=compilacion /fuentes/apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar ./apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
 COPY --from=compilacion /fuentes/demo/ ./demo/
 COPY --from=compilacion /fuentes/apps-practica/laboratorio/BancoEvaluacion.java /fuentes/apps-practica/laboratorio/banco.json ./apps-practica/laboratorio/
+COPY --from=compilacion /fuentes/apps-practica/laboratorio/integracion-v03/ ./apps-practica/laboratorio/integracion-v03/
 COPY --from=compilacion /fuentes/apps-practica/clientes-vulnerable/ejemplos/f8/ ./apps-practica/clientes-vulnerable/ejemplos/f8/
 
 USER opsec

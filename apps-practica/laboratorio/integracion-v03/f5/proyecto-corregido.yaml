@@ -1,0 +1,7 @@
+# Integración #67: F5 corregido. Validar no equivale a detectar.
+nombre: integracion-f5-corregido
+app:
+  jar: ../../../clientes-vulnerable/target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=todos"]
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}

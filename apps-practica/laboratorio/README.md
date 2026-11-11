@@ -14,6 +14,9 @@ El informe actual es `resultado.json`, con traza y hallazgos; no se genera HTML.
 El [banco de evaluación (#66)](BANCO.md) ejecuta listas de aplicaciones y versiones
 desde Java y genera tablas CSV/Markdown de detecciones, falsos positivos y tiempos.
 
+La [preparación de integración v0.3 (#67)](INTEGRACION-V03.md) contiene los veinte
+perfiles de F1–F10 y una aceptación optativa que exige todas las dependencias.
+
 ## Requisitos y construcción
 
 - Docker con soporte para contenedores Linux (en Windows, Docker Desktop iniciado
