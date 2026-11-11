@@ -2,7 +2,7 @@
 
 Reporteros de resultados: HTML con capturas, JSON, JUnit XML y SARIF. Cada uno implementa `Reportero` y el núcleo los descubre con `ServiceLoader`.
 
-- **Dueño:** P3.
+- **Dueño:** P3 (salidas).
 - **Paquete raíz:** `io.github.physanto.opsecengine.informes`
 
 ## Ejemplo de referencia

@@ -2,7 +2,7 @@
 
 Aplicación Swing de práctica con fallos sembrados, que sirve de objetivo para evaluar el motor y para docencia. Imita un proyecto típico de estudiantes (portada, selección de modo, inicio de sesión, menús por rol y gestión de personas) con una base H2 embebida en memoria. Su artifactId es `opsec-clientes-vulnerable`.
 
-- **Dueño:** P3.
+- **Dueño:** P3 (laboratorio).
 - **Paquete raíz:** `io.github.physanto.opsecengine.practica`
 - **Versión de Java:** compila con `--release 11`, porque H2 2.x se publica para Java 11. Se ejecuta con Java 11 o superior.
 
