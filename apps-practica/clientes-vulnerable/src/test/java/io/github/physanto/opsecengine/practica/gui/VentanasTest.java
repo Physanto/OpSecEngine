@@ -82,7 +82,8 @@ class VentanasTest {
         JFrame portada = crear(() -> new Portada(contexto));
 
         assertThat(portada.getTitle()).isEqualTo("Portada");
-        assertThat(textosDeBotones(portada)).containsExactly("Avanzar", "Componentes");
+        assertThat(textosDeBotones(portada))
+                .containsExactly("Avanzar", "Componentes", "Rendimiento");
     }
 
     @Test

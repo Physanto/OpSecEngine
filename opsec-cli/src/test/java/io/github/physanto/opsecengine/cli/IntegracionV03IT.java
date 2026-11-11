@@ -221,7 +221,11 @@ class IntegracionV03IT {
                         .map(arg -> arg.substring("-Dpractica.corregir=".length()))
                         .findFirst()
                         .orElseThrow();
-        Set<String> resultado = new HashSet<>(TODOS);
+        // La matriz v0.3 sigue cubriendo F1–F10; los perfiles corrigen también F11–F13 de v0.5.
+        Set<String> resultado =
+                IntStream.rangeClosed(1, 13)
+                        .mapToObj(numero -> "F" + numero)
+                        .collect(Collectors.toSet());
         if (valor.equals("todos")) resultado.clear();
         else resultado.removeAll(List.of(valor.split(",")));
         return resultado;

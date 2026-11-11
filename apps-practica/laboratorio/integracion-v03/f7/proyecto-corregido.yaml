@@ -2,6 +2,6 @@
 nombre: integracion-f7-corregido
 app:
   jar: ../../../clientes-vulnerable/target/clientes-vulnerable.jar
-  argumentosJvm: ["-Dpractica.corregir=F1,F2,F3,F5,F6,F7,F8,F9,F10"]
+  argumentosJvm: ["-Dpractica.corregir=F1,F2,F3,F5,F6,F7,F8,F9,F10,F11,F12,F13"]
 roles:
   admin: {usuario: Admin, contrasena: "Admin#2026"}

@@ -1,6 +1,6 @@
 # Fallos sembrados en clientes-vulnerable
 
-La app trae diez fallos sembrados. Por defecto **todos están activos**; cada uno tiene un identificador y se corrige con la propiedad del sistema `practica.corregir`:
+La app trae trece fallos sembrados. Por defecto **todos están activos**; cada uno tiene un identificador y se corrige con la propiedad del sistema `practica.corregir`:
 
 | Valor | Efecto |
 |---|---|
@@ -24,6 +24,9 @@ Los ids no distinguen mayúsculas y admiten espacios alrededor de las comas. Un 
 | F8 | El botón de diagnóstico lanza una excepción sin capturar | CWE-248 | `EXCEPCION-NO-CAPTURADA` (oráculo implícito, sin CWE en el catálogo) |
 | F9 | El registro permite campos vacíos o de formato inválido | CWE-20 | Validación del registro (nivel 2) |
 | F10 | Un cliente puede modificar los datos de una persona | CWE-862 | Autorización por rol (nivel 3; el oráculo diferencial está pendiente) |
+| F11 | Trabajo de tres segundos en el EDT | CWE-400 | `INTERFAZ-CONGELADA` (#47, pendiente) |
+| F12 | Ventanas ocultas sin `dispose` | CWE-404 | Fugas de ventanas (#47, ID pendiente de contrato) |
+| F13 | Operación con tres segundos de demora innecesaria fuera del EDT | CWE-400 | Tiempo de respuesta (#47, ID y umbral pendientes de contrato) |
 
 Los ids de oráculo son los del catálogo `contratos/catalogos/oraculos.yaml`.
 
@@ -61,6 +64,13 @@ todas las ventanas». Ese criterio queda pendiente del módulo del motor; no se 
 que el explorador actual lo haya verificado.
 
 ## Correspondencia de fallos y suites (issue #62)
+
+Para F11–F13 (v0.5, #69), los interruptores, la reproducción, las correcciones y
+las dependencias de detección se describen en [README.md](README.md#rendimiento-y-robustez-69).
+Sus proyectos vulnerables y corregidos y sus suites están en
+`ejemplos/rendimiento/f11`, `f12` y `f13`. Las pruebas de `RendimientoMuestraTest`
+comprueban ambos estados de cada fallo; no sustituyen la detección pendiente de
+los oráculos de #47 y de los eventos de #18.
 
 El nivel 0 identifica la base original (F1–F5); el nivel 1 es la selección de la
 v0.1 (F6–F8). Cada fallo tiene una suite de ejemplo y un proyecto que selecciona

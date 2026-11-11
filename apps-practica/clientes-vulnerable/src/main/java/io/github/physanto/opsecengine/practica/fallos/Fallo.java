@@ -21,7 +21,13 @@ public enum Fallo {
     /** El registro acepta campos vacíos o con formato inválido. */
     F9("Registro de personas sin validar campos", "CWE-20"),
     /** La modificación no verifica el rol del usuario. */
-    F10("Modificación de personas sin autorización", "CWE-862");
+    F10("Modificación de personas sin autorización", "CWE-862"),
+    /** Trabajo lento ejecutado en el hilo de eventos. */
+    F11("Interfaz bloqueada por trabajo en el EDT", "CWE-400"),
+    /** Ventanas ocultas sin liberar sus recursos nativos. */
+    F12("Ventanas cerradas visualmente pero sin dispose", "CWE-404"),
+    /** Operación con demora innecesaria, fuera del EDT. */
+    F13("Acción lenta por trabajo innecesario", "CWE-400");
 
     private final String descripcion;
     private final String cwe;

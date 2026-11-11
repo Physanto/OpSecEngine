@@ -68,6 +68,8 @@ evaluador de #32 y el dueño de la CLI.
 vulnerables/corregidos: **20 variantes**. Los perfiles aíslan cada fallo, salvo F7,
 que conserva F4 en ambas variantes para provocar el mismo error SQL y comprobar
 si se expone su traza. F3 mantiene el `main` de `EliminarPersona` en ambas versiones.
+Al añadir F11–F13 en #69, los perfiles v0.3 los corrigen explícitamente para
+mantener aislados los fallos originales; la matriz continúa teniendo veinte variantes.
 
 F4 conserva el marcador literal `OPSEC-F4`; todavía no es un canario registrado
 por el motor. Al integrar #15/#42 se debe ajustar ese caso al mecanismo real de

@@ -28,6 +28,7 @@ Cada carpeta de [ejemplos/](ejemplos/) contiene un proyecto y una suite por fall
 |---|---|---|
 | Portada | `gui.Portada` | botón **Avanzar** |
 | Componentes de práctica (#68) | `gui.ComponentesMuestra` | tabla, lista, pestañas y dos diálogos modales anidados; se abre con **Componentes** en la portada |
+| Rendimiento y robustez (#69) | `gui.RendimientoMuestra` | botones para F11, F12 y F13; se abre con **Rendimiento** en la portada |
 | Escoger modo | `gui.EscogerModo` | botones **Nube** (`botonNube`) y **Local** |
 | Iniciar sesión | `gui.InicioSesion` | campos **Usuario** (`campoUsuario`, con etiqueta) y **Contraseña** (solo etiqueta), botones **Iniciar Sesion** (`botonIniciarSesion`), **Probar excepción** (`botonProbarExcepcion`) y **Volver** |
 | Menú cliente | `gui.MenuCliente` | botones **Buscar Persona**, **Modificar Persona** (`botonModificarPersona`) y **Cerrar Sesion** |
@@ -138,3 +139,41 @@ comprueban selecciones, pestañas, propietarios y liberación de diálogos; la
 validación de la referencia manual no demuestra que la grabadora produzca una
 suite. Cuando se integre, habrá que grabar el flujo anterior, validar su YAML con
 `opsec validar` y reproducirlo, sin reemplazar esa evidencia por esta referencia.
+
+## Rendimiento y robustez (#69)
+
+Desde la portada, **Rendimiento** abre tres acciones independientes y finitas:
+
+| Fallo | Acción vulnerable | Corrección |
+|---|---|---|
+| F11 | **Probar EDT** ejecuta tres segundos de carga en el EDT | `-Dpractica.corregir=F11` hace el mismo trabajo en un `SwingWorker`; el EDT sigue atendiendo eventos |
+| F12 | **Abrir y cerrar ventana** oculta una ventana temporal sin liberarla; repetir tres veces retiene tres ventanas | `-Dpractica.corregir=F12` llama a `dispose`; retiene cero |
+| F13 | **Probar acción lenta** demora tres segundos el resultado, fuera del EDT | `-Dpractica.corregir=F13` elimina ese trabajo innecesario |
+
+Ambas variantes terminan con el mismo mensaje funcional. La pantalla muestra
+el resultado y la cantidad de ventanas todavía retenidas. Al cerrarla se liberan
+las ventanas propias y se cancelan los trabajos en segundo plano. Ningún fallo se
+ejecuta automáticamente al arrancar la app.
+
+Los proyectos de `ejemplos/rendimiento/f11`, `f12` y `f13` aíslan un fallo por
+proceso; cada carpeta tiene su proyecto corregido y su suite. Por ejemplo:
+
+```sh
+java -jar opsec-cli/target/opsec-0.1.0-SNAPSHOT.jar validar \
+  apps-practica/clientes-vulnerable/ejemplos/rendimiento/f11/proyecto.yaml
+java -Dpractica.corregir=todos -cp apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar \
+  io.github.physanto.opsecengine.practica.gui.RendimientoMuestra
+```
+
+`RendimientoMuestraTest` comprueba los hilos de ejecución, que el EDT corregido
+atiende eventos mientras sigue la carga, la demora de F13, los recursos nativos
+retenidos por F12 y su liberación/cancelación al cerrar. La carga de prueba es
+reducida o controlada con señales; el ejemplo real mantiene tres segundos.
+
+**Aceptación pendiente:** hacen falta los eventos de #18 y los oráculos de #47.
+Solo `INTERFAZ-CONGELADA` tiene ID reservado; F12/F13 no inventan identificadores.
+Para F13 se debe medir hasta **Acción terminada.**, no solo la duración de despachar
+el clic, porque ambas variantes trabajan fuera del EDT. El indicador de ventanas
+es diagnóstico de la app, no una detección del motor. Un `CUMPLE` sin un oráculo
+de F12/F13 no acredita la aceptación. Tras integrarlos habrá que comprobar cada
+par vulnerable/corregido y sus umbrales con la traza real.
