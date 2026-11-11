@@ -8,13 +8,17 @@ Aplicación Swing de práctica con fallos sembrados, que sirve de objetivo para 
 
 Los fallos sembrados, cómo reproducirlos y qué oráculo debe detectarlos están en [FALLOS.md](FALLOS.md).
 
+El nivel 1 incluye F6 (contraseña en consola), F7 (traza en diálogo) y F8 (excepción sin capturar).
+La selección, los interruptores y las pruebas están descritos en [FALLOS.md](FALLOS.md).
+El oráculo de F7 está pendiente en el motor.
+
 ## Ventanas
 
 | Ventana | Clase | Componentes |
 |---|---|---|
 | Portada | `gui.Portada` | botón **Avanzar** |
 | Escoger modo | `gui.EscogerModo` | botones **Nube** (`botonNube`) y **Local** |
-| Iniciar sesión | `gui.InicioSesion` | campos **Usuario** (`campoUsuario`, con etiqueta) y **Contraseña** (solo etiqueta), botones **Iniciar Sesion** (`botonIniciarSesion`) y **Volver** |
+| Iniciar sesión | `gui.InicioSesion` | campos **Usuario** (`campoUsuario`, con etiqueta) y **Contraseña** (solo etiqueta), botones **Iniciar Sesion** (`botonIniciarSesion`), **Probar excepción** (`botonProbarExcepcion`) y **Volver** |
 | Menú cliente | `gui.MenuCliente` | botones **Buscar Persona** y **Cerrar Sesion** |
 | Menú administrador | `gui.MenuAdministrador` | botones **Buscar Persona**, **Eliminar Persona** (`botonEliminarPersona`) y **Cerrar Sesion** |
 | Buscar persona | `gui.BuscarPersona` | campo **Uid** (`campoUid`, con etiqueta), botón **Buscar**, área de resultado sin nombre |

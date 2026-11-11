@@ -13,7 +13,11 @@ public enum Fallo {
     /** El inicio de sesión responde distinto a un usuario inexistente y a una contraseña mala. */
     F5("Mensajes distintos para usuario inexistente y contraseña incorrecta", "CWE-204"),
     /** La contraseña escrita se imprime en la consola al iniciar sesión. */
-    F6("La contraseña se imprime en la consola al iniciar sesión", "CWE-532");
+    F6("La contraseña se imprime en la consola al iniciar sesión", "CWE-532"),
+    /** Un error de consulta muestra su pila de llamadas al usuario. */
+    F7("Pila de llamadas en el diálogo de error de consulta", "CWE-209"),
+    /** Una acción de diagnóstico deja escapar una excepción al EDT. */
+    F8("Excepción no capturada en una acción de la interfaz", "CWE-248");
 
     private final String descripcion;
     private final String cwe;

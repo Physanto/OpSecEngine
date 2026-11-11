@@ -1,11 +1,14 @@
 package io.github.physanto.opsecengine.practica.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.practica.ContextoApp;
 import io.github.physanto.opsecengine.practica.datos.BaseDatos;
 import io.github.physanto.opsecengine.practica.datos.BasesDePrueba;
 import io.github.physanto.opsecengine.practica.datos.Rol;
+import io.github.physanto.opsecengine.practica.fallos.Fallo;
 import io.github.physanto.opsecengine.practica.fallos.Interruptores;
 import io.github.physanto.opsecengine.practica.servicio.Sesion;
 import java.awt.Component;
@@ -99,6 +102,26 @@ class VentanasTest {
         assertThat(contrasena.getName()).isNull();
         assertThat(boton(ventana, "Iniciar Sesion").getName()).isEqualTo("botonIniciarSesion");
         assertThat(ventana.getRootPane().getDefaultButton().getText()).isEqualTo("Iniciar Sesion");
+    }
+
+    @Test
+    void elBotonDeDiagnosticoDejaEscaparF8SoloCuandoEstaActivo() throws Exception {
+        JFrame vulnerable = crear(() -> new InicioSesion(contexto));
+        ContextoApp corregido =
+                ContextoApp.crear(
+                        base,
+                        Interruptores.corrigiendo(Fallo.F8),
+                        new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8));
+        JFrame reparada = crear(() -> new InicioSesion(corregido));
+
+        enEdt(() -> {
+            assertThatThrownBy(() -> boton(vulnerable, "Probar excepción").doClick())
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("F8");
+            assertThatCode(() -> boton(reparada, "Probar excepción").doClick())
+                    .doesNotThrowAnyException();
+            return null;
+        });
     }
 
     @Test
