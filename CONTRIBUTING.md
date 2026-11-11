@@ -178,7 +178,7 @@ Una tarea está terminada cuando:
 
 ## Compilar y probar
 
-Solo se necesita un **JDK 21 o superior**. El Maven Wrapper descarga la versión de Maven correcta.
+Solo se necesita un **JDK 21**. El Maven Wrapper descarga la versión de Maven correcta.
 
 **Linux y macOS**
 
@@ -207,7 +207,7 @@ En Git Bash también funciona `./mvnw -B verify`.
 **Documentación Javadoc**
 
 ```sh
-./mvnw -B -DskipTests javadoc:aggregate
+./mvnw -B -DskipTests package javadoc:aggregate
 ```
 
 El resultado queda en `target/reports/apidocs/index.html`.
