@@ -48,6 +48,28 @@ Las pruebas comprueban `n3-local-sin-login.jsonl` (NO_CUMPLE), `a1-admin-elimina
 y la apertura directa de F3, incluida su denegación corregida. El emisor debe aportar eventos de
 backend y un contexto de sesión correcto; el oráculo no instrumenta la aplicación.
 
+`OraculoAutorizacionDiferencial` (id `AUTORIZACION-DIFERENCIAL`, momento `SUITE`, CWE-862)
+compara las operaciones observadas en `Contexto.trazasSuite()` con `Proyecto.politica()`.
+Una operación se identifica por el título de una `VENTANA_ABIERTA` o por el objetivo `texto=...`
+de un `PULSAR` que produce SQL o Firestore sensible en ese mismo paso, antes de `PASO_FIN`
+o de la siguiente acción. Compara nombres completos sin distinguir mayúsculas y omitiendo espacios
+exteriores; los nombres de rol conservan su escritura exacta. Usa el rol del evento solo si
+`sesionActiva=true`; el rol previsto del caso no acredita una sesión.
+
+Una operación reservada a otro rol produce un hallazgo probable; SQL con filas afectadas enteras
+positivas en el mismo paso lo confirma. Ignora errores de backend y no vincula escrituras de pasos
+posteriores con una ventana anterior. F2 se detecta como probable en N3 al abrir «Eliminar persona»;
+A1 admin no lo activa. Un clic terminado en `OK` o un diálogo de denegación no acreditan acceso.
+Con política parcial, omite operaciones no declaradas. Sin política, informa candidatos `INFO`
+cuando la misma operación aparece en contextos distintos, sin inferir jerarquías ni declarar fallos.
+Los candidatos pueden incluir ventanas públicas: requieren revisión y una política explícita.
+El evaluador existente devuelve `CUMPLE` si solo hay hallazgos `INFO`; ese resultado no acredita
+la autorización de las operaciones cuando falta la política.
+La evidencia contiene secuencias del caso identificado en la explicación; no copia consultas ni
+valores. Solo considera trazas de casos de la suite y eventos cuyo caso coincide con su traza.
+El núcleo debe invocar la evaluación de suite y aportar contextos correctos; el oráculo no
+instrumenta la aplicación ni resuelve equivalencias entre títulos y clases de ventanas.
+
 `EvaluadorOraculos` recibe los oráculos registrados. `iniciarCaso(contexto)` crea una sesión
 independiente: `registrarEvento(evento)` evalúa los oráculos `EVENTO` con el prefijo observado y
 `terminar(motivoIncompleto)` evalúa los de `CASO`. Los veredictos acumulan hallazgos sin repetirlos;
@@ -123,7 +145,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos de seguridad del catálogo (v0.3): `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos de seguridad del catálogo (v0.3): `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
 ## Dependencias permitidas
 

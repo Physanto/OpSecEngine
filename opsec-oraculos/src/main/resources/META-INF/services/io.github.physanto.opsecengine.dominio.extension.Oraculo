@@ -3,3 +3,4 @@ io.github.physanto.opsecengine.oraculos.OraculoContrasenaEnConsola
 io.github.physanto.opsecengine.oraculos.OraculoTrazaEnDialogo
 io.github.physanto.opsecengine.oraculos.OraculoAppTerminada
 io.github.physanto.opsecengine.oraculos.OraculoSinSesion
+io.github.physanto.opsecengine.oraculos.OraculoAutorizacionDiferencial
