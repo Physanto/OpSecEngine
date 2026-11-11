@@ -25,9 +25,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.AbstractButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPasswordField;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -78,7 +82,7 @@ class VentanasTest {
         JFrame portada = crear(() -> new Portada(contexto));
 
         assertThat(portada.getTitle()).isEqualTo("Portada");
-        assertThat(textosDeBotones(portada)).containsExactly("Avanzar");
+        assertThat(textosDeBotones(portada)).containsExactly("Avanzar", "Componentes");
     }
 
     @Test
@@ -87,6 +91,47 @@ class VentanasTest {
 
         assertThat(boton(ventana, "Nube").getName()).isEqualTo("botonNube");
         assertThat(boton(ventana, "Local").getName()).isNull();
+    }
+
+    @Test
+    void componentesPermiteSeleccionarTablaListaYCambiarPestanas() throws Exception {
+        JFrame ventana = crear(() -> new ComponentesMuestra(contexto));
+        enEdt(() -> {
+            JTable tabla = unico(ventana, JTable.class);
+            assertThat(tabla.getName()).isEqualTo("tablaPersonas");
+            assertThat(tabla.isCellEditable(0, 0)).isFalse();
+            boton(ventana, "Siguiente persona").doClick();
+            assertThat(tabla.getSelectedRow()).isEqualTo(1);
+            assertThat(etiqueta(ventana, "Persona seleccionada: P002")).isNotNull();
+            boton(ventana, "Ver lista").doClick();
+            assertThat(unico(ventana, JTabbedPane.class).getSelectedIndex()).isEqualTo(1);
+            JList<?> lista = unico(ventana, JList.class);
+            lista.setSelectedIndex(1);
+            assertThat(etiqueta(ventana, "Categoría seleccionada: Soporte")).isNotNull();
+            boton(ventana, "Ver tabla").doClick();
+            assertThat(unico(ventana, JTabbedPane.class).getSelectedIndex()).isZero();
+            return null;
+        });
+        assertThat(contexto.personas().listar()).hasSize(5);
+    }
+
+    @Test
+    void dialogosAnidadosSonModalesYTienenPropietarioQueLosLibera() throws Exception {
+        JFrame ventana = crear(() -> new ComponentesMuestra(contexto));
+        enEdt(() -> {
+            JDialog detalle = ComponentesMuestra.crearDetalle(ventana);
+            JDialog confirmacion = ComponentesMuestra.crearConfirmacion(detalle);
+            assertThat(detalle.getOwner()).isSameAs(ventana);
+            assertThat(confirmacion.getOwner()).isSameAs(detalle);
+            assertThat(detalle.isModal()).isTrue();
+            assertThat(confirmacion.isModal()).isTrue();
+            assertThat(confirmacion.getName()).isEqualTo("dialogoConfirmacion");
+            assertThat(confirmacion.isDisplayable()).isTrue();
+            ventana.dispose();
+            assertThat(detalle.isDisplayable()).isFalse();
+            assertThat(confirmacion.isDisplayable()).isFalse();
+            return null;
+        });
     }
 
     @Test

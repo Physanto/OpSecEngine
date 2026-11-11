@@ -39,6 +39,11 @@ public final class Portada extends JFrame {
         avanzar.addActionListener(e -> Navegacion.cambiar(this, new EscogerModo(contexto)));
         JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER));
         botones.add(avanzar);
+        JButton componentes = new JButton("Componentes");
+        componentes.setName("botonComponentes");
+        componentes.addActionListener(
+                e -> Navegacion.cambiar(this, new ComponentesMuestra(contexto)));
+        botones.add(componentes);
 
         JPanel contenido = new JPanel(new BorderLayout(0, 16));
         contenido.setBorder(BorderFactory.createEmptyBorder(24, 32, 24, 32));

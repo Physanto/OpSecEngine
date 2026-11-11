@@ -27,6 +27,7 @@ Cada carpeta de [ejemplos/](ejemplos/) contiene un proyecto y una suite por fall
 | Ventana | Clase | Componentes |
 |---|---|---|
 | Portada | `gui.Portada` | botón **Avanzar** |
+| Componentes de práctica (#68) | `gui.ComponentesMuestra` | tabla, lista, pestañas y dos diálogos modales anidados; se abre con **Componentes** en la portada |
 | Escoger modo | `gui.EscogerModo` | botones **Nube** (`botonNube`) y **Local** |
 | Iniciar sesión | `gui.InicioSesion` | campos **Usuario** (`campoUsuario`, con etiqueta) y **Contraseña** (solo etiqueta), botones **Iniciar Sesion** (`botonIniciarSesion`), **Probar excepción** (`botonProbarExcepcion`) y **Volver** |
 | Menú cliente | `gui.MenuCliente` | botones **Buscar Persona**, **Modificar Persona** (`botonModificarPersona`) y **Cerrar Sesion** |
@@ -110,3 +111,30 @@ mvnw.cmd -B -pl apps-practica/clientes-vulnerable -am verify
 ```
 
 La lógica (repositorios, inicio de sesión, control de acceso e interruptores) se prueba sin interfaz. Las pruebas de ventanas se omiten automáticamente cuando el entorno no tiene pantalla (`GraphicsEnvironment.isHeadless()`); construyen las ventanas sin mostrarlas.
+
+## Componentes para grabadora e inspector (#68)
+
+Desde la portada, **Componentes** abre una pantalla con `tablaPersonas` (tres filas
+de muestra, sin edición), `listaCategorias` y `pestanasPractica` (Tabla/Lista).
+La selección cambia `resultadoComponentes`. **Abrir detalle** abre `dialogoDetalle`;
+desde él, **Abrir confirmación** abre `dialogoConfirmacion`, cuyo propietario es
+el primer diálogo. Cerrar la ventana libera también sus diálogos. Estos controles
+no modifican los datos de personas.
+
+Flujo manual para grabar: seleccionar una fila, pasar a Lista, elegir Soporte,
+abrir Detalle y Confirmación, aceptar y cerrar Detalle. Los componentes tienen
+nombres estables y nombres accesibles o etiquetas asociadas.
+La suite de `ejemplos/componentes/suites/componentes.yaml` es una **referencia
+manual**, con los flujos de tabla, lista y diálogos separados. Validar con:
+
+```sh
+java -jar opsec-cli/target/opsec-0.1.0-SNAPSHOT.jar validar \
+  apps-practica/clientes-vulnerable/ejemplos/componentes/proyecto.yaml
+```
+
+**Aceptación pendiente:** la grabadora y el inspector aún no están implementados
+en esta rama (la CLI ofrece `version`, `validar` y `ejecutar`). Las pruebas de Swing
+comprueban selecciones, pestañas, propietarios y liberación de diálogos; la
+validación de la referencia manual no demuestra que la grabadora produzca una
+suite. Cuando se integre, habrá que grabar el flujo anterior, validar su YAML con
+`opsec validar` y reproducirlo, sin reemplazar esa evidencia por esta referencia.
