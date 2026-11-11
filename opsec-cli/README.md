@@ -53,6 +53,10 @@ informe incorrecto o un falso positivo en la corregida hace fallar `verify`.
 Se omite sin pantalla en local; en la CI Linux la ausencia de Xvfb hace fallar la
 prueba. Véase el [alcance y la verificación del laboratorio](../apps-practica/laboratorio/README.md#suite-de-humo-issue-65).
 
+`BancoEvaluacionIT` verifica el [banco de métricas del laboratorio](../apps-practica/laboratorio/BANCO.md):
+ejecuciones reales, conteos de detecciones y falsos positivos, datos incompletos o
+alterados y reproducción idéntica de sus tablas desde los informes guardados.
+
 Desde la raíz del repositorio:
 
 ```sh

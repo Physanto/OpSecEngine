@@ -11,6 +11,9 @@ Se reutilizan los proyectos y la suite de `demo/`: F6 escribe una contraseña de
 prueba en la consola y el oráculo `CONTRASENA-EN-CONSOLA` decide el veredicto.
 El informe actual es `resultado.json`, con traza y hallazgos; no se genera HTML.
 
+El [banco de evaluación (#66)](BANCO.md) ejecuta listas de aplicaciones y versiones
+desde Java y genera tablas CSV/Markdown de detecciones, falsos positivos y tiempos.
+
 ## Requisitos y construcción
 
 - Docker con soporte para contenedores Linux (en Windows, Docker Desktop iniciado
