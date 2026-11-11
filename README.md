@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/imagenes/logo.png" alt="OpSecEngine: Opcode Security Engine" width="100%">
+</p>
+
 # OpSecEngine
 
 [![CI](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml)
@@ -120,6 +124,7 @@ OpSecEngine/
 ├── pom.xml                       pom padre: módulos y versiones fijas
 ├── mvnw, mvnw.cmd, .mvn/         Maven Wrapper
 ├── build-tools/                  configuración de calidad (Checkstyle)
+├── docs/imagenes/                imágenes del README
 ├── contratos/
 │   ├── esquemas/                 JSON Schema de proyecto, suite, payload, regla de oráculo y traza
 │   ├── catalogos/                eventos, oráculos, códigos de resultado y CWE
