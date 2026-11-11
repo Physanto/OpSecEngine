@@ -18,11 +18,24 @@ Su prueba, `OraculoExcepcionNoCapturadaTest`, carga con `CargadorTrazas` de `ops
 | `EXCEPCION-NO-CAPTURADA` | `OraculoExcepcionNoCapturada` | `EVENTO` | — | Un evento `EXCEPCION` con `capturada=false`. |
 | `CONTRASENA-EN-CONSOLA` | `OraculoContrasenaEnConsola` | `EVENTO` | CWE-532 | Una línea `CONSOLA` que contiene una contraseña de prueba: la de un rol del proyecto o la escrita con `LLENAR` en un campo cuyo localizador menciona contraseña, password, clave o pass. Ignora contraseñas de menos de 4 caracteres y nunca copia la contraseña en el hallazgo. Lo activa el fallo F6 de la app de práctica. |
 
+## Evaluación por momento
+
+`EvaluadorOraculos` recibe los oráculos registrados. `iniciarCaso(contexto)` crea una sesión
+independiente: `registrarEvento(evento)` evalúa los oráculos `EVENTO` con el prefijo observado y
+`terminar(motivoIncompleto)` evalúa los de `CASO`. Los veredictos acumulan hallazgos sin repetirlos;
+un error de un oráculo queda como motivo no concluyente. `traza()` devuelve una copia inmutable.
+Al terminar la suite, `evaluarSuite(Contexto.deSuite(...))` evalúa únicamente los de `SUITE`.
+Cada sesión de caso se usa desde un solo hilo y recibe secuencias estrictamente crecientes.
+
+El prefijo conserva la detección de contraseñas obtenidas de `PASO_INICIO`, aunque puede requerir
+trabajo cuadrático con trazas largas. El núcleo todavía debe conectar estas llamadas a su ejecución;
+esta implementación no modifica `EvaluacionService` ni `EjecucionService`.
+
 ### Pendiente para el dueño del módulo (P2)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Evaluador por evento, caso y suite (hoy `EvaluacionService` del núcleo entrega la traza completa al terminar el caso) y cargador de reglas YAML de `oraculos/`.
+1. Cargador de reglas YAML de `oraculos/`.
 2. Oráculos implícitos que faltan: cierre inesperado de la app y `TRAZA-EN-DIALOGO` (los eventos `DIALOGO` ya llegan del agente).
 3. `CONTRASENA-EN-CONSOLA`: buscar también los payloads con `{contrasena}` y los canarios cuando lleguen los ataques (v0.2).
 4. Oráculos de seguridad del catálogo (v0.3): `SIN-SESION`, `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
