@@ -4,7 +4,7 @@
 
 # OpSecEngine
 
-[![CI](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml)
+[![CI](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Physanto/OpSecEngine/actions/workflows/ci.yml)
 
 OpSecEngine (Opcode Security Engine): motor libre de pruebas GUI y de seguridad para aplicaciones Java Swing.
 
@@ -147,7 +147,7 @@ OpSecEngine/
 
 ## Contribuir
 
-Lee la [guía de contribución](CONTRIBUTING.md): flujo de ramas (git flow), formato de commits, pull requests hacia `develop`, archivos protegidos, proceso de cambio de contrato, Definición de Terminado y convenciones de código.
+Lee la [guía de contribución](CONTRIBUTING.md): ramas por módulo, formato de commits, integración hacia `main`, archivos protegidos, proceso de cambio de contrato, Definición de Terminado y convenciones de código.
 
 ## Licencia
 

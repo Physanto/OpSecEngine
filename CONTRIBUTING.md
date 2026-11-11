@@ -4,7 +4,7 @@ Gracias por contribuir a **OpSecEngine**. Esta guía explica cómo se organiza e
 
 ## Índice
 
-1. [Ramas (git flow)](#ramas-git-flow)
+1. [Ramas por módulo](#ramas-por-módulo)
 2. [Commits](#commits)
 3. [Pull requests](#pull-requests)
 4. [Archivos protegidos y cambios de contrato](#archivos-protegidos-y-cambios-de-contrato)
@@ -12,41 +12,38 @@ Gracias por contribuir a **OpSecEngine**. Esta guía explica cómo se organiza e
 6. [Convenciones de código](#convenciones-de-código)
 7. [Compilar y probar](#compilar-y-probar)
 
-## Ramas (git flow)
+## Ramas por módulo
 
-| Rama | Para qué | Nace de | Se fusiona en |
-|---|---|---|---|
-| `main` | Versiones publicadas. Siempre estable. | — | — |
-| `develop` | Integración del trabajo del equipo. | `main` | — |
-| `feature/*` | Una tarea: funcionalidad, corrección, pruebas o documentación. | `develop` | `develop` |
-| `release/*` | Preparar una versión: ajustes finales, número de versión, notas. | `develop` | `main` y `develop` |
-| `hotfix/*` | Corregir algo urgente de una versión publicada. | `main` | `main` y `develop` |
+`main` es la rama de integración: tiene la base del proyecto y todo lo que el líder ya integró. Cada módulo tiene **una rama propia**, de larga duración, donde su dueño trabaja todas las issues de ese módulo. El líder integra cada rama de módulo en `main`.
 
-Nombres de rama en minúscula, con guiones y sin tildes ni ñ:
-
-```text
-feature/agente-eventos-sinteticos
-feature/oraculos-sin-sesion-falso-positivo
-feature/informes-readme
-release/0.1.0
-hotfix/0.1.1-cierre-de-sesion
-```
+| Rama | Para qué | Quién trabaja | Nace de | Se integra en |
+|---|---|---|---|---|
+| `main` | Base del proyecto e integración. Siempre compila y pasa la CI. | Solo el líder integra | — | — |
+| `modulo/agente` | `opsec-agente` | P1 | `main` | `main` |
+| `modulo/nucleo` | `opsec-nucleo` | Líder | `main` | `main` |
+| `modulo/oraculos` | `opsec-oraculos` | P2 | `main` | `main` |
+| `modulo/ataques` | `opsec-ataques` | P2 | `main` | `main` |
+| `modulo/informes` | `opsec-informes` | P3 (salidas) | `main` | `main` |
+| `modulo/cli` | `opsec-cli` | P3 (salidas) | `main` | `main` |
+| `modulo/app-practica` | `apps-practica/` | P3 (laboratorio) | `main` | `main` |
+| `feature/*` | Cambios del líder en la base: contratos, `pom.xml`, CI, documentación común | Líder | `main` | `main` |
+| `hotfix/*` | Corrección urgente de algo ya integrado | Líder | `main` | `main` |
 
 Reglas:
 
-- **Una rama, un tema, un módulo.** Si una tarea toca módulos de dueños distintos, se divide en varias ramas y PR.
-- Las ramas `feature/*` viven pocos días (3 o 4 como máximo). Mejor PR pequeños y frecuentes.
-- Nunca se hace commit directo en `main` ni en `develop`, y nunca se usa `git push --force` sobre ramas compartidas.
-- Actualiza tu rama con `develop` al menos una vez al día:
+- **En tu rama de módulo solo se toca tu módulo.** Si necesitas cambiar un contrato, otro módulo o un archivo protegido, abre un issue (ver [Archivos protegidos](#archivos-protegidos-y-cambios-de-contrato)); no lo cambies en tu rama.
+- **Una rama cubre varias issues.** Cada issue se resuelve con uno o más commits en la rama del módulo; en el cuerpo del commit escribe `Refs #<número>` para enlazarlo.
+- **Trae `main` a tu rama al menos una vez al día** y siempre antes de pedir una integración:
 
   ```sh
   git fetch origin
-  git merge origin/develop
+  git merge origin/main
   ```
 
-  Si la rama todavía no se ha subido, también sirve `git rebase origin/develop`; una vez subida, usa `merge` para no tener que forzar el push.
-
-- Al cerrar una versión, la rama `release/*` se fusiona en `main`, se etiqueta (`v0.1.0`) y se fusiona de vuelta en `develop`. Lo mismo con `hotfix/*`.
+  Nunca uses `rebase` sobre una rama ya subida ni `git push --force`.
+- **Integra seguido**, no al final: cuando termines un grupo de issues (como mínimo una vez por sprint), abre un PR de tu rama de módulo hacia `main`. Después de la integración la rama sigue viva y continúas en ella.
+- Nadie hace commit directo en `main`: todo entra por PR o por una integración del líder.
+- Las versiones se etiquetan en `main` (`v0.1.0`, `v0.2.0`…) al cerrar cada hito.
 
 ## Commits
 
@@ -84,22 +81,21 @@ test: agrega traza de eliminacion sin login
 
 ## Pull requests
 
-1. Crea la rama desde `develop` actualizado:
+1. La primera vez, cambia a la rama de tu módulo (ya existe en GitHub):
 
    ```sh
-   git checkout develop
-   git pull
-   git checkout -b feature/<modulo>-<tema>
+   git fetch origin
+   git checkout modulo/<modulo>
    ```
 
-2. Trabaja en commits pequeños y ejecuta `./mvnw -B verify` antes de subir.
-3. Sube la rama: `git push -u origin feature/<modulo>-<tema>`.
-4. Abre el PR en GitHub con **base `develop`** (la rama por defecto del repositorio es `main`: revisa la base antes de crearlo). Solo las ramas `release/*` y `hotfix/*` abren PR hacia `main`.
-5. Completa la plantilla del PR: qué hace, cómo probarlo, el issue relacionado y el checklist de la Definición de Terminado.
-6. Requisitos para fusionar:
+2. Toma una issue del tablero, muévela a *En curso* y trabájala en commits pequeños. Ejecuta `./mvnw -B verify` antes de cada `git push`.
+3. Sube tus commits: `git push origin modulo/<modulo>`. La CI corre en cada push.
+4. Cuando tengas un grupo de issues terminado, trae `main` a tu rama (`git merge origin/main`), vuelve a ejecutar `verify` y abre el PR **de `modulo/<modulo>` hacia `main`**.
+5. Completa la plantilla del PR: qué hace, cómo probarlo, una línea `Cierra #<número>` por cada issue terminada y el checklist de la Definición de Terminado.
+6. Requisitos para integrar:
    - CI en verde en Windows, macOS y Linux.
-   - Aprobación del dueño del módulo (ver `.github/CODEOWNERS`); si toca contratos, también la del líder.
-7. Se fusiona con un commit de merge (sin *fast-forward*) para conservar el historial de la rama, y luego se borra la rama.
+   - Revisión del líder (y del dueño del módulo, ver `.github/CODEOWNERS`).
+7. El líder integra con un commit de merge (sin *squash* ni *fast-forward*). La rama de módulo **no se borra**: sigues trabajando en ella.
 
 ## Archivos protegidos y cambios de contrato
 
@@ -134,7 +130,7 @@ Todo PR que modifique contratos lleva la etiqueta `contrato` y enlaza su solicit
 
 Una tarea está terminada cuando:
 
-- [ ] El código está en `develop` mediante un PR aprobado.
+- [ ] El código está integrado en `main` mediante un PR aprobado.
 - [ ] Tiene pruebas unitarias; los oráculos además tienen al menos una traza que los activa y una que no.
 - [ ] La CI está en verde, incluidos el formato y las reglas de dependencia.
 - [ ] No modifica archivos protegidos sin una solicitud de cambio de contrato aprobada.
