@@ -1,0 +1,29 @@
+# Rutas relativas a la raíz del repo, que es el contexto de docker build.
+# Solo se envían los archivos necesarios para compilar y ejecutar la demo.
+**
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/**
+!build-tools/
+!build-tools/**
+!contratos/
+!contratos/**
+!opsec-*/
+!opsec-*/pom.xml
+!opsec-*/src/
+!opsec-*/src/**
+!apps-practica/
+!apps-practica/clientes-vulnerable/
+!apps-practica/clientes-vulnerable/pom.xml
+!apps-practica/clientes-vulnerable/src/
+!apps-practica/clientes-vulnerable/src/**
+!demo/
+!demo/proyecto.yaml
+!demo/proyecto-corregido.yaml
+!demo/suites/
+!demo/suites/**
+**/target/
+**/resultados/
+**/*.jar
+**/*.log

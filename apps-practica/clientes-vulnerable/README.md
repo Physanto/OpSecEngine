@@ -15,6 +15,9 @@ El oráculo de F7 está pendiente en el motor.
 Los niveles 2 y 3 añaden los formularios Registrar Persona (F9) y Modificar Persona
 (F10). Sus correcciones y pruebas están descritas en [FALLOS.md](FALLOS.md).
 
+Para ejecutar la demo del motor sobre esta app sin pantalla del anfitrión, consulte
+el [laboratorio Docker con JDK 21 y Xvfb](../laboratorio/README.md).
+
 La tabla nivel → fallo → CWE → oráculo → suite y los comandos de validación están
 en [FALLOS.md](FALLOS.md#correspondencia-de-fallos-y-suites-issue-62).
 Cada carpeta de [ejemplos/](ejemplos/) contiene un proyecto y una suite por fallo.
