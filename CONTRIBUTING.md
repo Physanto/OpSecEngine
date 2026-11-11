@@ -193,6 +193,8 @@ En Linux sin pantalla, las pruebas con Swing se omiten. Para ejecutarlas, usa un
 xvfb-run --auto-servernum ./mvnw -B verify
 ```
 
+Con pantalla real (en cualquier sistema), las pruebas con Swing abren ventanas durante unos segundos y la app de práctica puede tomar el foco. Mientras corre `verify`, no escribas sobre esas ventanas: una tecla puede cambiar un campo o cerrar un diálogo y hacer fallar una prueba. En Linux, `xvfb-run` evita que aparezcan.
+
 **Windows** (CMD o PowerShell)
 
 ```bat
