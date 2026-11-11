@@ -33,6 +33,32 @@ El prefijo conserva la detección de contraseñas obtenidas de `PASO_INICIO`, au
 trabajo cuadrático con trazas largas. El núcleo todavía debe conectar estas llamadas a su ejecución;
 esta implementación no modifica `EvaluacionService` ni `EjecucionService`.
 
+## Generación de validación con adaptador temporal
+
+`GeneradorValidacion` implementa `GeneradorCasos` para el enfoque `VALIDACION`. El constructor
+`GeneradorValidacion(adaptador)` recibe un `AdaptadorValidacion` con formularios y payloads ya cargados:
+
+- `Formulario(ventanaId, base, pasoEnvio, campos)`: caso base con la navegación conocida, valores
+  válidos y envío. No admite ataques pendientes de expansión. `pasoEnvio` identifica un `PULSAR`.
+- `Campo(ordenPaso, tipo)`: identifica un paso `LLENAR` anterior al envío y su tipo de campo.
+- `Payload(id, texto, tiposCampo, usaCanario, oraculos)`: proyección local de una entrada de la
+  biblioteca. Los tipos son los nombres de `TipoCampo`, sin importar clases de `opsec-ataques`.
+
+El generador selecciona las ventanas presentes en el mapa y produce una variante por campo y
+payload compatible. Conserva los demás valores, pasos y rol del caso base. Sustituye `{canario}`
+cuando corresponde, deja `ataques` vacío y combina los ids de oráculos sin repetirlos. Ordena por
+id de caso base, orden del campo e id de payload; genera ids y canarios deterministas. El origen
+queda en `Caso.extensiones().get("validacion")`, junto al resto de extensiones del caso base.
+Un objetivo de campo limita la variación a ese campo; un objetivo de botón de envío incluye todos
+los campos del formulario. Omite ventanas ausentes y roles no declarados en el proyecto.
+
+Para la instancia descubierta con `ServiceLoader`, el integrador debe proporcionar una **instancia
+Java** de `AdaptadorValidacion` en `Proyecto.extensiones().get("validacion")`. Sin ella devuelve una
+lista vacía. Un mapa procedente de YAML no se convierte automáticamente en ese adaptador. No hay
+descubrimiento de campos, lectura de la biblioteca ni conexión nueva a la CLI: el líder debe
+aportar esos datos y sustituir este adaptador cuando exista el contrato definitivo. La generación
+no ejecuta ni comprueba en la GUI los casos base aportados.
+
 ## Reglas YAML
 
 `new CargadorReglas().cargarCarpeta(ruta)` carga los archivos `*.yaml` de una carpeta en orden de
