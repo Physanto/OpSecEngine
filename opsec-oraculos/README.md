@@ -32,6 +32,22 @@ la biblioteca de ataques. El rastreo por canario requiere los metadatos indicado
 
 ## Evaluación por momento
 
+`OraculoSinSesion` (id `SIN-SESION`, momento `CASO`, CWE-306) detecta operaciones SQL o
+Firestore incluidas en `Proyecto.sensibles()` cuyo contexto declara `sesionActiva=false`.
+Respeta las listas vacías y compara operaciones sin distinguir mayúsculas. Si SQL no aporta
+`operacion`, usa su primera palabra, omitiendo espacios y comentarios iniciales; no analiza
+sentencias compuestas ni resuelve escrituras dentro de un `WITH`. En esos casos el emisor debe
+aportar `operacion`. No interpreta roles, ventanas ni un inicio de sesión posterior como prueba
+de autenticación de una escritura anterior. Ignora eventos de otros casos y errores de backend.
+
+El hallazgo es confirmado cuando SQL informa una cantidad entera positiva de `filasAfectadas`;
+sin esa prueba es probable, incluso con cero filas. Firestore produce hallazgos probables porque
+su evento no confirma el efecto. Los eventos `ESTADO` no se asocian automáticamente a escrituras.
+La evidencia referencia la secuencia de la operación sin copiar consultas, rutas ni valores.
+Las pruebas comprueban `n3-local-sin-login.jsonl` (NO_CUMPLE), `a1-admin-elimina.jsonl` (CUMPLE)
+y la apertura directa de F3, incluida su denegación corregida. El emisor debe aportar eventos de
+backend y un contexto de sesión correcto; el oráculo no instrumenta la aplicación.
+
 `EvaluadorOraculos` recibe los oráculos registrados. `iniciarCaso(contexto)` crea una sesión
 independiente: `registrarEvento(evento)` evalúa los oráculos `EVENTO` con el prefijo observado y
 `terminar(motivoIncompleto)` evalúa los de `CASO`. Los veredictos acumulan hallazgos sin repetirlos;
@@ -107,7 +123,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos de seguridad del catálogo (v0.3): `SIN-SESION`, `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos de seguridad del catálogo (v0.3): `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
 ## Dependencias permitidas
 
