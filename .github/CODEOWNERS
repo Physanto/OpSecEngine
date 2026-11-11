@@ -4,25 +4,29 @@
 # reglas generales van arriba y los archivos protegidos (contratos y proceso)
 # al final, para que siempre los apruebe el líder.
 #
-# Roles: líder = @Physanto. Los usuarios de P1, P2 y P3 todavía no están
-# definidos; cuando se conozcan, agregarlos delante de @Physanto en las
-# líneas marcadas con su rol.
+# Roles:
+#   Líder y P1 (agente) ....................... @Physanto
+#   P2 (oráculos y ataques) ................... @marlon890
+#   P3, salidas (informes y CLI) .............. @hiTimmyy
+#   P3, laboratorio (app de práctica) ......... usuario pendiente
+#
+# Cuando se conozca el usuario de P3 (laboratorio), agregarlo delante de
+# @Physanto en la línea de /apps-practica/. Cada usuario listado aquí debe
+# ser colaborador del repositorio con permiso Write.
 
 # Por defecto, el líder revisa todo
 *                                       @Physanto
 
 # Módulos con dueño
-# P1
+# P1 (lo toma el líder)
 /opsec-agente/                          @Physanto
 # P2
-/opsec-oraculos/                        @Physanto
-# P2
-/opsec-ataques/                         @Physanto
-# P3
-/opsec-informes/                        @Physanto
-# P3
-/opsec-cli/                             @Physanto
-# P3
+/opsec-oraculos/                        @marlon890 @Physanto
+/opsec-ataques/                         @marlon890 @Physanto
+# P3, salidas
+/opsec-informes/                        @hiTimmyy @Physanto
+/opsec-cli/                             @hiTimmyy @Physanto
+# P3, laboratorio (usuario pendiente)
 /apps-practica/                         @Physanto
 /opsec-nucleo/                          @Physanto
 
