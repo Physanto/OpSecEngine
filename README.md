@@ -47,7 +47,7 @@ Hoja de ruta:
 
 ## Requisitos
 
-Solo se necesita un **JDK 21 o superior** (probado con 21 y 25). Las aplicaciones que se prueban pueden ser de Java 8 en adelante: corren en su propia JVM y el agente se compila para Java 8. No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
+Solo se necesita un **JDK 21**, la versión con la que trabaja el equipo y prueba la CI. Las aplicaciones que se prueban pueden ser de Java 8 en adelante: corren en su propia JVM y el agente se compila para Java 8. No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
 
 ## Compilar y probar
 
@@ -79,7 +79,7 @@ Otros comandos útiles:
 
 ```sh
 ./mvnw spotless:apply                       # aplica el formato automático
-./mvnw -B -DskipTests javadoc:aggregate     # documentación en target/reports/apidocs/
+./mvnw -B -DskipTests package javadoc:aggregate   # documentación en target/reports/apidocs/
 ./mvnw -B verify -pl opsec-oraculos -am     # un solo módulo y sus dependencias
 ```
 
