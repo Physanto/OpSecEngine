@@ -16,6 +16,7 @@ Su prueba, `OraculoExcepcionNoCapturadaTest`, carga con `CargadorTrazas` de `ops
 | Id | Clase | Momento | CWE | Qué detecta |
 |---|---|---|---|---|
 | `EXCEPCION-NO-CAPTURADA` | `OraculoExcepcionNoCapturada` | `EVENTO` | — | Un evento `EXCEPCION` con `capturada=false`. |
+| `TRAZA-EN-DIALOGO` | `OraculoTrazaEnDialogo` | `EVENTO` | CWE-209 | El campo `texto` de un `DIALOGO` contiene una firma de excepción o una línea de pila Java. Detecta clases calificadas, excepciones sin paquete seguidas de dos puntos y marcos con archivo y línea, `Native Method` o `Unknown Source`. No copia el mensaje al hallazgo ni marca palabras genéricas como «error». |
 | `CONTRASENA-EN-CONSOLA` | `OraculoContrasenaEnConsola` | `EVENTO` | CWE-532 | Una línea `CONSOLA` que contiene una contraseña de prueba: la de un rol del proyecto o la escrita con `LLENAR` en un campo cuyo localizador menciona contraseña, password, clave o pass. Ignora contraseñas de menos de 4 caracteres y nunca copia la contraseña en el hallazgo. Lo activa el fallo F6 de la app de práctica. |
 
 ## Evaluación por momento
@@ -49,7 +50,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos implícitos que faltan: cierre inesperado de la app y `TRAZA-EN-DIALOGO` (los eventos `DIALOGO` ya llegan del agente).
+1. Oráculo implícito de cierre inesperado de la app.
 2. `CONTRASENA-EN-CONSOLA`: buscar también los payloads con `{contrasena}` y los canarios cuando lleguen los ataques (v0.2).
 3. Oráculos de seguridad del catálogo (v0.3): `SIN-SESION`, `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
