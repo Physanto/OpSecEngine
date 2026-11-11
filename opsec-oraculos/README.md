@@ -31,14 +31,27 @@ El prefijo conserva la detección de contraseñas obtenidas de `PASO_INICIO`, au
 trabajo cuadrático con trazas largas. El núcleo todavía debe conectar estas llamadas a su ejecución;
 esta implementación no modifica `EvaluacionService` ni `EjecucionService`.
 
+## Reglas YAML
+
+`new CargadorReglas().cargarCarpeta(ruta)` carga los archivos `*.yaml` de una carpeta en orden de
+nombre y devuelve una lista de `Oraculo`; `leer(archivo)` carga un solo archivo. Las reglas se
+validan con el esquema oficial empaquetado, sin acceso a la red, y rechazan ids reservados,
+duplicados y CWE ajenos al catálogo. La lista puede combinarse con los oráculos Java al crear
+`EvaluadorOraculos`. No se registra cada regla con `ServiceLoader` ni se cambia la CLI.
+
+`texto_contiene` busca cualquiera de sus fragmentos, distinguiendo mayúsculas, en el campo indicado
+o en todos los campos de texto si no hay `campo`. Se combina con `tipo` e `igual_a` mediante AND.
+Se produce un hallazgo por evento en `EVENTO`, por caso en `CASO` y por suite en `SUITE` si hay
+coincidencias. Un campo ausente no equivale a un valor null. Los archivos inválidos lanzan
+`IllegalArgumentException` con el origen y los errores; los fallos de lectura lanzan `IOException`.
+
 ### Pendiente para el dueño del módulo (P2)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Cargador de reglas YAML de `oraculos/`.
-2. Oráculos implícitos que faltan: cierre inesperado de la app y `TRAZA-EN-DIALOGO` (los eventos `DIALOGO` ya llegan del agente).
-3. `CONTRASENA-EN-CONSOLA`: buscar también los payloads con `{contrasena}` y los canarios cuando lleguen los ataques (v0.2).
-4. Oráculos de seguridad del catálogo (v0.3): `SIN-SESION`, `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos implícitos que faltan: cierre inesperado de la app y `TRAZA-EN-DIALOGO` (los eventos `DIALOGO` ya llegan del agente).
+2. `CONTRASENA-EN-CONSOLA`: buscar también los payloads con `{contrasena}` y los canarios cuando lleguen los ataques (v0.2).
+3. Oráculos de seguridad del catálogo (v0.3): `SIN-SESION`, `AUTORIZACION-DIFERENCIAL`, `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
 ## Dependencias permitidas
 
