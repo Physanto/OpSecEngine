@@ -109,11 +109,10 @@ class CodecMensajesTest {
         assertThatThrownBy(
                         () -> codec.deserializar("{\"version\":1,\"tipo\":\"NUEVO\",\"id\":\"m\"}"))
                 .isInstanceOf(ExcepcionProtocolo.class);
-        assertThatThrownBy(
-                        () ->
-                                codec.deserializar(
-                                        "{\"version\":1,\"tipo\":\"CERRAR\",\"id\":\"m\","
-                                                + "\"cuerpo\":[1,2]}"))
+        assertThatThrownBy(() ->
+                        codec.deserializar(
+                                "{\"version\":1,\"tipo\":\"CERRAR\",\"id\":\"m\","
+                                        + "\"cuerpo\":[1,2]}"))
                 .isInstanceOf(ExcepcionProtocolo.class);
     }
 

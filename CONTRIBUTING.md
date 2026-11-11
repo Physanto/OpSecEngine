@@ -165,7 +165,7 @@ Una tarea está terminada cuando:
 
 **Versiones de Java**
 
-- El motor compila con Java 17 (`--release 17`).
+- El motor compila con Java 21 (`--release 21`).
 - `opsec-protocolo` y `opsec-agente` compilan con Java 8 (`--release 8`), porque el agente corre dentro de la aplicación probada.
 - La app de práctica `apps-practica/clientes-vulnerable` compila con Java 11 (lo exige H2).
 
@@ -178,7 +178,7 @@ Una tarea está terminada cuando:
 
 ## Compilar y probar
 
-Solo se necesita un **JDK 17 o superior**. El Maven Wrapper descarga la versión de Maven correcta.
+Solo se necesita un **JDK 21 o superior**. El Maven Wrapper descarga la versión de Maven correcta.
 
 **Linux y macOS**
 
@@ -192,6 +192,8 @@ En Linux sin pantalla, las pruebas con Swing se omiten. Para ejecutarlas, usa un
 ```sh
 xvfb-run --auto-servernum ./mvnw -B verify
 ```
+
+Con pantalla real (en cualquier sistema), las pruebas con Swing abren ventanas durante unos segundos y la app de práctica puede tomar el foco. Mientras corre `verify`, no escribas sobre esas ventanas: una tecla puede cambiar un campo o cerrar un diálogo y hacer fallar una prueba. En Linux, `xvfb-run` evita que aparezcan.
 
 **Windows** (CMD o PowerShell)
 

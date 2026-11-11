@@ -12,8 +12,8 @@ import picocli.CommandLine.Spec;
  * <p>Ejemplo de salida:
  *
  * <pre>
- * OpSecEngine 0.0.1-SNAPSHOT
- * Java 17.0.12 (Eclipse Adoptium) en Linux 6.8.0 (amd64)
+ * OpSecEngine 0.1.0-SNAPSHOT
+ * Java 21.0.9 (Eclipse Adoptium) en Linux 6.8.0 (amd64)
  * </pre>
  */
 @Command(

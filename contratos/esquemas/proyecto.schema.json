@@ -25,6 +25,10 @@
           "description": "Clase principal. Si falta, se lee del manifiesto del JAR.",
           "$ref": "#/$defs/textoNoVacio"
         },
+        "java": {
+          "description": "Carpeta del JDK o JRE con que se lanza la app (la que contiene bin/java), por ejemplo C:/Program Files/Java/jdk1.8.0_401. Si falta, la app se lanza con el mismo Java del motor. Desde contratos v1.1.",
+          "$ref": "#/$defs/textoNoVacio"
+        },
         "argumentosJvm": {
           "description": "Argumentos adicionales para la JVM de la app.",
           "type": "array",

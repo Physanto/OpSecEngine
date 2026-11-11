@@ -1,0 +1,210 @@
+package io.github.physanto.opsecengine.agente.swing;
+
+import io.github.physanto.opsecengine.agente.api.EmisorEventos;
+import java.awt.AWTEvent;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dialog;
+import java.awt.Toolkit;
+import java.awt.Window;
+import java.awt.event.AWTEventListener;
+import java.awt.event.WindowEvent;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.function.Consumer;
+import javax.swing.AbstractButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+
+/**
+ * Observa las ventanas de la aplicación probada y emite {@code VENTANA_ABIERTA}, {@code
+ * VENTANA_CERRADA} y, para los diálogos con un {@code JOptionPane}, {@code DIALOGO}.
+ *
+ * <p>Se registra con {@code Toolkit.addAWTEventListener}, así que no modifica la aplicación. Cada
+ * ventana recibe un identificador estable durante la sesión, por ejemplo {@code InicioSesion-3}.
+ * Una ventana abierta es la que se muestra por primera vez ({@code WINDOW_OPENED}); una cerrada, la
+ * que se destruye con {@code dispose} ({@code WINDOW_CLOSED}). Ocultar una ventana con {@code
+ * setVisible(false)} todavía no se informa.
+ *
+ * <p>Recibe los eventos en el EDT. Nunca lanza excepciones hacia la aplicación: los errores se
+ * informan al registro del agente.
+ */
+public final class ObservadorVentanas implements AWTEventListener {
+
+    private final EmisorEventos emisor;
+    private final Consumer<String> registro;
+    private final Map<Window, String> identificadores = new WeakHashMap<>();
+    private int contador;
+
+    /**
+     * Crea el observador sin registrarlo.
+     *
+     * @param emisor emisor de los eventos; no puede ser null
+     * @param registro destino de los mensajes de error del agente; no puede ser null
+     */
+    public ObservadorVentanas(EmisorEventos emisor, Consumer<String> registro) {
+        this.emisor = emisor;
+        this.registro = registro;
+    }
+
+    /**
+     * Registra el observador en el toolkit de AWT.
+     *
+     * @param emisor emisor de los eventos; no puede ser null
+     * @param registro destino de los mensajes de error del agente; no puede ser null
+     * @return el observador registrado
+     */
+    public static ObservadorVentanas instalar(EmisorEventos emisor, Consumer<String> registro) {
+        ObservadorVentanas observador = new ObservadorVentanas(emisor, registro);
+        Toolkit.getDefaultToolkit().addAWTEventListener(observador, AWTEvent.WINDOW_EVENT_MASK);
+        return observador;
+    }
+
+    /**
+     * Atiende un evento de AWT; solo le interesan la apertura y el cierre de ventanas.
+     *
+     * @param evento evento de AWT
+     */
+    @Override
+    public void eventDispatched(AWTEvent evento) {
+        try {
+            if (evento.getID() == WindowEvent.WINDOW_OPENED) {
+                abierta(((WindowEvent) evento).getWindow());
+            } else if (evento.getID() == WindowEvent.WINDOW_CLOSED) {
+                cerrada(((WindowEvent) evento).getWindow());
+            }
+        } catch (RuntimeException e) {
+            registro.accept("No se pudo observar una ventana: " + e);
+        }
+    }
+
+    private void abierta(Window ventana) {
+        String id = identificador(ventana);
+        Map<String, Object> datos = datosVentana(ventana, id);
+        if (ventana instanceof Dialog) {
+            datos.put("modal", ((Dialog) ventana).isModal());
+        }
+        emisor.emitir("VENTANA_ABIERTA", datos);
+        JOptionPane panel = buscarPanel(ventana);
+        if (panel != null) {
+            emisor.emitir("DIALOGO", datosDialogo(ventana, panel, id));
+        }
+    }
+
+    private void cerrada(Window ventana) {
+        emisor.emitir("VENTANA_CERRADA", datosVentana(ventana, identificador(ventana)));
+    }
+
+    private synchronized String identificador(Window ventana) {
+        String id = identificadores.get(ventana);
+        if (id == null) {
+            String nombre = ventana.getClass().getSimpleName();
+            id = (nombre.isEmpty() ? "Ventana" : nombre) + "-" + (++contador);
+            identificadores.put(ventana, id);
+        }
+        return id;
+    }
+
+    private static Map<String, Object> datosVentana(Window ventana, String id) {
+        Map<String, Object> datos = new LinkedHashMap<>();
+        datos.put("ventanaId", id);
+        datos.put("clase", ventana.getClass().getName());
+        datos.put("titulo", DescriptorComponentes.texto(ventana));
+        return datos;
+    }
+
+    private static Map<String, Object> datosDialogo(Window ventana, JOptionPane panel, String id) {
+        Map<String, Object> datos = new LinkedHashMap<>();
+        datos.put("texto", textoMensaje(panel.getMessage()));
+        datos.put("titulo", DescriptorComponentes.texto(ventana));
+        datos.put("tipoMensaje", tipoMensaje(panel.getMessageType()));
+        List<String> opciones = new ArrayList<>();
+        juntarBotones(panel, opciones);
+        datos.put("opciones", opciones);
+        datos.put("ventanaId", id);
+        return datos;
+    }
+
+    private static String textoMensaje(Object mensaje) {
+        if (mensaje == null) {
+            return "";
+        }
+        if (mensaje instanceof Object[]) {
+            StringBuilder texto = new StringBuilder();
+            for (Object parte : (Object[]) mensaje) {
+                String linea = textoMensaje(parte);
+                if (!linea.isEmpty()) {
+                    texto.append(texto.length() > 0 ? "\n" : "").append(linea);
+                }
+            }
+            return texto.toString();
+        }
+        if (mensaje instanceof Component) {
+            List<String> textos = new ArrayList<>();
+            juntarEtiquetas((Component) mensaje, textos);
+            return String.join("\n", textos);
+        }
+        return String.valueOf(mensaje);
+    }
+
+    private static String tipoMensaje(int tipo) {
+        switch (tipo) {
+            case JOptionPane.ERROR_MESSAGE:
+                return "ERROR";
+            case JOptionPane.INFORMATION_MESSAGE:
+                return "INFORMACION";
+            case JOptionPane.WARNING_MESSAGE:
+                return "ADVERTENCIA";
+            case JOptionPane.QUESTION_MESSAGE:
+                return "PREGUNTA";
+            default:
+                return "PLANO";
+        }
+    }
+
+    private static JOptionPane buscarPanel(Component componente) {
+        if (componente instanceof JOptionPane) {
+            return (JOptionPane) componente;
+        }
+        if (componente instanceof Container) {
+            for (Component hijo : ((Container) componente).getComponents()) {
+                JOptionPane panel = buscarPanel(hijo);
+                if (panel != null) {
+                    return panel;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static void juntarBotones(Component componente, List<String> textos) {
+        if (componente instanceof AbstractButton) {
+            String texto = ((AbstractButton) componente).getText();
+            if (texto != null && !texto.isEmpty()) {
+                textos.add(texto);
+            }
+        }
+        if (componente instanceof Container) {
+            for (Component hijo : ((Container) componente).getComponents()) {
+                juntarBotones(hijo, textos);
+            }
+        }
+    }
+
+    private static void juntarEtiquetas(Component componente, List<String> textos) {
+        if (componente instanceof JLabel) {
+            String texto = ((JLabel) componente).getText();
+            if (texto != null && !texto.isEmpty()) {
+                textos.add(texto);
+            }
+        }
+        if (componente instanceof Container) {
+            for (Component hijo : ((Container) componente).getComponents()) {
+                juntarEtiquetas(hijo, textos);
+            }
+        }
+    }
+}

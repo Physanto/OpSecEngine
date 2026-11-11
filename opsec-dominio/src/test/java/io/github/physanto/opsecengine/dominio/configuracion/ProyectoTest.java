@@ -31,6 +31,17 @@ class ProyectoTest {
         assertThat(proyecto.pasosLogin()).isEmpty();
         assertThat(proyecto.politica()).isEmpty();
         assertThat(proyecto.extensiones()).isEmpty();
+        assertThat(proyecto.javaApp()).isNull();
+    }
+
+    @Test
+    void conservaLaCarpetaDeJavaDeLaApp() {
+        Path jdk8 = Path.of("jdk8");
+
+        Proyecto proyecto =
+                new Proyecto("clientes", JAR, null, null, jdk8, null, null, null, null, null, null);
+
+        assertThat(proyecto.javaApp()).isEqualTo(jdk8);
     }
 
     @Test
@@ -53,42 +64,20 @@ class ProyectoTest {
 
     @Test
     void validaNombreJarYClasePrincipal() {
-        assertThatThrownBy(
-                        () ->
-                                new Proyecto(
-                                        null, JAR, null, null, null, null, null, null, null, null))
+        assertThatThrownBy(() ->
+                        new Proyecto(null, JAR, null, null, null, null, null, null, null, null))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(
                         () -> new Proyecto("", JAR, null, null, null, null, null, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(
-                        () ->
-                                new Proyecto(
-                                        "clientes",
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null))
+        assertThatThrownBy(() ->
+                        new Proyecto(
+                                "clientes", null, null, null, null, null, null, null, null, null))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("JAR");
-        assertThatThrownBy(
-                        () ->
-                                new Proyecto(
-                                        "clientes",
-                                        JAR,
-                                        " ",
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null))
+        assertThatThrownBy(() ->
+                        new Proyecto(
+                                "clientes", JAR, " ", null, null, null, null, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -114,19 +103,18 @@ class ProyectoTest {
         Map<String, List<String>> politica = new HashMap<>();
         politica.put("Eliminar Persona", null);
 
-        assertThatThrownBy(
-                        () ->
-                                new Proyecto(
-                                        "clientes",
-                                        JAR,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        politica,
-                                        null))
+        assertThatThrownBy(() ->
+                        new Proyecto(
+                                "clientes",
+                                JAR,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                politica,
+                                null))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("Eliminar Persona");
     }

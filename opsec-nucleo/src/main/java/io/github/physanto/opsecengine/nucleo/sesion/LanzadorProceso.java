@@ -49,7 +49,8 @@ public final class LanzadorProceso implements ArranqueApp {
     private final Path carpetaResultados;
 
     /**
-     * Crea un lanzador que usa el {@code java} de la JVM actual.
+     * Crea un lanzador que usa el {@code java} de la JVM actual, salvo que el proyecto indique otro
+     * en {@link Proyecto#javaApp()}.
      *
      * @param jarAgente ruta del jar del agente ({@code opsec-agente-<versión>-agente.jar}); no
      *     puede ser null
@@ -62,9 +63,10 @@ public final class LanzadorProceso implements ArranqueApp {
     }
 
     /**
-     * Crea un lanzador con un ejecutable de Java propio, por ejemplo un JDK 8 para apps antiguas.
+     * Crea un lanzador con un ejecutable de Java por defecto propio. Si el proyecto indica {@link
+     * Proyecto#javaApp()}, ese tiene prioridad.
      *
-     * @param java ruta del ejecutable {@code java}; no puede ser null
+     * @param java ruta del ejecutable {@code java} por defecto; no puede ser null
      * @param jarAgente ruta del jar del agente; no puede ser null
      * @param carpetaResultados carpeta donde se escriben las salidas de la aplicación; no puede ser
      *     null
@@ -89,7 +91,23 @@ public final class LanzadorProceso implements ArranqueApp {
     }
 
     /**
+     * Devuelve el ejecutable {@code java} de una carpeta de JDK o JRE.
+     *
+     * @param carpetaJava carpeta del JDK o JRE; no puede ser null
+     * @return ruta {@code <carpetaJava>/bin/java}; en Windows el sistema agrega {@code .exe}
+     * @throws NullPointerException si {@code carpetaJava} es null
+     */
+    public static Path ejecutableJava(Path carpetaJava) {
+        return Objects.requireNonNull(carpetaJava, "La carpeta de Java no puede ser null")
+                .resolve("bin")
+                .resolve("java");
+    }
+
+    /**
      * Arma el comando que lanza la aplicación, sin ejecutarlo.
+     *
+     * <p>El primer elemento es el {@code java} de {@link Proyecto#javaApp()} si el proyecto lo
+     * indica, o el {@code java} por defecto del lanzador.
      *
      * @param proyecto proyecto con el JAR, la clase principal y los argumentos de la JVM; no puede
      *     ser null
@@ -102,7 +120,10 @@ public final class LanzadorProceso implements ArranqueApp {
         Objects.requireNonNull(proyecto, "El proyecto no puede ser null");
         Objects.requireNonNull(token, "El token no puede ser null");
         List<String> comando = new ArrayList<>();
-        comando.add(java.toString());
+        comando.add(
+                proyecto.javaApp() == null
+                        ? java.toString()
+                        : ejecutableJava(proyecto.javaApp()).toString());
         comando.addAll(proyecto.argumentosJvm());
         comando.add(
                 "-javaagent:"
@@ -130,11 +151,15 @@ public final class LanzadorProceso implements ArranqueApp {
      * @param puerto puerto donde el motor espera al agente
      * @param token token de la sesión; no puede ser null
      * @return el proceso de la aplicación
-     * @throws IOException si no se puede crear la carpeta de resultados o lanzar el proceso
+     * @throws IOException si no se puede crear la carpeta de resultados o lanzar el proceso, o si
+     *     la carpeta {@link Proyecto#javaApp()} no tiene {@code bin/java}
      * @throws NullPointerException si {@code proyecto} o {@code token} son null
      */
     public Process lanzar(Proyecto proyecto, int puerto, String token) throws IOException {
         List<String> comando = comando(proyecto, puerto, token);
+        if (proyecto.javaApp() != null) {
+            exigirJava(proyecto.javaApp());
+        }
         Files.createDirectories(carpetaResultados);
         REGISTRO.fine(() -> "Lanzando la aplicación " + proyecto.nombre() + ": " + comando);
         return new ProcessBuilder(comando)
@@ -193,5 +218,18 @@ public final class LanzadorProceso implements ArranqueApp {
             textos.add(entrada.toString());
         }
         return String.join(File.pathSeparator, textos);
+    }
+
+    /** Falla con un mensaje claro si la carpeta de Java del proyecto no tiene {@code bin/java}. */
+    private static void exigirJava(Path carpetaJava) throws IOException {
+        Path ejecutable = ejecutableJava(carpetaJava);
+        Path ejecutableWindows = ejecutable.resolveSibling("java.exe");
+        if (!Files.isRegularFile(ejecutable) && !Files.isRegularFile(ejecutableWindows)) {
+            throw new IOException(
+                    "No se encontró el ejecutable java en "
+                            + ejecutable.getParent()
+                            + "; revise app.java en proyecto.yaml: debe ser la carpeta de un JDK o"
+                            + " JRE");
+        }
     }
 }

@@ -68,7 +68,7 @@ body:
     id: version
     attributes:
       label: Versión o commit de OpSecEngine
-      placeholder: 0.0.1-SNAPSHOT o hash del commit
+      placeholder: 0.1.0-SNAPSHOT o el hash del commit
   - type: textarea
     id: registros
     attributes:

@@ -21,7 +21,7 @@ El Javadoc de `EjecucionService` lista lo que falta y la versión en que llega.
 
 ## Ejemplo de referencia
 
-`EjecucionServiceTest` prueba la ejecución contra `AgenteFalso` de `opsec-soporte-pruebas`, sin lanzar ninguna aplicación: el arranque de la sesión es una lambda que conecta un agente falso al puerto del motor. `EjecucionServiceIT` hace lo mismo con el agente eco real y `AplicacionDePrueba` en otra JVM.
+`EjecucionServiceTest` prueba la ejecución contra `AgenteFalso` de `opsec-soporte-pruebas`, sin lanzar ninguna aplicación: el arranque de la sesión es una lambda que conecta un agente falso al puerto del motor. `EjecucionServiceIT` hace lo mismo con el agente real y `AplicacionDePrueba` en otra JVM.
 
 ## Dependencias permitidas
 

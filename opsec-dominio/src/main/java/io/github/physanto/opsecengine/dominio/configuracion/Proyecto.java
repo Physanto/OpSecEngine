@@ -27,6 +27,9 @@ import java.util.Set;
  *     leerla del manifiesto del JAR
  * @param argumentosJvm argumentos adicionales para la JVM de la aplicación probada; si es null
  *     queda vacía, y no admite elementos null
+ * @param javaApp carpeta del JDK o JRE con que se lanza la aplicación probada (la que contiene
+ *     {@code bin/java}); puede ser null para lanzarla con el mismo Java del motor. Desde contratos
+ *     v1.1
  * @param datos entorno de datos de prueba; si es null se usa {@link EntornoDatos#ninguno()}
  * @param roles roles con sus credenciales de prueba, con nombres únicos; si es null queda vacía, y
  *     no admite elementos null
@@ -44,6 +47,7 @@ public record Proyecto(
         Path jar,
         String clasePrincipal,
         List<String> argumentosJvm,
+        Path javaApp,
         EntornoDatos datos,
         List<Rol> roles,
         List<Paso> pasosLogin,
@@ -92,6 +96,51 @@ public record Proyecto(
     }
 
     /**
+     * Crea un proyecto que lanza la aplicación con el mismo Java del motor ({@code javaApp} null).
+     *
+     * <p>Es el constructor de contratos v1; se conserva para que el campo nuevo sea un cambio
+     * aditivo.
+     *
+     * @param nombre nombre del proyecto; no puede ser null ni estar en blanco
+     * @param jar ruta del JAR de la aplicación probada; no puede ser null
+     * @param clasePrincipal clase con el método {@code main}; puede ser null
+     * @param argumentosJvm argumentos adicionales para la JVM; puede ser null
+     * @param datos entorno de datos de prueba; puede ser null
+     * @param roles roles con sus credenciales de prueba; puede ser null
+     * @param pasosLogin pasos que inician sesión con un rol; puede ser null
+     * @param sensibles operaciones sensibles; puede ser null
+     * @param politica roles autorizados para cada operación; puede ser null
+     * @param extensiones campos adicionales; puede ser null
+     * @throws NullPointerException si {@code nombre} o {@code jar} son null, o si alguna colección
+     *     contiene elementos, claves o valores null
+     * @throws IllegalArgumentException en los mismos casos que el constructor canónico
+     */
+    public Proyecto(
+            String nombre,
+            Path jar,
+            String clasePrincipal,
+            List<String> argumentosJvm,
+            EntornoDatos datos,
+            List<Rol> roles,
+            List<Paso> pasosLogin,
+            OperacionesSensibles sensibles,
+            Map<String, List<String>> politica,
+            Map<String, Object> extensiones) {
+        this(
+                nombre,
+                jar,
+                clasePrincipal,
+                argumentosJvm,
+                null,
+                datos,
+                roles,
+                pasosLogin,
+                sensibles,
+                politica,
+                extensiones);
+    }
+
+    /**
      * Busca un rol por su nombre.
      *
      * @param nombreRol nombre exacto del rol; no puede ser null
@@ -108,17 +157,15 @@ public record Proyecto(
             return Map.of();
         }
         Map<String, List<String>> copia = new HashMap<>();
-        politica.forEach(
-                (operacion, rolesAutorizados) ->
-                        copia.put(
+        politica.forEach((operacion, rolesAutorizados) ->
+                copia.put(
+                        Objects.requireNonNull(operacion, "La política no admite operaciones null"),
+                        List.copyOf(
                                 Objects.requireNonNull(
-                                        operacion, "La política no admite operaciones null"),
-                                List.copyOf(
-                                        Objects.requireNonNull(
-                                                rolesAutorizados,
-                                                "La operación "
-                                                        + operacion
-                                                        + " de la política no tiene roles"))));
+                                        rolesAutorizados,
+                                        "La operación "
+                                                + operacion
+                                                + " de la política no tiene roles"))));
         return Map.copyOf(copia);
     }
 }

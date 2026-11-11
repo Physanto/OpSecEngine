@@ -25,7 +25,7 @@ public final class VersionMotor {
     /**
      * Devuelve la versión del motor.
      *
-     * @return versión del motor, por ejemplo {@code 0.0.1-SNAPSHOT}
+     * @return versión del motor, por ejemplo {@code 0.1.0-SNAPSHOT}
      */
     public static String motor() {
         return VERSION;

@@ -185,11 +185,10 @@ public final class MotorFalso implements AutoCloseable {
             Duration restante = Duration.ofNanos(Math.max(1, limite - System.nanoTime()));
             Mensaje mensaje =
                     nuevo.recibir(restante)
-                            .orElseThrow(
-                                    () ->
-                                            new ExcepcionProtocolo(
-                                                    "El agente se conectó pero no envió HOLA a"
-                                                            + " tiempo"));
+                            .orElseThrow(() ->
+                                    new ExcepcionProtocolo(
+                                            "El agente se conectó pero no envió HOLA a"
+                                                    + " tiempo"));
             recibidos.add(mensaje);
             HolaDto hola = validarSaludo(nuevo, mensaje);
             canal = nuevo;

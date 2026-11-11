@@ -73,13 +73,12 @@ public final class InformeService {
         for (String formato : new LinkedHashSet<>(List.copyOf(formatos))) {
             reporteros.add(
                     registro.reportero(formato)
-                            .orElseThrow(
-                                    () ->
-                                            new IllegalArgumentException(
-                                                    "No hay un reportero para el formato "
-                                                            + formato
-                                                            + "; los disponibles son "
-                                                            + formatosDisponibles())));
+                            .orElseThrow(() ->
+                                    new IllegalArgumentException(
+                                            "No hay un reportero para el formato "
+                                                    + formato
+                                                    + "; los disponibles son "
+                                                    + formatosDisponibles())));
         }
         Files.createDirectories(destino);
         for (Reportero reportero : reporteros) {

@@ -17,14 +17,16 @@ Ideas principales:
 
 ## Estado del proyecto
 
-En construcción: **Fase 0 (base del proyecto)**, versión `0.0.1-SNAPSHOT`. Todavía no hay versiones publicadas.
+En construcción: base del proyecto terminada (versión `0.0.5`) y desarrollo de la v0.1 en curso. Ya se puede ver una primera demo de punta a punta: [`demo/`](demo/README.md) detecta una contraseña escrita en la consola (CWE-532) en la app de práctica.
 
 Ya está disponible:
 
-- Contratos versión 1: modelos del dominio, interfaces de extensión, protocolo motor-agente, esquemas JSON de los YAML y catálogos (eventos, oráculos, códigos de resultado, CWE).
+- Contratos versión 1.1: modelos del dominio, interfaces de extensión, protocolo motor-agente, esquemas JSON de los YAML y catálogos (eventos, oráculos, códigos de resultado, CWE).
 - Dobles de prueba (`AgenteFalso`, `MotorFalso`) y trazas, mapas y resultados de ejemplo.
 - Núcleo mínimo: carga y validación de proyectos y suites, sesiones, ejecución, evaluación e informes.
-- Un ejemplo de referencia por módulo: un oráculo, un archivo de payloads, el reportero JSON y la CLI con `version` y `validar`.
+- Agente mínimo: pulsa, llena y espera en modo semántico, y observa consola, ventanas, diálogos y excepciones.
+- Oráculos `EXCEPCION-NO-CAPTURADA` y `CONTRASENA-EN-CONSOLA` (CWE-532), un archivo de payloads y el reportero JSON.
+- CLI con `version`, `validar` y `ejecutar`, que trae dentro el agente, los oráculos y los reporteros.
 - App de práctica `clientes-vulnerable` con fallos sembrados.
 - Verificaciones automáticas de formato, estilo, Javadoc, dependencias entre módulos y contratos, e integración continua en Windows, macOS y Linux.
 
@@ -41,7 +43,7 @@ Hoja de ruta:
 
 ## Requisitos
 
-Solo se necesita un **JDK 17 o superior** (probado con 17 y 21). No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
+Solo se necesita un **JDK 21 o superior** (probado con 21 y 25). Las aplicaciones que se prueban pueden ser de Java 8 en adelante: corren en su propia JVM y el agente se compila para Java 8. No hace falta instalar Maven: el proyecto incluye el Maven Wrapper (`mvnw` y `mvnw.cmd`), que descarga la versión correcta la primera vez.
 
 ## Compilar y probar
 
@@ -56,6 +58,8 @@ En Linux sin pantalla, las pruebas con Swing se omiten automáticamente. Para ej
 ```sh
 xvfb-run --auto-servernum ./mvnw -B verify
 ```
+
+Con pantalla real (en cualquier sistema), las pruebas con Swing abren ventanas durante unos segundos y la app de práctica puede tomar el foco. Mientras corre `verify`, no escribas sobre esas ventanas: una tecla puede cambiar un campo o cerrar un diálogo y hacer fallar una prueba. En Linux, `xvfb-run` evita que aparezcan.
 
 **Windows** (CMD o PowerShell)
 
@@ -82,25 +86,28 @@ En Windows, reemplaza `./mvnw` por `mvnw.cmd`.
 Después de `verify`, la CLI `opsec` queda empaquetada con todas sus dependencias:
 
 ```sh
-java -jar opsec-cli/target/opsec-0.0.1-SNAPSHOT.jar version
-java -jar opsec-cli/target/opsec-0.0.1-SNAPSHOT.jar validar contratos/ejemplos/proyecto.yaml
+java -jar opsec-cli/target/opsec-<versión>.jar version
+java -jar opsec-cli/target/opsec-<versión>.jar validar contratos/ejemplos/proyecto.yaml
+java -jar opsec-cli/target/opsec-<versión>.jar ejecutar demo/proyecto.yaml
 ```
+
+Ver [`demo/README.md`](demo/README.md) para la demo completa.
 
 ## Módulos
 
 | Módulo | Responsabilidad | Java | Rol dueño |
 |---|---|---|---|
-| `opsec-dominio` | Modelos inmutables e interfaces de extensión (`Oraculo`, `GeneradorCasos`, `Reportero`, `ProveedorDatos`, `ProveedorIA`). Sin dependencias. | 17 | Líder |
+| `opsec-dominio` | Modelos inmutables e interfaces de extensión (`Oraculo`, `GeneradorCasos`, `Reportero`, `ProveedorDatos`, `ProveedorIA`). Sin dependencias. | 21 | Líder |
 | `opsec-protocolo` | Mensajes motor-agente (JSON por líneas sobre socket local) y su serialización. | 8 | Líder |
 | `opsec-agente` | Agente que corre dentro de la app probada: driver Swing, observadores, ganchos y capturas. Dependencias reubicadas. | 8 | P1 (el paquete `api`, el líder) |
-| `opsec-nucleo` | Servicios de aplicación: proyectos, sesiones, ejecución, evaluación, informes; cliente del agente y lanzador de procesos. | 17 | Líder |
-| `opsec-oraculos` | Oráculos incluidos, descubiertos con `ServiceLoader`. | 17 | P2 |
-| `opsec-ataques` | Biblioteca de payloads en YAML y su cargador. | 17 | P2 |
-| `opsec-informes` | Reporteros: HTML, JSON, JUnit XML y SARIF. | 17 | P3 |
-| `opsec-cli` | Línea de comandos `opsec`. | 17 | P3 |
-| `opsec-soporte-pruebas` | Dobles de prueba compartidos y datos de ejemplo. Solo se usa en pruebas. | 17 | Líder |
-| `opsec-verificacion` | Pruebas de arquitectura (ArchUnit) y de contratos. Sin código principal. | 17 | Líder |
-| `apps-practica/clientes-vulnerable` | App Swing con fallos sembrados, para evaluar el motor y para docencia. | 11 | P3 |
+| `opsec-nucleo` | Servicios de aplicación: proyectos, sesiones, ejecución, evaluación, informes; cliente del agente y lanzador de procesos. | 21 | Líder |
+| `opsec-oraculos` | Oráculos incluidos, descubiertos con `ServiceLoader`. | 21 | P2 |
+| `opsec-ataques` | Biblioteca de payloads en YAML y su cargador. | 21 | P2 |
+| `opsec-informes` | Reporteros: HTML, JSON, JUnit XML y SARIF. | 21 | P3 (salidas) |
+| `opsec-cli` | Línea de comandos `opsec`. | 21 | P3 (salidas) |
+| `opsec-soporte-pruebas` | Dobles de prueba compartidos y datos de ejemplo. Solo se usa en pruebas. | 21 | Líder |
+| `opsec-verificacion` | Pruebas de arquitectura (ArchUnit) y de contratos. Sin código principal. | 21 | Líder |
+| `apps-practica/clientes-vulnerable` | App Swing con fallos sembrados, para evaluar el motor y para docencia. | 11 | P3 (laboratorio) |
 
 Reglas de dependencia: `opsec-dominio` no depende de nada; `opsec-agente` solo depende de `opsec-protocolo`; oráculos, ataques e informes dependen solo del dominio; las presentaciones (como la CLI) solo hablan con el núcleo, y ningún módulo depende de una presentación. Las reglas se comprueban en cada build.
 

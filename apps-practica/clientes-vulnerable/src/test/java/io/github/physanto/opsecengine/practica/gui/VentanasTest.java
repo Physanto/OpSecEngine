@@ -61,11 +61,10 @@ class VentanasTest {
 
     @AfterEach
     void cerrar() throws Exception {
-        enEdt(
-                () -> {
-                    abiertas.forEach(JFrame::dispose);
-                    return null;
-                });
+        enEdt(() -> {
+            abiertas.forEach(JFrame::dispose);
+            return null;
+        });
         if (base != null) {
             base.close();
         }
@@ -130,12 +129,11 @@ class VentanasTest {
         JFrame ventana = crear(() -> new EliminarPersona(contexto, ADMIN));
 
         String texto =
-                enEdt(
-                        () -> {
-                            unico(ventana, JTextField.class).setText(" P003 ");
-                            boton(ventana, "Eliminar").doClick();
-                            return unico(ventana, JTextArea.class).getText();
-                        });
+                enEdt(() -> {
+                    unico(ventana, JTextField.class).setText(" P003 ");
+                    boton(ventana, "Eliminar").doClick();
+                    return unico(ventana, JTextArea.class).getText();
+                });
 
         assertThat(texto).isEqualTo("Se eliminó la persona P003.");
         assertThat(contexto.personas().buscar("P003")).isEmpty();
@@ -146,19 +144,18 @@ class VentanasTest {
         JFrame ventana = crear(() -> new EliminarPersona(contexto, ADMIN));
 
         List<String> textos =
-                enEdt(
-                        () -> {
-                            List<String> resultado = new ArrayList<>();
-                            JTextField campo = unico(ventana, JTextField.class);
-                            AbstractButton eliminar = boton(ventana, "Eliminar");
-                            campo.setText("P999");
-                            eliminar.doClick();
-                            resultado.add(unico(ventana, JTextArea.class).getText());
-                            campo.setText("  ");
-                            eliminar.doClick();
-                            resultado.add(unico(ventana, JTextArea.class).getText());
-                            return resultado;
-                        });
+                enEdt(() -> {
+                    List<String> resultado = new ArrayList<>();
+                    JTextField campo = unico(ventana, JTextField.class);
+                    AbstractButton eliminar = boton(ventana, "Eliminar");
+                    campo.setText("P999");
+                    eliminar.doClick();
+                    resultado.add(unico(ventana, JTextArea.class).getText());
+                    campo.setText("  ");
+                    eliminar.doClick();
+                    resultado.add(unico(ventana, JTextArea.class).getText());
+                    return resultado;
+                });
 
         assertThat(textos)
                 .containsExactly(
@@ -171,13 +168,12 @@ class VentanasTest {
         JFrame ventana = crear(() -> new BuscarPersona(contexto, ADMIN));
 
         String texto =
-                enEdt(
-                        () -> {
-                            JTextField campo = (JTextField) etiqueta(ventana, "Uid").getLabelFor();
-                            campo.setText("P005");
-                            boton(ventana, "Buscar").doClick();
-                            return unico(ventana, JTextArea.class).getText();
-                        });
+                enEdt(() -> {
+                    JTextField campo = (JTextField) etiqueta(ventana, "Uid").getLabelFor();
+                    campo.setText("P005");
+                    boton(ventana, "Buscar").doClick();
+                    return unico(ventana, JTextArea.class).getText();
+                });
 
         assertThat(texto).contains("Uid: P005", "Nombre: Valentina Castaño");
         assertThat(unico(ventana, JTextArea.class).getName()).isNull();

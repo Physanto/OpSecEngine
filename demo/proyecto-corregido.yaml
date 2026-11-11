@@ -1,0 +1,13 @@
+# Demo de OpSecEngine: la misma app con el fallo F6 corregido (la contraseña ya no sale en la
+# consola). Usa las mismas suites que proyecto.yaml.
+# Formato: contratos/esquemas/proyecto.schema.json
+
+nombre: demo-clientes-corregido
+
+app:
+  jar: ../apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=F6"]
+
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}
+  cliente: {usuario: Cliente, contrasena: "Cliente#2026"}

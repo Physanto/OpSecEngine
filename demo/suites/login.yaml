@@ -1,0 +1,23 @@
+# Suite de la demo: inicio de sesión del administrador desde la nube.
+# Formato: contratos/esquemas/suite.schema.json
+#
+# No hay "esperado" escrito: el oráculo CONTRASENA-EN-CONSOLA decide el veredicto.
+# Modo SEMANTICO: el agente de la demo todavía no implementa el modo EVENTOS.
+
+suite: login
+version: "1"
+enfoques: [SEGURIDAD]
+
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+
+casos:
+  - id: LOGIN-ADMIN
+    descripcion: El administrador inicia sesión con sus credenciales de prueba.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: Admin, Contraseña: "Admin#2026"}
+      - pulsar: Iniciar Sesion
+      - esperar: {tituloVentana: Menú administrador}

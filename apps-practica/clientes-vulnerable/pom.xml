@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.physanto.opsecengine</groupId>
         <artifactId>opsec-padre</artifactId>
-        <version>0.0.4</version>
+        <version>0.0.5</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -19,8 +19,8 @@
     <properties>
         <!-- H2 2.x se publica compilado para Java 11, así que la app no puede bajar a Java 8 -->
         <maven.compiler.release>11</maven.compiler.release>
-        <!-- JUnit 6 requiere Java 17 para compilar las pruebas -->
-        <maven.compiler.testRelease>17</maven.compiler.testRelease>
+        <!-- Las pruebas se compilan para Java 21, como el motor -->
+        <maven.compiler.testRelease>21</maven.compiler.testRelease>
         <!-- Este módulo sí puede escribir en la consola -->
         <checkstyle.consola.severidad>ignore</checkstyle.consola.severidad>
     </properties>
