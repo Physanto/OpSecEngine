@@ -46,6 +46,13 @@ Ningún otro módulo puede depender de este.
 
 ## Pruebas
 
+`DemoIT` es la suite de humo de integración (#65): ejecuta la app real con F6 y F8
+activos y corregidos. Comprueba códigos de salida, veredictos, oráculos, CWE y
+evidencias del JSON contra los eventos de la traza. Una detección ausente, un
+informe incorrecto o un falso positivo en la corregida hace fallar `verify`.
+Se omite sin pantalla en local; en la CI Linux la ausencia de Xvfb hace fallar la
+prueba. Véase el [alcance y la verificación del laboratorio](../apps-practica/laboratorio/README.md#suite-de-humo-issue-65).
+
 Desde la raíz del repositorio:
 
 ```sh

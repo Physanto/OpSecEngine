@@ -18,12 +18,17 @@
 !apps-practica/clientes-vulnerable/pom.xml
 !apps-practica/clientes-vulnerable/src/
 !apps-practica/clientes-vulnerable/src/**
+!apps-practica/clientes-vulnerable/ejemplos/
+!apps-practica/clientes-vulnerable/ejemplos/f8/
+!apps-practica/clientes-vulnerable/ejemplos/f8/**
 !demo/
 !demo/proyecto.yaml
 !demo/proyecto-corregido.yaml
 !demo/suites/
 !demo/suites/**
 **/target/
-**/resultados/
+# No excluir los datos de prueba src/main/resources/resultados/.
+demo/resultados/
+apps-practica/clientes-vulnerable/ejemplos/f8/resultados/
 **/*.jar
 **/*.log

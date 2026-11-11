@@ -122,6 +122,56 @@ Necesita pantalla (en Linux: `xvfb-run --auto-servernum ./mvnw -B -pl opsec-cli 
 `DemoIT` cubre la demo del motor, pero no sustituye construir y ejecutar la imagen
 para verificar JDK 21, Xvfb y la persistencia del volumen.
 
+## Suite de humo (issue #65)
+
+`opsec-cli/src/test/java/.../DemoIT.java` ejecuta cuatro escenarios con la app real:
+
+| Fallo | Suite reutilizada | Vulnerable | Corregido |
+|---|---|---|---|
+| F6: contraseña en consola | `demo/suites/login.yaml` | `NO_CUMPLE`, código 3, CWE-532 | `CUMPLE`, código 0 |
+| F8: excepción no capturada | `clientes-vulnerable/ejemplos/f8/suites/f8.yaml` | `NO_CUMPLE`, código 3 | `CUMPLE`, código 0 |
+
+La prueba comprueba el oráculo de cada hallazgo y que sus referencias de evidencia
+existan en la traza. En los controles corregidos exige que no haya hallazgos ni
+motivo de ejecución incompleta. Una detección ausente, un veredicto no concluyente,
+un hallazgo de otro oráculo o un falso positivo provoca una aserción fallida y un
+build rojo.
+El ejemplo vulnerable F8 deja únicamente F8 activo; el proyecto corregido usa los
+mismos pasos y corrige todos los fallos.
+
+El flujo existente de `.github/workflows/ci.yml` ejecuta `./mvnw -B verify` bajo
+Xvfb en Linux para los PR hacia `main`. Failsafe incluye `DemoIT`; no se necesita
+otro flujo. En local sin pantalla se omite; en Linux con `CI=true`, no disponer de
+pantalla hace fallar la prueba para evitar una omisión silenciosa en CI.
+La rama `test/app-prueba-2` no está incluida entre los filtros de push de ese flujo:
+la ejecución en GitHub se comprobará al abrir el PR autorizado hacia `main`.
+
+La suite cubre los dos oráculos implementados actualmente. F7 y los niveles 2/3
+requieren implementaciones del motor antes de añadir comprobaciones de detección;
+no se declaran cubiertos por esta suite de humo. La integración de todos los
+fallos de v0.3 corresponde a la issue #67.
+
+Verificación realizada el 11 de noviembre de 2026:
+
+| Comprobación | Resultado observado |
+|---|---|
+| Windows, JDK 27: `./mvnw -B -pl opsec-cli -am verify` | `BUILD SUCCESS`; F6 y F8 pasan con sus controles corregidos. |
+| Linux, JDK 21.0.13, `CI=true`, Xvfb: `./mvnw -B verify` completo | `BUILD SUCCESS`; `DemoIT`: 2 pruebas, 0 fallos, 0 errores y 0 omitidas (4 ejecuciones de la app). |
+| Copia del JAR sin registrar el oráculo de F6 | Maven termina con código 1: falla el caso F6 y pasa F8. |
+| Copia del JAR sin registrar el oráculo de F8 | Maven termina con código 1: falla el caso F8 y pasa F6. |
+
+Los controles retiraron registros de `ServiceLoader` solo en copias temporales
+del JAR; no modificaron el código ni el registro del motor. La evidencia local
+está en `target/issue65/evidencia/` (ignorada por Git). El filtro de construcción
+conserva los recursos de prueba `src/main/resources/resultados/` y excluye las
+carpetas de informes generados.
+
+Esto demuestra localmente que una pérdida de detección rompe la verificación que
+ejecuta la CI. Quedan pendientes la ejecución real del flujo en GitHub y el cierre
+formal de la Definición de Terminado: CI verde, PR aprobado e integrado en `main`
+y tarea en *Hecho*. No se declara completado ese proceso desde la verificación
+local.
+
 ## Referencias técnicas
 
 - [Etiquetas oficiales de Eclipse Temurin](https://github.com/docker-library/docs/blob/master/eclipse-temurin/README.md).
