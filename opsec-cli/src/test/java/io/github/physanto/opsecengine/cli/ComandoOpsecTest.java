@@ -59,6 +59,27 @@ class ComandoOpsecTest {
     }
 
     @Test
+    void validarUsaElSingularCuandoHayUnoSolo() throws Exception {
+        Path archivo =
+                Files.writeString(
+                        carpeta.resolve("proyecto.yaml"),
+                        "app: {jar: a.jar}\n"
+                                + "roles:\n  admin: {usuario: Admin, contrasena: \"12345\"}\n"
+                                + "login:\n  pasos:\n    - pulsar: Entrar\n",
+                        StandardCharsets.UTF_8);
+        Files.createDirectory(carpeta.resolve("suites"));
+        Files.writeString(
+                carpeta.resolve("suites").resolve("una.yaml"),
+                "suite: una\ncasos:\n  - id: A\n    pasos:\n      - esperar: 10\n",
+                StandardCharsets.UTF_8);
+
+        assertThat(ejecutar("validar", archivo.toString())).isZero();
+        assertThat(salida.toString())
+                .contains("válido (1 rol, 1 paso de inicio de sesión)")
+                .contains("Suite una: válida (1 caso)");
+    }
+
+    @Test
     void validarMuestraLosErroresConSuRuta() throws Exception {
         Path archivo =
                 Files.writeString(

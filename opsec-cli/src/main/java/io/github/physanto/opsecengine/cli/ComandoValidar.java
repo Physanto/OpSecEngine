@@ -67,10 +67,10 @@ public final class ComandoValidar implements Callable<Integer> {
                     "Proyecto "
                             + proyecto.nombre()
                             + ": válido ("
-                            + proyecto.roles().size()
-                            + " roles, "
-                            + proyecto.pasosLogin().size()
-                            + " pasos de inicio de sesión)");
+                            + contar(proyecto.roles().size(), "rol", "roles")
+                            + ", "
+                            + contar(proyecto.pasosLogin().size(), "paso", "pasos")
+                            + " de inicio de sesión)");
             if (!Files.isDirectory(carpetaSuites)) {
                 salida.println(
                         "No hay carpeta " + ProyectoService.CARPETA_SUITES + "/ junto al proyecto");
@@ -80,8 +80,8 @@ public final class ComandoValidar implements Callable<Integer> {
                         "Suite "
                                 + suite.nombre()
                                 + ": válida ("
-                                + suite.casos().size()
-                                + " casos)");
+                                + contar(suite.casos().size(), "caso", "casos")
+                                + ")");
             }
             salida.flush();
             return 0;
@@ -94,5 +94,10 @@ public final class ComandoValidar implements Callable<Integer> {
         }
         errores.flush();
         return CODIGO_INVALIDO;
+    }
+
+    /** Escribe una cantidad con el sustantivo en singular o plural, por ejemplo "1 caso". */
+    private static String contar(int cantidad, String singular, String plural) {
+        return cantidad + " " + (cantidad == 1 ? singular : plural);
     }
 }
