@@ -21,7 +21,7 @@ Ideas principales:
 
 ## Estado del proyecto
 
-En construcción: base del proyecto terminada (versión `0.0.5`) y desarrollo de la v0.1 en curso. Ya se puede ver una primera demo de punta a punta: [`demo/`](demo/README.md) detecta una contraseña escrita en la consola (CWE-532) en la app de práctica.
+En construcción: base del proyecto terminada (versión `0.0.6`) y desarrollo de la v0.1 en curso. Ya se puede ver una primera demo de punta a punta: [`demo/`](demo/README.md) detecta una contraseña escrita en la consola (CWE-532) en la app de práctica.
 
 Ya está disponible:
 
