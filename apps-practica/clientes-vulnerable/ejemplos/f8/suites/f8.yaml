@@ -1,0 +1,16 @@
+# Oráculo implementado. F8 es el único fallo activo.
+# Validar el formato no demuestra que la ejecución detecte el fallo.
+suite: f8
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F8-CASO
+    descripcion: "Provocar la excepción sin capturar del botón de diagnóstico."
+    oraculos: [EXCEPCION-NO-CAPTURADA]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - pulsar: Probar excepción

@@ -28,8 +28,8 @@ Los ids de oráculo son los del catálogo `contratos/catalogos/oraculos.yaml`.
 ## Nivel 1 (v0.1, issue #61)
 
 Se seleccionan F6, F7 y F8 por corresponder a los tres oráculos de la v0.1.
-F1–F5 se mantienen como fallos originales, sin cambiar su comportamiento ni
-asignarlos a otros niveles en esta entrega.
+F1–F5 se mantienen como fallos originales del nivel 0. No se añaden los niveles
+2 y 3 en esta entrega.
 
 | Fallo | Oráculo esperado | Corrección | Prueba unitaria |
 |---|---|---|---|
@@ -40,6 +40,92 @@ asignarlos a otros niveles en esta entrega.
 Las pruebas de lógica no necesitan pantalla; la prueba del botón se omite sin
 pantalla. La implementación de `TRAZA-EN-DIALOGO` corresponde al módulo de oráculos:
 su ausencia no impide preparar F7, pero sí comprobar su detección con el motor actual.
+
+## Correspondencia de fallos y suites (issue #62)
+
+El nivel 0 identifica la base original (F1–F5); el nivel 1 es la selección de la
+v0.1 (F6–F8). Cada fallo tiene una suite de ejemplo y un proyecto que selecciona
+sus interruptores. Las rutas de esta tabla son relativas a esta carpeta.
+
+| Nivel | Fallo | CWE del fallo | Oráculo esperado | Suite de ejemplo |
+|---|---|---|---|---|
+| 0 (base) | F1 | CWE-798 | `CREDENCIALES-DEBILES` (CWE-521; véase la limitación debajo) | [f1.yaml](ejemplos/f1/suites/f1.yaml) |
+| 0 (base) | F2 | CWE-306 | `SIN-SESION` | [f2.yaml](ejemplos/f2/suites/f2.yaml) |
+| 0 (base) | F3 | CWE-306 | `SIN-SESION` | [f3.yaml](ejemplos/f3/suites/f3.yaml) |
+| 0 (base) | F4 | CWE-89 | `SQLI-CANARIO` | [f4.yaml](ejemplos/f4/suites/f4.yaml) |
+| 0 (base) | F5 | CWE-204 | `ENUMERACION-USUARIOS` | [f5.yaml](ejemplos/f5/suites/f5.yaml) |
+| 1 | F6 | CWE-532 | `CONTRASENA-EN-CONSOLA` | [f6.yaml](ejemplos/f6/suites/f6.yaml) |
+| 1 | F7 | CWE-209 | `TRAZA-EN-DIALOGO` | [f7.yaml](ejemplos/f7/suites/f7.yaml) |
+| 1 | F8 | CWE-248 | `EXCEPCION-NO-CAPTURADA` (CWE nulo en el catálogo) | [f8.yaml](ejemplos/f8/suites/f8.yaml) |
+
+**Alcance de los ejemplos:** no modifican la app ni implementan oráculos nuevos.
+Cada carpeta `ejemplos/fN/` contiene `proyecto.yaml` y `suites/fN.yaml`. Los proyectos
+corrigen los otros fallos para aislar el objetivo, salvo F7, que necesita F4 activo
+para provocar el error de consulta. F3 especifica como clase principal
+`io.github.physanto.opsecengine.practica.gui.EliminarPersona`; las demás suites
+arrancan desde la portada. No se usa la acción `IR_A`, aún no implementada.
+
+### Validar las ocho suites
+
+Desde la raíz del repositorio, con JDK 21, construir la CLI y la app:
+
+```bash
+./mvnw -B verify
+```
+
+`opsec validar` recibe un **proyecto**, no un archivo de suite: valida también
+los YAML de `suites/` junto a él. Para un fallo:
+
+```bash
+java -jar opsec-cli/target/opsec-0.1.0-SNAPSHOT.jar validar apps-practica/clientes-vulnerable/ejemplos/f6/proyecto.yaml
+```
+
+Para validar todos en Git Bash, Linux o macOS (se detiene si alguno falla):
+
+```bash
+for fallo in 1 2 3 4 5 6 7 8; do
+  java -jar opsec-cli/target/opsec-0.1.0-SNAPSHOT.jar validar "apps-practica/clientes-vulnerable/ejemplos/f${fallo}/proyecto.yaml" || break
+done
+```
+
+En PowerShell:
+
+```powershell
+foreach ($fallo in 1..8) {
+    java -jar opsec-cli/target/opsec-0.1.0-SNAPSHOT.jar validar "apps-practica/clientes-vulnerable/ejemplos/f$fallo/proyecto.yaml"
+    if ($LASTEXITCODE -ne 0) { throw "Falló la validación de F$fallo" }
+}
+```
+
+Se esperan ocho proyectos y ocho suites válidos (nueve casos: F5 contiene C01 y
+C02 para comparar los mensajes). El resultado válido comprueba carga y formato;
+no demuestra la ejecución del flujo ni la detección del fallo.
+
+### Dependencias de ejecución para P2 y el líder
+
+- **F1:** `CREDENCIALES-DEBILES` es el oráculo dinámico previsto para la pareja
+  `soporte` / `soporte123`; su CWE es 521. No demuestra por sí mismo que la
+  contraseña esté embebida en el código (CWE-798); eso corresponde al análisis
+  estático descrito en F1. El oráculo dinámico todavía falta.
+- **F2 y F3:** faltan `SIN-SESION`, los ganchos JDBC y la confirmación del borrado.
+  Además, `Uid` en EliminarPersona no tiene etiqueta asociada ni nombre: el agente
+  actual no resuelve ese campo con el localizador de texto de `llenar`. Las suites
+  documentan el flujo esperado y validan, pero necesitan la mejora del agente para
+  completarlo. No se altera ese componente en esta issue.
+- **F4:** la suite contiene una entrada SQL concreta con el marcador literal
+  `OPSEC-F4`. No es un canario generado por el motor. Faltan el rastreo/generación
+  de canarios, los ganchos JDBC y `SQLI-CANARIO` para confirmar el hallazgo.
+- **F5:** C01 usa un usuario inexistente y C02 una contraseña incorrecta del Admin.
+  Falta `ENUMERACION-USUARIOS`, que debe comparar los diálogos a nivel de suite.
+- **F7:** falta `TRAZA-EN-DIALOGO`; el proyecto conserva F4 activo intencionalmente.
+- **F6 y F8:** usan los dos oráculos disponibles. Sus suites no requieren login
+  automático por `rol:` ni expansión de ataques; se usan pasos explícitos y modo
+  `SEMANTICO`, el modo disponible actualmente.
+
+Los oráculos se solicitan explícitamente en cada caso. El motor actual señala
+los no registrados como `NO_CONCLUYENTE`; no debe interpretarse ese resultado
+como ausencia del fallo. Esta entrega valida ejemplos; la integración completa
+del banco y las versiones corregidas pertenece a otras issues.
 
 ## Datos semilla
 

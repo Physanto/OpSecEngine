@@ -12,6 +12,10 @@ El nivel 1 incluye F6 (contraseña en consola), F7 (traza en diálogo) y F8 (exc
 La selección, los interruptores y las pruebas están descritos en [FALLOS.md](FALLOS.md).
 El oráculo de F7 está pendiente en el motor.
 
+La tabla nivel → fallo → CWE → oráculo → suite y los comandos de validación están
+en [FALLOS.md](FALLOS.md#correspondencia-de-fallos-y-suites-issue-62).
+Cada carpeta de [ejemplos/](ejemplos/) contiene un proyecto y una suite por fallo.
+
 ## Ventanas
 
 | Ventana | Clase | Componentes |

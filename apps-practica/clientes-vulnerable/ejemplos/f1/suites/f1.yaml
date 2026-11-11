@@ -1,0 +1,17 @@
+# Falta el oráculo CREDENCIALES-DEBILES; no equivale a verificar el análisis estático.
+# Validar el formato no demuestra que la ejecución detecte el fallo.
+suite: f1
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F1-CASO
+    descripcion: "Reproducir el acceso con la cuenta de soporte embebida."
+    oraculos: [CREDENCIALES-DEBILES]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "soporte", Contraseña: "soporte123"}
+      - pulsar: Iniciar Sesion
