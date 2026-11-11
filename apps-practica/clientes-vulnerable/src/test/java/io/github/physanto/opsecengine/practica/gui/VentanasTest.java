@@ -130,10 +130,34 @@ class VentanasTest {
                 crear(() -> new MenuCliente(contexto, Sesion.iniciada("Cliente", Rol.CLIENTE)));
         JFrame admin = crear(() -> new MenuAdministrador(contexto, ADMIN));
 
-        assertThat(textosDeBotones(cliente)).containsExactly("Buscar Persona", "Cerrar Sesion");
+        assertThat(textosDeBotones(cliente))
+                .containsExactly("Buscar Persona", "Modificar Persona", "Cerrar Sesion");
         assertThat(textosDeBotones(admin))
-                .containsExactly("Buscar Persona", "Eliminar Persona", "Cerrar Sesion");
+                .containsExactly(
+                        "Buscar Persona",
+                        "Registrar Persona",
+                        "Modificar Persona",
+                        "Eliminar Persona",
+                        "Cerrar Sesion");
         assertThat(boton(admin, "Eliminar Persona").getName()).isEqualTo("botonEliminarPersona");
+    }
+
+    @Test
+    void losFormulariosDeRegistroYModificacionExponenSusCampos() throws Exception {
+        JFrame registro = crear(() -> new RegistrarPersona(contexto, ADMIN));
+        JFrame modificacion =
+                crear(() ->
+                        new ModificarPersona(contexto, Sesion.iniciada("Cliente", Rol.CLIENTE)));
+
+        for (JFrame ventana : List.of(registro, modificacion)) {
+            assertThat(ventana.getTitle()).isIn("Registrar persona", "Modificar persona");
+            assertThat(boton(ventana, "Guardar").getName())
+                    .isIn("botonGuardarRegistrarPersona", "botonGuardarModificarPersona");
+            assertThat(etiqueta(ventana, "Uid").getLabelFor()).isInstanceOf(JTextField.class);
+            assertThat(etiqueta(ventana, "Nombre").getLabelFor()).isInstanceOf(JTextField.class);
+            assertThat(etiqueta(ventana, "Documento").getLabelFor()).isInstanceOf(JTextField.class);
+            assertThat(etiqueta(ventana, "Correo").getLabelFor()).isInstanceOf(JTextField.class);
+        }
     }
 
     @Test

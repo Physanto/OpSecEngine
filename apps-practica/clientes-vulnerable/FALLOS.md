@@ -1,6 +1,6 @@
 # Fallos sembrados en clientes-vulnerable
 
-La app trae ocho fallos sembrados. Por defecto **todos están activos**; cada uno tiene un identificador y se corrige con la propiedad del sistema `practica.corregir`:
+La app trae diez fallos sembrados. Por defecto **todos están activos**; cada uno tiene un identificador y se corrige con la propiedad del sistema `practica.corregir`:
 
 | Valor | Efecto |
 |---|---|
@@ -22,14 +22,16 @@ Los ids no distinguen mayúsculas y admiten espacios alrededor de las comas. Un 
 | F6 | La contraseña se imprime en la consola al iniciar sesión | CWE-532 | `CONTRASENA-EN-CONSOLA` |
 | F7 | Un error SQL del login expone su pila de llamadas en un diálogo | CWE-209 | `TRAZA-EN-DIALOGO` (pendiente en el motor) |
 | F8 | El botón de diagnóstico lanza una excepción sin capturar | CWE-248 | `EXCEPCION-NO-CAPTURADA` (oráculo implícito, sin CWE en el catálogo) |
+| F9 | El registro permite campos vacíos o de formato inválido | CWE-20 | Validación del registro (nivel 2) |
+| F10 | Un cliente puede modificar los datos de una persona | CWE-862 | Autorización por rol (nivel 3; el oráculo diferencial está pendiente) |
 
 Los ids de oráculo son los del catálogo `contratos/catalogos/oraculos.yaml`.
 
 ## Nivel 1 (v0.1, issue #61)
 
 Se seleccionan F6, F7 y F8 por corresponder a los tres oráculos de la v0.1.
-F1–F5 se mantienen como fallos originales del nivel 0. No se añaden los niveles
-2 y 3 en esta entrega.
+F1–F5 se mantienen como base original; F6–F8 son nivel 1, F9 cubre validación
+de nivel 2 y F10 cubre seguridad de nivel 3.
 
 | Fallo | Oráculo esperado | Corrección | Prueba unitaria |
 |---|---|---|---|
@@ -40,6 +42,23 @@ F1–F5 se mantienen como fallos originales del nivel 0. No se añaden los nivel
 Las pruebas de lógica no necesitan pantalla; la prueba del botón se omite sin
 pantalla. La implementación de `TRAZA-EN-DIALOGO` corresponde al módulo de oráculos:
 su ausencia no impide preparar F7, pero sí comprobar su detección con el motor actual.
+
+## Niveles 2 y 3 (issue #63)
+
+| Nivel | Ventana | Fallo | CWE | Corrección | Pruebas |
+|---|---|---|---|---|---|
+| 2 | Registrar persona | F9: acepta nombre vacío, documento no numérico y correo inválido | CWE-20 | `-Dpractica.corregir=F9` valida Uid, nombre, documento y correo antes del INSERT | `EdicionPersonaServicioTest` prueba el registro inválido vulnerable y corregido; `VentanasTest` identifica los controles |
+| 3 | Modificar persona | F10: permite que el rol Cliente actualice cualquier persona | CWE-862 | `-Dpractica.corregir=F10` exige rol Administrador antes del UPDATE | `EdicionPersonaServicioTest` prueba escritura como Cliente y su rechazo corregido; `VentanasTest` identifica los controles |
+
+Los nuevos accesos aparecen en los menús de administrador (registro y modificación)
+y cliente (modificación). La versión corregida comparte el formulario y pasos; los
+interruptores solo cambian la decisión del servicio.
+
+El repositorio no implementa todavía `ExploracionService`. Las pruebas de ventanas
+construyen sin mostrar las pantallas y comprueban componentes identificables y las
+opciones del menú, pero no pueden satisfacer el criterio «el explorador encuentra
+todas las ventanas». Ese criterio queda pendiente del módulo del motor; no se afirma
+que el explorador actual lo haya verificado.
 
 ## Correspondencia de fallos y suites (issue #62)
 

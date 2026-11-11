@@ -34,7 +34,9 @@ class InterruptoresTest {
 
         assertThat(interruptores.corregidos()).containsExactly(Fallo.F1, Fallo.F4);
         assertThat(interruptores.activos())
-                .containsExactly(Fallo.F2, Fallo.F3, Fallo.F5, Fallo.F6, Fallo.F7, Fallo.F8);
+                .containsExactly(
+                        Fallo.F2, Fallo.F3, Fallo.F5, Fallo.F6, Fallo.F7, Fallo.F8, Fallo.F9,
+                        Fallo.F10);
         assertThat(interruptores.estaActivo(Fallo.F1)).isFalse();
         assertThat(interruptores.estaActivo(Fallo.F2)).isTrue();
     }
@@ -55,12 +57,12 @@ class InterruptoresTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"F9", "F1,X", "1", "todo"})
+    @ValueSource(strings = {"F11", "F1,X", "1", "todo"})
     void unIdDesconocidoEsUnError(String valor) {
         assertThatThrownBy(() -> Interruptores.desdeTexto(valor))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(Interruptores.PROPIEDAD)
-                .hasMessageContaining("F8");
+                .hasMessageContaining("F10");
     }
 
     @Test
@@ -92,7 +94,7 @@ class InterruptoresTest {
     @Test
     void elTextoListaActivosYCorregidos() {
         assertThat(Interruptores.corrigiendo(Fallo.F1, Fallo.F4).toString())
-                .isEqualTo("Fallos activos: F2, F3, F5, F6, F7, F8; corregidos: F1, F4");
+                .isEqualTo("Fallos activos: F2, F3, F5, F6, F7, F8, F9, F10; corregidos: F1, F4");
         assertThat(Interruptores.todosActivos().toString()).endsWith("corregidos: ninguno");
     }
 

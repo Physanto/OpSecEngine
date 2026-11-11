@@ -17,7 +17,11 @@ public enum Fallo {
     /** Un error de consulta muestra su pila de llamadas al usuario. */
     F7("Pila de llamadas en el diálogo de error de consulta", "CWE-209"),
     /** Una acción de diagnóstico deja escapar una excepción al EDT. */
-    F8("Excepción no capturada en una acción de la interfaz", "CWE-248");
+    F8("Excepción no capturada en una acción de la interfaz", "CWE-248"),
+    /** El registro acepta campos vacíos o con formato inválido. */
+    F9("Registro de personas sin validar campos", "CWE-20"),
+    /** La modificación no verifica el rol del usuario. */
+    F10("Modificación de personas sin autorización", "CWE-862");
 
     private final String descripcion;
     private final String cwe;

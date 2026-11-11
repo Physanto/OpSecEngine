@@ -12,6 +12,9 @@ El nivel 1 incluye F6 (contraseña en consola), F7 (traza en diálogo) y F8 (exc
 La selección, los interruptores y las pruebas están descritos en [FALLOS.md](FALLOS.md).
 El oráculo de F7 está pendiente en el motor.
 
+Los niveles 2 y 3 añaden los formularios Registrar Persona (F9) y Modificar Persona
+(F10). Sus correcciones y pruebas están descritas en [FALLOS.md](FALLOS.md).
+
 La tabla nivel → fallo → CWE → oráculo → suite y los comandos de validación están
 en [FALLOS.md](FALLOS.md#correspondencia-de-fallos-y-suites-issue-62).
 Cada carpeta de [ejemplos/](ejemplos/) contiene un proyecto y una suite por fallo.
@@ -23,8 +26,10 @@ Cada carpeta de [ejemplos/](ejemplos/) contiene un proyecto y una suite por fall
 | Portada | `gui.Portada` | botón **Avanzar** |
 | Escoger modo | `gui.EscogerModo` | botones **Nube** (`botonNube`) y **Local** |
 | Iniciar sesión | `gui.InicioSesion` | campos **Usuario** (`campoUsuario`, con etiqueta) y **Contraseña** (solo etiqueta), botones **Iniciar Sesion** (`botonIniciarSesion`), **Probar excepción** (`botonProbarExcepcion`) y **Volver** |
-| Menú cliente | `gui.MenuCliente` | botones **Buscar Persona** y **Cerrar Sesion** |
-| Menú administrador | `gui.MenuAdministrador` | botones **Buscar Persona**, **Eliminar Persona** (`botonEliminarPersona`) y **Cerrar Sesion** |
+| Menú cliente | `gui.MenuCliente` | botones **Buscar Persona**, **Modificar Persona** (`botonModificarPersona`) y **Cerrar Sesion** |
+| Menú administrador | `gui.MenuAdministrador` | botones **Buscar Persona**, **Registrar Persona** (`botonRegistrarPersona`), **Modificar Persona** (`botonModificarPersona`), **Eliminar Persona** (`botonEliminarPersona`) y **Cerrar Sesion** |
+| Registrar persona | `gui.RegistrarPersona` | Uid, nombre, documento, correo; **Guardar** (`botonGuardarRegistrarPersona`) |
+| Modificar persona | `gui.ModificarPersona` | Uid, nombre, documento, correo; **Guardar** (`botonGuardarModificarPersona`) |
 | Buscar persona | `gui.BuscarPersona` | campo **Uid** (`campoUid`, con etiqueta), botón **Buscar**, área de resultado sin nombre |
 | Eliminar persona | `gui.EliminarPersona` | campo sin nombre ni etiqueta asociada junto al texto "Uid", botón **Eliminar** (`botonEliminar`), área `areaResultado` |
 

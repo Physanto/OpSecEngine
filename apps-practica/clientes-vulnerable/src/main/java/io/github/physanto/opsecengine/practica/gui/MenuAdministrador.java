@@ -38,8 +38,18 @@ public final class MenuAdministrador extends JFrame {
         JButton cerrarSesion = new JButton("Cerrar Sesion");
         cerrarSesion.addActionListener(e -> Navegacion.cambiar(this, new Portada(contexto)));
 
-        JPanel botones = new JPanel(new GridLayout(3, 1, 0, 8));
+        JPanel botones = new JPanel(new GridLayout(0, 1, 0, 8));
         botones.add(buscar);
+        JButton registrar = new JButton("Registrar Persona");
+        registrar.setName("botonRegistrarPersona");
+        registrar.addActionListener(
+                e -> Navegacion.cambiar(this, new RegistrarPersona(contexto, sesion)));
+        botones.add(registrar);
+        JButton modificar = new JButton("Modificar Persona");
+        modificar.setName("botonModificarPersona");
+        modificar.addActionListener(
+                e -> Navegacion.cambiar(this, new ModificarPersona(contexto, sesion)));
+        botones.add(modificar);
         botones.add(eliminar);
         botones.add(cerrarSesion);
 
