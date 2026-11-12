@@ -112,6 +112,7 @@ class AgenteIT {
                                         criterio("TITULO_VENTANA", VentanaDePrueba.TITULO),
                                         null))
                         .isEqualTo(CodigoResultado.OK);
+                // La etiqueta Nombre no usa setLabelFor: se resuelve por cercanía.
                 assertThat(paso(motor, modo, "LLENAR", criterio("ETIQUETA", "Nombre"), "Ana"))
                         .isEqualTo(CodigoResultado.OK);
                 assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Saludar"), null))

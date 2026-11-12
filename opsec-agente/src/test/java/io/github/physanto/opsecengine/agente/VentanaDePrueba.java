@@ -24,10 +24,10 @@ import javax.swing.WindowConstants;
 /**
  * Aplicación Swing mínima para las pruebas de integración del agente.
  *
- * <p>Muestra la ventana "Ventana de prueba" con un campo "Nombre" (asociado a su etiqueta), un
- * botón "Saludar" que escribe "Hola, &lt;nombre&gt;" en la consola y lo muestra en un diálogo modal
- * con el botón "Cerrar", un botón "Fallar" que lanza una excepción y un botón deshabilitado
- * "Bloqueado". Termina sola después de 60 segundos.
+ * <p>Muestra la ventana "Ventana de prueba" con un campo "Nombre" (a la derecha de su etiqueta, sin
+ * asociación explícita), un botón "Saludar" que escribe "Hola, &lt;nombre&gt;" en la consola y lo
+ * muestra en un diálogo modal con el botón "Cerrar", un botón "Fallar" que lanza una excepción y un
+ * botón deshabilitado "Bloqueado". Termina sola después de 60 segundos.
  *
  * <p>Para las acciones de selección y navegación tiene además un combo "Rol" (Cliente o Admin), una
  * casilla "Recordar", unas pestañas "General" y "Avanzado" (esta con el botón "Detalle") y un botón
@@ -82,7 +82,6 @@ public final class VentanaDePrueba {
                         System.out.println("Tecla en Nombre");
                     }
                 });
-        etiqueta.setLabelFor(campo);
         JButton saludar = new JButton("Saludar");
         saludar.addMouseListener(
                 new MouseAdapter() {
