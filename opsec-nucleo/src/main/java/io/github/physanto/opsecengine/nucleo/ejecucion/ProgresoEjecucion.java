@@ -8,8 +8,10 @@ import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
  * <p>Los pasos de login se identifican con {@code login=true} y el orden de su plantilla, a
  * diferencia del número 0 que llevan en la traza. Los totales describen el trabajo previsto: un
  * fallo puede impedir ejecutar todos los pasos. Un caso no ejecutable emite inicio y fin de caso,
- * sin notificaciones de pasos. El fin de suite se emite después de la evaluación y del manifiesto;
- * no se garantiza una notificación de fin si la ejecución lanza una excepción.
+ * sin notificaciones de pasos. Un reintento de {@code ESPERAR} repite los avisos de inicio y fin
+ * con el mismo número de paso; los totales no cuentan intentos adicionales. El fin de suite se
+ * emite después de la evaluación y del manifiesto; no se garantiza una notificación de fin si la
+ * ejecución lanza una excepción.
  *
  * @param tipo transición notificada
  * @param nombreSuite nombre de la suite
