@@ -6,7 +6,7 @@ import io.github.physanto.opsecengine.nucleo.sesion.LanzadorProceso;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -142,7 +142,7 @@ class ComandoVerificarTest {
                                         carpetaRegistros.resolve(LanzadorProceso.ARCHIVO_ERRORES),
                                         "Exception in thread main\n\n"
                                                 + "java.lang.NoClassDefFoundError: Falta\n",
-                                        Charset.defaultCharset());
+                                        StandardCharsets.UTF_8);
                                 throw new IOException("La aplicación terminó");
                             };
                         });
@@ -164,7 +164,7 @@ class ComandoVerificarTest {
             texto.append("linea ").append(i).append("\n\n");
         }
         Path registro =
-                Files.writeString(carpeta.resolve("errores.log"), texto, Charset.defaultCharset());
+                Files.writeString(carpeta.resolve("errores.log"), texto, StandardCharsets.UTF_8);
 
         List<String> lineas = ComandoVerificar.ultimasLineas(registro);
 
@@ -236,7 +236,7 @@ class ComandoVerificarTest {
     private Path escribir(String nombre, String contenido) throws IOException {
         Path destino = carpeta.resolve(nombre);
         Files.createDirectories(destino.getParent());
-        return Files.writeString(destino, contenido, java.nio.charset.StandardCharsets.UTF_8);
+        return Files.writeString(destino, contenido, StandardCharsets.UTF_8);
     }
 
     private static void borrar(Path registros) throws IOException {

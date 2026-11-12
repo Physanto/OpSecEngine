@@ -9,7 +9,7 @@ import io.github.physanto.opsecengine.nucleo.sesion.LanzadorProceso;
 import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -238,7 +238,7 @@ public final class ComandoVerificar implements Callable<Integer> {
     }
 
     /**
-     * Lee las últimas líneas de un archivo de texto.
+     * Lee en UTF-8 las últimas líneas de un archivo de texto.
      *
      * @return hasta {@value #LINEAS_DE_ERROR} líneas no vacías del final, o una lista vacía si el
      *     archivo no existe o no se puede leer
@@ -246,7 +246,7 @@ public final class ComandoVerificar implements Callable<Integer> {
     static List<String> ultimasLineas(Path archivo) {
         try {
             List<String> lineas =
-                    Files.readAllLines(archivo, Charset.defaultCharset()).stream()
+                    Files.readAllLines(archivo, StandardCharsets.UTF_8).stream()
                             .filter(linea -> !linea.isBlank())
                             .toList();
             return lineas.subList(Math.max(0, lineas.size() - LINEAS_DE_ERROR), lineas.size());
