@@ -16,10 +16,8 @@ import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -82,9 +80,6 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
 
     /** Intervalo entre intentos de encontrar un componente. */
     private static final long INTERVALO_BUSQUEDA_MS = 50;
-
-    /** Líneas de pila que se envían como máximo en un evento {@code EXCEPCION}. */
-    private static final int MAXIMO_LINEAS_PILA = 30;
 
     private final EmisorEventos emisor;
 
@@ -510,20 +505,7 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     }
 
     private void emitirExcepcion(Throwable excepcion, String hilo) {
-        Map<String, Object> datos = new LinkedHashMap<>();
-        datos.put("clase", excepcion.getClass().getName());
-        datos.put("mensaje", excepcion.getMessage());
-        datos.put("hilo", hilo);
-        datos.put("capturada", false);
-        List<String> pila = new ArrayList<>();
-        for (StackTraceElement elemento : excepcion.getStackTrace()) {
-            if (pila.size() == MAXIMO_LINEAS_PILA) {
-                break;
-            }
-            pila.add(elemento.toString());
-        }
-        datos.put("pila", pila);
-        emisor.emitir("EXCEPCION", datos);
+        emisor.emitir("EXCEPCION", ObservadorExcepciones.datos(excepcion, hilo, false));
     }
 
     private static long restanteMs(long limite) {

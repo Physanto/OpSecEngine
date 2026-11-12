@@ -32,6 +32,10 @@ import javax.swing.WindowConstants;
  * "Abrir" que muestra el diálogo no modal "Auxiliar", que se destruye al cerrarlo. Cada cambio se
  * escribe en la consola.
  *
+ * <p>Para las excepciones que nadie captura tiene el botón "Fallar después", que lanza una
+ * excepción en una tarea posterior del EDT, y "Fallar en hilo", que la lanza en el hilo
+ * "trabajador".
+ *
  * <p>Ni la ventana ni el diálogo pueden recibir el foco. Con pantalla real, el gestor de ventanas
  * le daría el foco al diálogo, y una tecla Espacio o Enter de quien esté usando el equipo pulsaría
  * "Cerrar" y cambiaría el resultado de la prueba. El agente no necesita el foco en los modos
@@ -123,6 +127,19 @@ public final class VentanaDePrueba {
             auxiliar.pack();
             auxiliar.setVisible(true);
         });
+        JButton fallarDespues = new JButton("Fallar después");
+        fallarDespues.addActionListener(e ->
+                SwingUtilities.invokeLater(() -> {
+                    throw new IllegalStateException("Fallo en el EDT");
+                }));
+        JButton fallarEnHilo = new JButton("Fallar en hilo");
+        fallarEnHilo.addActionListener(e ->
+                new Thread(
+                                () -> {
+                                    throw new IllegalArgumentException("Fallo en el trabajador");
+                                },
+                                "trabajador")
+                        .start());
         marco.setLayout(new GridLayout(0, 2));
         marco.add(etiqueta);
         marco.add(campo);
@@ -134,6 +151,8 @@ public final class VentanaDePrueba {
         marco.add(rol);
         marco.add(recordar);
         marco.add(pestanas);
+        marco.add(fallarDespues);
+        marco.add(fallarEnHilo);
         marco.pack();
         marco.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         marco.setFocusableWindowState(false);

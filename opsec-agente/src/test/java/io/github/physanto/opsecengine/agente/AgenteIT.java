@@ -166,6 +166,49 @@ class AgenteIT {
         }
     }
 
+    @Test
+    void elAgenteInformaLasExcepcionesQueNadieCaptura() throws Exception {
+        assumeThat(GraphicsEnvironment.isHeadless()).as("necesita pantalla").isFalse();
+        Path salida = carpeta.resolve("excepciones.log");
+        try (MotorFalso motor = new MotorFalso()) {
+            Process proceso = lanzar(motor, VentanaDePrueba.class.getName(), salida);
+            try {
+                motor.esperarHola(ESPERA);
+                assertThat(
+                                paso(
+                                        motor,
+                                        "SEMANTICO",
+                                        "PULSAR",
+                                        criterio("TEXTO", "Fallar después"),
+                                        null))
+                        .isEqualTo(CodigoResultado.OK);
+                assertThat(
+                                paso(
+                                        motor,
+                                        "SEMANTICO",
+                                        "PULSAR",
+                                        criterio("TEXTO", "Fallar en hilo"),
+                                        null))
+                        .isEqualTo(CodigoResultado.OK);
+
+                esperarEvento(motor, "EXCEPCION", "mensaje", "Fallo en el EDT");
+                esperarEvento(motor, "EXCEPCION", "mensaje", "Fallo en el trabajador");
+                assertThat(eventos(motor, "EXCEPCION"))
+                        .hasSize(2)
+                        .allSatisfy(e -> assertThat(e.getDatos()).containsEntry("capturada", false))
+                        .anySatisfy(e ->
+                                assertThat(String.valueOf(e.getDatos().get("hilo")))
+                                        .startsWith("AWT-EventQueue"))
+                        .anySatisfy(
+                                e -> assertThat(e.getDatos()).containsEntry("hilo", "trabajador"));
+                esperarEvento(motor, "CONSOLA", "Exception in thread \"trabajador\"");
+                assertThat(motor.cerrar()).isTrue();
+            } finally {
+                detener(proceso);
+            }
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"SEMANTICO", "EVENTOS"})
     void elAgenteSeleccionaMarcaNavegaYCierraVentanas(String modo) throws Exception {
