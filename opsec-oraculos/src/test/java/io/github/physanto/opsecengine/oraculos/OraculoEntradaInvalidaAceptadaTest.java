@@ -3,18 +3,25 @@ package io.github.physanto.opsecengine.oraculos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaValidacion;
+import io.github.physanto.opsecengine.dominio.caso.Senal;
+import io.github.physanto.opsecengine.dominio.caso.Suite;
+import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
+import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.extension.Oraculo;
 import io.github.physanto.opsecengine.dominio.resultado.Confianza;
 import io.github.physanto.opsecengine.dominio.resultado.EstadoVeredicto;
+import io.github.physanto.opsecengine.dominio.resultado.Veredicto;
 import io.github.physanto.opsecengine.dominio.traza.ContextoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
-import io.github.physanto.opsecengine.oraculos.PoliticaValidacionTemporal.Senal;
 import io.github.physanto.opsecengine.soporte.CargadorTrazas;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,12 +30,43 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import org.junit.jupiter.api.Test;
 
-class EvaluadorValidacionTemporalTest {
-    private final EvaluadorValidacionTemporal evaluador = new EvaluadorValidacionTemporal();
+class OraculoEntradaInvalidaAceptadaTest {
+    private static final OraculoEntradaInvalidaAceptada ORACULO =
+            new OraculoEntradaInvalidaAceptada();
+
+    private static Veredicto evaluar(Traza traza, PoliticaValidacion politica) {
+        Proyecto proyecto =
+                new Proyecto(
+                        "clientes",
+                        Path.of("app.jar"),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null);
+        Caso caso = new Caso("VAL38", null, null, null, null, null, null, politica, null, null);
+        return ORACULO.evaluarResultado(
+                traza,
+                Contexto.deCaso(
+                        proyecto,
+                        new Suite("validacion", null, null, null, List.of(caso), null),
+                        caso));
+    }
+
+    @Test
+    void aplicaSoloALosCasosConPoliticaDeValidacion() {
+        Caso sin = new Caso("A", null, null, null, null, null, null);
+        Caso con = new Caso("B", null, null, null, null, null, null, politica(), null, null);
+        assertThat(ORACULO.aplica(sin, null)).isFalse();
+        assertThat(ORACULO.aplica(con, null)).isTrue();
+    }
 
     @Test
     void laAceptacionActivaElHallazgoConEvidenciaSinRevelarElValor() throws Exception {
-        var resultado = evaluador.evaluar(aceptada(), politica());
+        var resultado = evaluar(aceptada(), politica());
         assertThat(resultado.estado()).isEqualTo(EstadoVeredicto.NO_CUMPLE);
         assertThat(resultado.hallazgos())
                 .singleElement()
@@ -44,28 +82,26 @@ class EvaluadorValidacionTemporalTest {
 
     @Test
     void elControlNegativoRequiereRechazoExplicitoYEnvioTerminado() throws Exception {
-        var resultado = evaluador.evaluar(rechazada(), politica());
+        var resultado = evaluar(rechazada(), politica());
         assertThat(resultado.estado()).isEqualTo(EstadoVeredicto.CUMPLE);
         assertThat(resultado.hallazgos()).isEmpty();
         Traza sinRespuesta =
                 new Traza(
                         "VAL38",
                         rechazada().eventos().stream().filter(e -> e.secuencia() != 3).toList());
-        assertThat(evaluador.evaluar(sinRespuesta, politica()).estado())
+        assertThat(evaluar(sinRespuesta, politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
         Traza envioFallido = datos(rechazada(), 4, Map.of("codigo", "ERROR"));
-        assertThat(evaluador.evaluar(envioFallido, politica()).estado())
+        assertThat(evaluar(envioFallido, politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
     }
 
     @Test
     void losDatosAusentesYLasEscriturasFallidasNoSeConfundenConValidacionCorrecta()
             throws Exception {
-        assertThat(evaluador.evaluar(null, politica()).estado())
-                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
-        assertThat(evaluador.evaluar(aceptada(), null).estado())
-                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
-        assertThat(evaluador.evaluar(new Traza("OTRO", aceptada().eventos()), politica()).estado())
+        assertThat(evaluar(null, politica()).estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(evaluar(aceptada(), null).estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(evaluar(new Traza("OTRO", aceptada().eventos()), politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
         for (Map<String, Object> campos :
                 List.<Map<String, Object>>of(
@@ -78,29 +114,25 @@ class EvaluadorValidacionTemporalTest {
                                 "etiqueta=Usuario",
                                 "valor",
                                 "valido"))) {
-            assertThat(evaluador.evaluar(datos(aceptada(), 0, campos), politica()).estado())
+            assertThat(evaluar(datos(aceptada(), 0, campos), politica()).estado())
                     .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
         }
         assertThat(
-                        evaluador
-                                .evaluar(
-                                        datos(aceptada(), 1, Map.of("codigo", "NO_ALCANZABLE")),
-                                        politica())
+                        evaluar(datos(aceptada(), 1, Map.of("codigo", "NO_ALCANZABLE")), politica())
                                 .estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
-        assertThat(evaluador.evaluar(new Traza("VAL38", List.of()), politica()).estado())
+        assertThat(evaluar(new Traza("VAL38", List.of()), politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
     }
 
     @Test
     void unaAceptacionNoDesaparecePorUnMensajeDeRechazoOPorUnEnvioIncompleto() throws Exception {
-        var incompleto =
-                evaluador.evaluar(datos(aceptada(), 4, Map.of("codigo", "ERROR")), politica());
+        var incompleto = evaluar(datos(aceptada(), 4, Map.of("codigo", "ERROR")), politica());
         assertThat(incompleto.estado()).isEqualTo(EstadoVeredicto.NO_CUMPLE);
         assertThat(incompleto.motivo()).contains("finalización");
         List<Evento> eventos = new ArrayList<>(rechazada().eventos());
         eventos.add(evento(5, TipoEvento.SESION, 5, Map.of("activa", true)));
-        assertThat(evaluador.evaluar(new Traza("VAL38", eventos), politica()).estado())
+        assertThat(evaluar(new Traza("VAL38", eventos), politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CUMPLE);
     }
 
@@ -119,7 +151,7 @@ class EvaluadorValidacionTemporalTest {
             }
         }
         eventos.add(evento(1, TipoEvento.SESION, 5, Map.of("activa", true)));
-        assertThat(evaluador.evaluar(new Traza("VAL38", eventos), politica()).estado())
+        assertThat(evaluar(new Traza("VAL38", eventos), politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
         eventos = new ArrayList<>(rechazada().eventos());
         eventos.add(
@@ -129,7 +161,7 @@ class EvaluadorValidacionTemporalTest {
                         6,
                         Map.of("accion", "PULSAR", "objetivo", "texto=Otra acción")));
         eventos.add(evento(6, TipoEvento.SESION, 5, Map.of("activa", true)));
-        assertThat(evaluador.evaluar(new Traza("VAL38", eventos), politica()).estado())
+        assertThat(evaluar(new Traza("VAL38", eventos), politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
     }
 
@@ -150,12 +182,12 @@ class EvaluadorValidacionTemporalTest {
                             anterior.tipo(),
                             contexto,
                             anterior.datos()));
-            assertThat(evaluador.evaluar(new Traza("VAL38", eventos), politica()).estado())
+            assertThat(evaluar(new Traza("VAL38", eventos), politica()).estado())
                     .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
         }
         List<Evento> eventos = new ArrayList<>(aceptada().eventos());
         eventos.add(evento(5, TipoEvento.PASO_INICIO, 5, Map.of("accion", "PULSAR")));
-        assertThat(evaluador.evaluar(new Traza("VAL38", eventos), politica()).estado())
+        assertThat(evaluar(new Traza("VAL38", eventos), politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
     }
 
@@ -181,7 +213,7 @@ class EvaluadorValidacionTemporalTest {
                         evento(4, TipoEvento.PASO_INICIO, 5, base.get(2).datos()),
                         evento(5, TipoEvento.SESION, 5, Map.of("activa", true)),
                         evento(6, TipoEvento.PASO_FIN, 5, Map.of("codigo", "OK")));
-        assertThat(evaluador.evaluar(new Traza("VAL38", eventos), politica()).estado())
+        assertThat(evaluar(new Traza("VAL38", eventos), politica()).estado())
                 .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
     }
 
@@ -232,8 +264,6 @@ class EvaluadorValidacionTemporalTest {
                 .isFalse();
         assertThat(aceptacion.coincide(evento(1, TipoEvento.SESION, 5, Map.of()))).isFalse();
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new Senal(TipoEvento.PASO_FIN, Map.of("codigo", "OK")));
-        assertThatIllegalArgumentException()
                 .isThrownBy(() -> new Senal(TipoEvento.DIALOGO, Map.of("texto", List.of("error"))));
     }
 
@@ -241,41 +271,31 @@ class EvaluadorValidacionTemporalTest {
     void rechazaPoliticasVaciasOContradictorias() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() ->
-                        new PoliticaValidacionTemporal(
-                                "VAL38", 5, 3, "", politica().aceptacion(), politica().rechazo()));
+                        new PoliticaValidacion(
+                                5, 3, "", politica().aceptacion(), politica().rechazo()));
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () -> new PoliticaValidacion(3, 5, "", List.of(), politica().rechazo()));
         assertThatIllegalArgumentException()
                 .isThrownBy(() ->
-                        new PoliticaValidacionTemporal(
-                                "VAL38", 3, 5, "", List.of(), politica().rechazo()));
-        assertThatIllegalArgumentException()
-                .isThrownBy(() ->
-                        new PoliticaValidacionTemporal(
-                                "VAL38",
-                                3,
-                                5,
-                                "",
-                                politica().aceptacion(),
-                                politica().aceptacion()));
+                        new PoliticaValidacion(
+                                3, 5, "", politica().aceptacion(), politica().aceptacion()));
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new Senal(TipoEvento.DIALOGO, Map.of()));
-        assertThatIllegalArgumentException()
-                .isThrownBy(() ->
-                        new Senal(TipoEvento.ESTADO, Map.of("cantidad", Double.POSITIVE_INFINITY)));
     }
 
     @Test
-    void noPublicaElIdPropuestoComoOraculoOficial() {
+    void seRegistraComoOraculoDelMotor() {
         assertThat(
                         ServiceLoader.load(Oraculo.class).stream()
                                 .map(ServiceLoader.Provider::get)
                                 .map(Oraculo::id)
                                 .toList())
-                .doesNotContain(EvaluadorValidacionTemporal.ID_PROPUESTO);
+                .contains(OraculoEntradaInvalidaAceptada.ID);
     }
 
-    private static PoliticaValidacionTemporal politica() {
-        return new PoliticaValidacionTemporal(
-                "VAL38",
+    private static PoliticaValidacion politica() {
+        return new PoliticaValidacion(
                 3,
                 5,
                 "",
@@ -297,7 +317,7 @@ class EvaluadorValidacionTemporalTest {
     private static Traza cargar(String archivo) throws Exception {
         try (var lector =
                 new InputStreamReader(
-                        EvaluadorValidacionTemporalTest.class.getResourceAsStream(archivo),
+                        OraculoEntradaInvalidaAceptadaTest.class.getResourceAsStream(archivo),
                         StandardCharsets.UTF_8)) {
             return new CargadorTrazas().leer(lector, archivo).getFirst();
         }

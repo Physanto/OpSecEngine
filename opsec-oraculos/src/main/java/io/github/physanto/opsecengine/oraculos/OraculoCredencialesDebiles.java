@@ -41,8 +41,8 @@ public final class OraculoCredencialesDebiles implements Oraculo {
      * Comprueba si hay una política local de autenticación.
      *
      * @param caso caso recibido; se usa el del contexto
-     * @param contexto contexto con extensiones.autenticacion; puede ser null
-     * @return true si se proporciona PoliticaAutenticacion
+     * @param contexto contexto con la política de autenticación del caso; puede ser null
+     * @return true si el caso declara una política de autenticación
      */
     @Override
     public boolean aplica(Caso caso, Contexto contexto) {

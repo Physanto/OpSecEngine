@@ -84,10 +84,7 @@ class GeneradorValidacionTest {
             String valor = caso.pasos().get(orden - 1).valor();
             assertThat(caso.oraculos()).containsAll(payload.oraculos());
             if (payload.usaCanario()) {
-                assertThat(valor)
-                        .isEqualTo(
-                                payload.texto()
-                                        .replace("{canario}", origen.get("canario").toString()));
+                assertThat(valor).isEqualTo(payload.texto().replace("{canario}", caso.canario()));
                 assertThat(valor).doesNotContain("{canario}");
             } else {
                 assertThat(valor).isEqualTo(payload.texto());
@@ -148,12 +145,7 @@ class GeneradorValidacionTest {
         Proyecto proyecto = proyecto(Map.of(), List.of());
         List<Caso> casos = a.generar(mapa, Objetivo.todaLaApp(), proyecto);
         assertThat(b.generar(mapa, Objetivo.todaLaApp(), proyecto)).isEqualTo(casos);
-        assertThat(
-                        casos.stream()
-                                .map(c -> (Map<?, ?>) c.extensiones().get("validacion"))
-                                .filter(m -> m.containsKey("canario"))
-                                .map(m -> m.get("canario"))
-                                .toList())
+        assertThat(casos.stream().map(Caso::canario).filter(java.util.Objects::nonNull).toList())
                 .doesNotHaveDuplicates();
     }
 

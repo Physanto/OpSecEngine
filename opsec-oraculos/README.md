@@ -34,9 +34,9 @@ pendientes de expansión. Usan `SEMANTICO`, sin reintentos y con una sesión a l
 la configuración según el proyecto. Las esperas comprueban señales visibles de ejemplo y
 las capturas permiten revisarlas, pero no demuestran por sí solas el efecto sobre los datos.
 
-La plantilla de validación no configura el adaptador temporal de la #38. La de seguridad
-necesita que el emisor aporte los eventos que consumen sus oráculos. Ninguna configura
-automáticamente los adaptadores de canarios, enumeración o autenticación de las #42–#44.
+Las plantillas no declaran `validacion`, `autenticacion`, `canario` ni `enumeracionUsuarios`
+(contratos v1.2): esos datos dependen de cada aplicación y los agrega quien adapta la suite.
+La de seguridad necesita que el emisor aporte los eventos que consumen sus oráculos.
 Esta entrega aporta recursos para el consumidor de escritorio; no añade un selector gráfico,
 un generador de casos ni una conexión nueva al núcleo o a la CLI.
 
@@ -49,8 +49,8 @@ un generador de casos ni una conexión nueva al núcleo o a la CLI.
 | `TRAZA-EN-DIALOGO` | `OraculoTrazaEnDialogo` | `EVENTO` | CWE-209 | El campo `texto` de un `DIALOGO` contiene una firma de excepción o una línea de pila Java. Detecta clases calificadas, excepciones sin paquete seguidas de dos puntos y marcos con archivo y línea, `Native Method` o `Unknown Source`. No copia el mensaje al hallazgo ni marca palabras genéricas como «error». |
 | `CONTRASENA-EN-CONSOLA` | `OraculoContrasenaEnConsola` | `EVENTO` | CWE-532 | Una contraseña de un rol, un valor escrito en un campo de contraseña o el canario asociado a ese valor aparece en `CONSOLA`. Reconoce palabras del localizador y `JPasswordField` en `PASO_FIN.componente`. Ignora valores y marcas de menos de 4 caracteres. No copia valores, marcas, localizadores ni líneas de consola al hallazgo. Lo activa el fallo F6 de la app de práctica. |
 
-Para los payloads generados por la #37, el canario se obtiene de
-`Caso.extensiones().get("validacion")`, campo `canario`. Solo se rastrea tras observarlo dentro
+El canario se obtiene de `Caso.canario()` (sección `canario` del caso en YAML, o el que
+fija el generador de la #37). Solo se rastrea tras observarlo dentro
 del valor de un `LLENAR` sensible del mismo caso. Un canario escrito únicamente en usuario o
 búsqueda no activa este oráculo. La evidencia del rastreo incluye las secuencias de escritura
 y consola; los valores completos de contraseña conservan la secuencia de consola como evidencia.
@@ -63,9 +63,8 @@ la biblioteca de ataques. El rastreo por canario requiere los metadatos indicado
 
 `OraculoSqliCanario` (`SQLI-CANARIO`) y `OraculoFirestoreRutaCanario`
 (`FIRESTORE-RUTA-CANARIO`) se evalúan al terminar el caso, con CWE-89 y registro SPI.
-Leen la marca exacta de `Caso.extensiones().get("validacion")`, campo `canario`, reutilizando
-la convención local de las #37 y #39. Exigen al menos cuatro caracteres, una marca no vacía
-y sin llaves de plantilla. Primero deben observarla dentro del valor materializado de un
+Leen la marca exacta de `Caso.canario()` (contratos v1.2); el dominio ya garantiza al menos
+cuatro caracteres, sin espacios ni llaves de plantilla. Primero deben observarla dentro del valor materializado de un
 `LLENAR` del propio caso; solo después buscan coincidencias, distinguiendo mayúsculas.
 
 SQL busca únicamente en `SQL.sql` cuando `tipoSentencia=STATEMENT`. Ignora `PREPARED`,
@@ -77,23 +76,22 @@ sin copiar la marca, el payload, la consulta ni la ruta. No confirma explotació
 sobre datos, aunque haya filas afectadas. El rastreo parte de `PASO_INICIO`: no exige un
 `PASO_FIN` exitoso, porque el backend puede ejecutarse durante la escritura del campo.
 
-La traza oficial `c13-sqli-login.jsonl`, con `K7Q2` declarado en su contexto, da `NO_CUMPLE`
+La traza oficial `c13-sqli-login.jsonl`, con `canario: K7Q2` declarado en el caso, da `NO_CUMPLE`
 por F4; su variante con `PREPARED` no activa el oráculo. Sin metadatos o sin escritura previa
 no hay hallazgos; una lista vacía no demuestra ausencia de inyección. El llamador debe aportar
 la marca y los eventos JDBC o Firestore. Los oráculos no instrumentan la aplicación ni extraen
-canarios de texto arbitrario. La solicitud de contrato de la #42 propone
-formalizar la asociación entre caso y canario; la conexión al núcleo sigue pendiente.
+canarios de texto arbitrario.
 
 ## Enumeración de usuarios (#43)
 
 `OraculoEnumeracionUsuarios` (`ENUMERACION-USUARIOS`, `SUITE`, CWE-204) compara los textos
-ordenados de los diálogos de dos intentos de login fallidos. El llamador debe aportar una
-instancia Java de `ComparacionEnumeracionUsuarios` en
-`Suite.extensiones().get("enumeracionUsuarios")`: caso de usuario inexistente y su paso de
-envío, caso de cuenta existente con contraseña incorrecta y su paso de envío. Debe garantizar
-que los datos representan esos escenarios y que ambos usan el mismo formulario.
-Para `c01-c02-mensajes.jsonl`, la instancia es
-`new ComparacionEnumeracionUsuarios("C01", 5, "C02", 5)`; la prueba produce `NO_CUMPLE` por F5.
+ordenados de los diálogos de dos intentos de login fallidos. Lee la sección
+`enumeracionUsuarios` de la suite (`Suite.enumeracionUsuarios()`, contratos v1.2): caso de
+usuario inexistente y su paso de envío, caso de cuenta existente con contraseña incorrecta y su
+paso de envío. Quien escribe la suite garantiza que los datos representan esos escenarios y
+que ambos usan el mismo formulario. Para `c01-c02-mensajes.jsonl` la comparación es
+`C01` paso 5 frente a `C02` paso 5 (ver `contratos/ejemplos/suites/login.yaml`); la prueba
+produce `NO_CUMPLE` por F5.
 La traza corregida con el mismo mensaje en ambos casos no activa el oráculo.
 
 Cada caso debe pertenecer a la suite y tener una sola traza y un único inicio del paso de envío.
@@ -107,24 +105,21 @@ Las diferencias producen un hallazgo `PROBABLE`, sin copiar mensajes ni credenci
 La explicación identifica los dos casos; la evidencia lista primero las secuencias de diálogos
 del usuario inexistente y luego las de contraseña incorrecta. Sin configuración o evidencia
 suficiente no hay hallazgos: el `CUMPLE` del evaluador existente no acredita entonces ausencia
-de enumeración. Un mapa de YAML no se transforma en el adaptador automáticamente. La
-solicitud de contrato de la #43 propone formalizar esta configuración;
-la carga y conexión al núcleo siguen pendientes. No se infieren escenarios desde ids,
+de enumeración. No se infieren escenarios desde ids,
 descripciones, nombres de usuario ni frases propias de una aplicación.
 
 ## Credenciales débiles y bloqueo de login (#44)
 
 `OraculoCredencialesDebiles` (`CREDENCIALES-DEBILES`, CWE-521) y `OraculoSinBloqueo`
 (`SIN-BLOQUEO`, CWE-307) se registran por SPI y se evalúan al terminar el caso.
-El llamador aporta una instancia Java de `PoliticaAutenticacion` en
-`Caso.extensiones().get("autenticacion")`, con:
+Leen la sección `autenticacion` del caso (`Caso.autenticacion()`, contratos v1.2), con:
 
-- `intentos`: lista ordenada de `Intento(pasoUsuario, pasoContrasena, pasoEnvio, usuario,
+- `intentos`: lista ordenada de `IntentoLogin(pasoUsuario, pasoContrasena, pasoEnvio, usuario,
   contrasena, debil)`. Los valores ya deben estar materializados; pueden estar vacíos.
 - `fallosPermitidos`: N rechazos consecutivos antes de exigir protección.
-- `retardoMinimo`: duración positiva considerada protección desde el último rechazo.
-- `rechazo` y `bloqueo`: listas no vacías de `PoliticaValidacionTemporal.Senal`, con igualdades
-  sobre datos de eventos. El integrador define su significado para la aplicación.
+- `retardoMinimoMs`: milisegundos considerados protección desde el último rechazo.
+- `rechazo` y `bloqueo`: listas no vacías de `Senal`, con igualdades sobre datos de eventos.
+  Quien escribe la suite define su significado para la aplicación.
 
 El rastreador exige dos `LLENAR` de campos distintos con los valores declarados y sus finales
 `OK`, sin sobrescrituras, sesión previa ni envíos intermedios. El envío debe ser un `PULSAR`
@@ -150,9 +145,7 @@ de bloqueo sin reinicios que borren su contador. N no se fija en cinco ni se con
 
 Los hallazgos solo referencian secuencias; no copian credenciales ni mensajes de la aplicación.
 Sin política o evidencia suficiente no hay hallazgos y el `CUMPLE` del evaluador no demuestra
-seguridad. Un mapa YAML no se convierte en el adaptador automáticamente. La
-solicitud de contrato de la #44 propone formalizar esos datos; la carga de
-payloads y la conexión al núcleo siguen pendientes.
+seguridad.
 
 ## Contraseñas visibles y cifrado JDBC (#45)
 
@@ -232,7 +225,7 @@ sus veredictos completos y obtener observaciones fiables del ámbito que se prue
   con las esperadas. Produce `ORDEN-TABULACION` o `ACCION-TECLADO-NO-ALCANZADA`, probables.
   Un recorrido incompleto es `NO_CONCLUYENTE`. Una acción semántica no demuestra uso con teclado.
 - `EvaluadorEscenarioRobustez.evaluar(traza, pasoInicio, pasoFinal, esperado, fallo)` recibe
-  señales `PoliticaValidacionTemporal.Senal` y pasos sin reintentos ambiguos. Evalúa el intervalo
+  señales `Senal` del dominio y pasos sin reintentos ambiguos. Evalúa el intervalo
   desde el primer paso hasta la acción posterior al último, si existe. Conserva excepciones
   sin capturar y cierres inesperados; una señal explícita de fallo produce
   `RESULTADO-ROBUSTEZ-INCORRECTO`, probable. Solo devuelve `CUMPLE` con todas las acciones del
@@ -240,11 +233,11 @@ sus veredictos completos y obtener observaciones fiables del ámbito que se prue
   o respuestas tardías deja incertidumbre. El llamador acredita el doble clic, cierre o fallo
   inyectado; el evaluador no ejecuta estímulos ni inyecta errores desde el agente.
 
-Los ids de estas APIs locales son propuestas, no reservas nuevas. Sus observaciones de GUI
-referencian un registro local de evidencia, sin convertirlas en eventos inexistentes.
-Los resultados no certifican accesibilidad completa, ausencia de fugas ni rendimiento estable
-en otros entornos. La solicitud de contrato de la #47 detalla los datos y la
-integración pendientes del líder; esta entrega no modifica agente, dominio, núcleo ni contratos.
+Sus ids están reservados en el catálogo desde contratos v1.2. Todavía no se registran por SPI:
+las observaciones de accesibilidad, teclado, liberación de ventanas y robustez las emitirá el
+agente en la v0.5 (el campo `liberada` de `VENTANA_CERRADA` ya existe). Mientras tanto, sus
+observaciones de GUI referencian un registro local de evidencia. Los resultados no certifican
+accesibilidad completa, ausencia de fugas ni rendimiento estable en otros entornos.
 
 ## Evaluación por momento
 
@@ -297,27 +290,24 @@ El prefijo conserva la detección de contraseñas obtenidas de `PASO_INICIO`, au
 trabajo cuadrático con trazas largas. El núcleo todavía debe conectar estas llamadas a su ejecución;
 esta implementación no modifica `EvaluacionService` ni `EjecucionService`.
 
-## Evaluación temporal de validación (#38)
+## Entrada inválida aceptada (#38)
 
-`EvaluadorValidacionTemporal.evaluar(traza, politica)` evalúa al terminar el caso una
-`PoliticaValidacionTemporal`: caso, paso `LLENAR`, paso posterior `PULSAR`, valor declarado
-inválido y señales explícitas de aceptación y rechazo. Cada `Senal` combina un tipo de evento
-(`DIALOGO`, `SESION` o `ESTADO`) con igualdades sobre sus datos. Las señales deben describir la
-semántica de la app; un `PASO_FIN` con `OK` no demuestra aceptación de la entrada.
+`OraculoEntradaInvalidaAceptada` (`ENTRADA-INVALIDA-ACEPTADA`, `CASO`, CWE-20) se registra por
+SPI y aplica a los casos con sección `validacion` (`Caso.validacion()`, contratos v1.2): paso
+`LLENAR` con el valor declarado inválido, paso posterior `PULSAR` que lo envía y señales
+explícitas de aceptación y de rechazo. Cada `Senal` combina un tipo de evento con igualdades
+sobre sus datos. Las señales deben describir la semántica de la app; un `PASO_FIN` con `OK` no
+demuestra aceptación de la entrada.
 
-Exige que la escritura termine correctamente y considera solo respuestas del caso y paso de envío,
-posteriores a este y anteriores a la siguiente acción. La aceptación produce `NO_CUMPLE` con un
-hallazgo `PROBABLE`; el rechazo explícito con envío terminado produce `CUMPLE`. La falta de
-evidencia produce `NO_CONCLUYENTE`. No copia el valor probado ni los mensajes de la app al hallazgo.
-Una señal de aceptación tardía atribuida al envío, después de comenzar otra acción, también deja
-el resultado no concluyente si todavía no se había observado una aceptación dentro del intervalo.
+Sobrescribe `evaluarResultado`: exige que la escritura termine correctamente y considera solo
+respuestas del caso y paso de envío, posteriores a este y anteriores a la siguiente acción. La
+aceptación produce `NO_CUMPLE` con un hallazgo `PROBABLE`; el rechazo explícito con envío
+terminado produce `CUMPLE`. La falta de evidencia produce `NO_CONCLUYENTE`, que el núcleo
+conserva con su motivo. No copia el valor probado ni los mensajes de la app al hallazgo. Una
+señal de aceptación tardía atribuida al envío, después de comenzar otra acción, también deja el
+resultado no concluyente si todavía no se había observado una aceptación dentro del intervalo.
 
-Esta evaluación no se registra con `ServiceLoader` ni se conecta automáticamente a la CLI, al
-generador de la #37 o al núcleo. El llamador debe conservar el `Veredicto` completo y combinarlo
-con los oráculos implícitos existentes. La solicitud de contrato de la #38
-propone el id, el CWE y la ampliación necesaria para preservar los tres estados en el contrato.
-
-## Generación de validación con adaptador temporal
+## Generación de validación
 
 `GeneradorValidacion` implementa `GeneradorCasos` para el enfoque `VALIDACION`. El constructor
 `GeneradorValidacion(adaptador)` recibe un `AdaptadorValidacion` con formularios y payloads ya cargados:
@@ -331,16 +321,16 @@ propone el id, el CWE y la ampliación necesaria para preservar los tres estados
 El generador selecciona las ventanas presentes en el mapa y produce una variante por campo y
 payload compatible. Conserva los demás valores, pasos y rol del caso base. Sustituye `{canario}`
 cuando corresponde, deja `ataques` vacío y combina los ids de oráculos sin repetirlos. Ordena por
-id de caso base, orden del campo e id de payload; genera ids y canarios deterministas. El origen
-queda en `Caso.extensiones().get("validacion")`, junto al resto de extensiones del caso base.
+id de caso base, orden del campo e id de payload; genera ids y canarios deterministas. El canario
+queda en `Caso.canario()` y el origen de la variante en `Caso.extensiones().get("validacion")`.
 Un objetivo de campo limita la variación a ese campo; un objetivo de botón de envío incluye todos
 los campos del formulario. Omite ventanas ausentes y roles no declarados en el proyecto.
 
 Para la instancia descubierta con `ServiceLoader`, el integrador debe proporcionar una **instancia
 Java** de `AdaptadorValidacion` en `Proyecto.extensiones().get("validacion")`. Sin ella devuelve una
-lista vacía. Un mapa procedente de YAML no se convierte automáticamente en ese adaptador. No hay
-descubrimiento de campos, lectura de la biblioteca ni conexión nueva a la CLI: el líder debe
-aportar esos datos y sustituir este adaptador cuando exista el contrato definitivo. La generación
+lista vacía. Los formularios salen del mapa de la app y los payloads de la biblioteca de ataques:
+los arma `GeneracionService` del núcleo, que crea el generador con `GeneradorValidacion(adaptador)`.
+Este módulo no descubre campos ni lee la biblioteca. La generación
 no ejecuta ni comprueba en la GUI los casos base aportados.
 
 ## Reglas YAML
@@ -361,7 +351,9 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Formalización e integración de las APIs locales de calidad de la #47.
+1. Convertir en oráculos registrados por SPI las APIs locales de calidad de la #47 cuando el
+   agente emita sus observaciones (v0.5).
+2. Proveedor de IA local opcional (`opsec-ia`, #48, v0.6).
 
 ## Dependencias permitidas
 

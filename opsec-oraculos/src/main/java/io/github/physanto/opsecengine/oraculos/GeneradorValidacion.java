@@ -69,7 +69,8 @@ public final class GeneradorValidacion implements GeneradorCasos {
      * <p>Un objetivo de control selecciona solo ese campo o todos los campos si es el botón de
      * envío. Omite formularios ausentes y roles que el proyecto no declara. Cada caso conserva el
      * rol y la navegación de su base, tiene los payloads ya materializados y no pide expansión de
-     * ataques al núcleo. Los detalles de origen y el canario quedan en extensiones.validacion.
+     * ataques al núcleo. El canario queda en {@link Caso#canario()} y el origen de la variante
+     * (caso base, ventana, campo y payload) en {@code extensiones.validacion}.
      *
      * @param mapa mapa de ventanas, posiblemente incompleto
      * @param objetivo toda la app, una ventana, un campo o un botón de envío
@@ -173,9 +174,6 @@ public final class GeneradorValidacion implements GeneradorCasos {
         origen.put("ventanaId", formulario.ventanaId());
         origen.put("ordenCampoBase", campo.ordenPaso());
         origen.put("payloadId", payload.id());
-        if (payload.usaCanario()) {
-            origen.put("canario", canario);
-        }
         Map<String, Object> extensiones = new LinkedHashMap<>(formulario.base().extensiones());
         extensiones.put(EXTENSION, Map.copyOf(origen));
         return new Caso(
@@ -185,6 +183,9 @@ public final class GeneradorValidacion implements GeneradorCasos {
                 pasos,
                 List.of(),
                 List.copyOf(oraculos),
+                payload.usaCanario() ? canario : null,
+                null,
+                null,
                 extensiones);
     }
 

@@ -32,8 +32,8 @@ import java.util.Set;
  *       "contraseña", "password", "clave" o "pass" (sin importar mayúsculas ni tildes), tomados de
  *       los eventos {@code PASO_INICIO}.
  *   <li>valores escritos en un componente identificado como JPasswordField por PASO_FIN;
- *   <li>el canario de Caso.extensiones.validacion, solo después de observarlo dentro de un valor
- *       escrito en uno de esos campos sensibles. No interpreta cualquier canario como contraseña.
+ *   <li>el canario del caso (Caso.canario()), solo después de observarlo dentro de un valor escrito
+ *       en uno de esos campos sensibles. No interpreta cualquier canario como contraseña.
  * </ul>
  *
  * <p>Se ignoran las contraseñas de menos de {@value #LONGITUD_MINIMA} caracteres, porque aparecen
@@ -205,13 +205,10 @@ public final class OraculoContrasenaEnConsola implements Oraculo {
         if (ctx == null
                 || ctx.caso() == null
                 || !ctx.caso().id().equals(traza.casoId())
-                || !(ctx.caso().extensiones().get("validacion") instanceof Map<?, ?> datos)
-                || !(datos.get("canario") instanceof String marca)
-                || marca.length() < LONGITUD_MINIMA
-                || List.of("{canario}", "{payload}", "{contrasena}", "{usuario}").contains(marca)) {
+                || ctx.caso().canario() == null) {
             return null;
         }
-        return marca;
+        return ctx.caso().canario();
     }
 
     static boolean esCampoDeContrasena(String objetivo) {

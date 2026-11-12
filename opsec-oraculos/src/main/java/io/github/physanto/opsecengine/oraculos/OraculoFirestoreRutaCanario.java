@@ -52,7 +52,7 @@ public final class OraculoFirestoreRutaCanario implements Oraculo {
      * Busca el canario escrito en LLENAR dentro de rutas de Firestore.
      *
      * @param traza traza del caso; puede ser null
-     * @param contexto contexto con extensiones.validacion.canario; puede ser null
+     * @param contexto contexto con el canario del caso; puede ser null
      * @return hallazgos probables por evento, sin copiar entradas ni datos del backend
      */
     @Override
