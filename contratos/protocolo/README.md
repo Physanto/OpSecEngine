@@ -7,3 +7,32 @@ Los ejemplos tienen formato para que se lean bien. Por el socket, cada mensaje v
 Las clases de cada mensaje y de su cuerpo están en el módulo `opsec-protocolo`: `Mensaje`, `TipoMensaje` y el paquete `dto`. Las pruebas de ese módulo leen todos estos ejemplos, así que un ejemplo que no coincida con el contrato hace fallar el build.
 
 Este directorio es un contrato: los cambios se piden con una solicitud de cambio de contrato.
+
+## Árbol de componentes (contratos-v1.4)
+
+Cada nodo de `ARBOL` conserva los campos existentes y añade:
+
+- `ruta`: localizador `Ventana/Clase[indice]/...`. La ventana se identifica por título,
+  nombre o clase simple; cada segmento posterior corresponde a un hijo directo, con índice
+  desde cero entre hermanos de la misma clase simple. Incluye los contenedores internos
+  de Swing. Se usa un identificador de ventana sin `/`; si el título no sirve, se usa el
+  nombre y, en último término, la clase simple.
+- `alcanzable`: componente visible y habilitado, con ancestros visibles, ancho y alto
+  positivos y área dentro de los límites de su ventana. Un componente completamente fuera
+  de ella no es alcanzable. No depende de que la ventana esté dentro de una pantalla física.
+- `acciones`: lista de acciones aplicables al tipo de control, independientemente de si está
+  alcanzable en ese instante. `PULSAR` para `AbstractButton`; `LLENAR` para campos de texto
+  editables; `SELECCIONAR` para combos, listas, tablas y pestañas; `MARCAR` para botones de
+  alternancia, casillas y botones de opción; `IR_A` para elementos de menú. Un control puede
+  ofrecer varias acciones. Los contenedores internos (`JRootPane`, `JLayeredPane` y glass
+  pane) y el contenido del glass pane no ofrecen acciones de exploración.
+
+Los campos nuevos son opcionales al leer: `ruta=null`, `alcanzable=false` y `acciones=[]`.
+Los campos desconocidos se ignoran también en los hijos. Se conserva el constructor anterior
+para los consumidores existentes; el formato del sobre sigue en versión 1.
+
+Se incluyen todas las ventanas visibles, los diálogos y los menús emergentes abiertos, tanto
+ligeros (dentro del árbol de su ventana) como pesados (en una ventana propia). La lectura se
+realiza en el EDT. `ejemplos/arbol.json` representa el formulario `InicioSesion` de la app de
+práctica; las pruebas comparan controles, nombres y acciones sin depender del aspecto visual
+ni de los detalles que pueda añadir cada Look and Feel.
