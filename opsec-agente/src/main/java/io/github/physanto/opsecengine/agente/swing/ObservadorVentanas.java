@@ -8,6 +8,7 @@ import java.awt.Dialog;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.AWTEventListener;
+import java.awt.event.ComponentEvent;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,9 +26,23 @@ import javax.swing.JOptionPane;
  *
  * <p>Se registra con {@code Toolkit.addAWTEventListener}, así que no modifica la aplicación. Cada
  * ventana recibe un identificador estable durante la sesión, por ejemplo {@code InicioSesion-3}.
- * Una ventana abierta es la que se muestra por primera vez ({@code WINDOW_OPENED}); una cerrada, la
- * que se destruye con {@code dispose} ({@code WINDOW_CLOSED}). Ocultar una ventana con {@code
- * setVisible(false)} todavía no se informa.
+ *
+ * <p>Lleva el estado de cada ventana (abierta, oculta o liberada) y emite un evento solo cuando ese
+ * estado cambia:
+ *
+ * <ul>
+ *   <li>{@code VENTANA_ABIERTA} cuando la ventana se muestra ({@code WINDOW_OPENED} o {@code
+ *       COMPONENT_SHOWN}), también cuando se vuelve a mostrar una ventana oculta o liberada; los
+ *       diálogos con {@code JOptionPane} emiten además {@code DIALOGO}.
+ *   <li>{@code VENTANA_CERRADA} con {@code liberada=false} cuando una ventana abierta se oculta con
+ *       {@code setVisible(false)} y conserva sus recursos nativos.
+ *   <li>{@code VENTANA_CERRADA} con {@code liberada=true} cuando una ventana abierta u oculta se
+ *       destruye con {@code dispose} ({@code isDisplayable()} es false). Una ventana que se oculta
+ *       y después se destruye emite dos {@code VENTANA_CERRADA}; el último de cada {@code
+ *       ventanaId} dice si quedó liberada. El estado se mira al atender el evento: una ventana que
+ *       se oculta y se destruye en la misma tarea del EDT emite un solo {@code VENTANA_CERRADA},
+ *       con {@code liberada=true}.
+ * </ul>
  *
  * <p>Recibe los eventos en el EDT. Nunca lanza excepciones hacia la aplicación: los errores se
  * informan al registro del agente.
@@ -37,6 +52,7 @@ public final class ObservadorVentanas implements AWTEventListener {
     private final EmisorEventos emisor;
     private final Consumer<String> registro;
     private final Map<Window, String> identificadores = new WeakHashMap<>();
+    private final Map<Window, Estado> estados = new WeakHashMap<>();
     private int contador;
 
     /**
@@ -59,22 +75,31 @@ public final class ObservadorVentanas implements AWTEventListener {
      */
     public static ObservadorVentanas instalar(EmisorEventos emisor, Consumer<String> registro) {
         ObservadorVentanas observador = new ObservadorVentanas(emisor, registro);
-        Toolkit.getDefaultToolkit().addAWTEventListener(observador, AWTEvent.WINDOW_EVENT_MASK);
+        Toolkit.getDefaultToolkit()
+                .addAWTEventListener(
+                        observador, AWTEvent.WINDOW_EVENT_MASK | AWTEvent.COMPONENT_EVENT_MASK);
         return observador;
     }
 
     /**
-     * Atiende un evento de AWT; solo le interesan la apertura y el cierre de ventanas.
+     * Atiende un evento de AWT; solo le interesan las ventanas que se abren, se muestran, se
+     * ocultan o se cierran.
      *
      * @param evento evento de AWT
      */
     @Override
     public void eventDispatched(AWTEvent evento) {
         try {
-            if (evento.getID() == WindowEvent.WINDOW_OPENED) {
-                abierta(((WindowEvent) evento).getWindow());
-            } else if (evento.getID() == WindowEvent.WINDOW_CLOSED) {
-                cerrada(((WindowEvent) evento).getWindow());
+            int id = evento.getID();
+            Object origen = evento.getSource();
+            if (!(origen instanceof Window)) {
+                return;
+            }
+            Window ventana = (Window) origen;
+            if (id == WindowEvent.WINDOW_OPENED || id == ComponentEvent.COMPONENT_SHOWN) {
+                abierta(ventana);
+            } else if (id == ComponentEvent.COMPONENT_HIDDEN || id == WindowEvent.WINDOW_CLOSED) {
+                cerrada(ventana);
             }
         } catch (RuntimeException e) {
             registro.accept("No se pudo observar una ventana: " + e);
@@ -82,6 +107,9 @@ public final class ObservadorVentanas implements AWTEventListener {
     }
 
     private void abierta(Window ventana) {
+        if (!cambiarEstado(ventana, Estado.ABIERTA)) {
+            return;
+        }
         String id = identificador(ventana);
         Map<String, Object> datos = datosVentana(ventana, id);
         if (ventana instanceof Dialog) {
@@ -94,8 +122,31 @@ public final class ObservadorVentanas implements AWTEventListener {
         }
     }
 
+    /**
+     * Informa una ventana que se ocultó o se destruyó. Al atender el evento la destrucción ya
+     * terminó, así que {@code isDisplayable()} dice si quedó liberada.
+     */
     private void cerrada(Window ventana) {
-        emisor.emitir("VENTANA_CERRADA", datosVentana(ventana, identificador(ventana)));
+        boolean liberada = !ventana.isDisplayable();
+        Estado anterior = estado(ventana);
+        if (anterior == null
+                || anterior == Estado.LIBERADA
+                || (anterior == Estado.OCULTA && !liberada)) {
+            return;
+        }
+        cambiarEstado(ventana, liberada ? Estado.LIBERADA : Estado.OCULTA);
+        Map<String, Object> datos = datosVentana(ventana, identificador(ventana));
+        datos.put("liberada", liberada);
+        emisor.emitir("VENTANA_CERRADA", datos);
+    }
+
+    private synchronized Estado estado(Window ventana) {
+        return estados.get(ventana);
+    }
+
+    /** Cambia el estado de la ventana; devuelve false si ya estaba en ese estado. */
+    private synchronized boolean cambiarEstado(Window ventana, Estado nuevo) {
+        return estados.put(ventana, nuevo) != nuevo;
     }
 
     private synchronized String identificador(Window ventana) {
@@ -114,6 +165,13 @@ public final class ObservadorVentanas implements AWTEventListener {
         datos.put("clase", ventana.getClass().getName());
         datos.put("titulo", DescriptorComponentes.texto(ventana));
         return datos;
+    }
+
+    /** Último estado informado de una ventana. */
+    private enum Estado {
+        ABIERTA,
+        OCULTA,
+        LIBERADA
     }
 
     private static Map<String, Object> datosDialogo(Window ventana, JOptionPane panel, String id) {
