@@ -1,0 +1,14 @@
+# Semilla #69; validar el YAML no acredita detección del oráculo.
+suite: rendimiento-f13
+version: "1"
+enfoques: [RENDIMIENTO, ROBUSTEZ]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F13-CASO
+    pasos:
+      - pulsar: Probar acción lenta
+      - esperar: {texto: Acción terminada.}
+    extensiones:
+      oraculoPendiente: "#47: acordar ID y medir hasta completar la operación"

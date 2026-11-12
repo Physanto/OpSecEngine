@@ -1,0 +1,16 @@
+# Semilla #69; validar el YAML no acredita detección del oráculo.
+suite: rendimiento-f12
+version: "1"
+enfoques: [RENDIMIENTO, ROBUSTEZ]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F12-CASO
+    pasos:
+      - pulsar: Abrir y cerrar ventana
+      - pulsar: Abrir y cerrar ventana
+      - pulsar: Abrir y cerrar ventana
+      - esperar: {nombreComponente: resultadoVentanasRetenidas}
+    extensiones:
+      oraculoPendiente: "#47: acordar ID y criterio de fuga de ventanas"

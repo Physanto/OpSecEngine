@@ -64,6 +64,25 @@ Ningún otro módulo puede depender de este.
 
 ## Pruebas
 
+`DemoIT` es la suite de humo de integración (#65): ejecuta la app real con F6 y F8
+activos y corregidos. Comprueba códigos de salida, veredictos, oráculos, CWE y
+evidencias del JSON contra los eventos de la traza. Una detección ausente, un
+informe incorrecto o un falso positivo en la corregida hace fallar `verify`.
+Se omite sin pantalla en local; en la CI Linux la ausencia de Xvfb hace fallar la
+prueba. Véase el [alcance y la verificación del laboratorio](../apps-practica/laboratorio/README.md#suite-de-humo-issue-65).
+
+`BancoEvaluacionIT` verifica el [banco de métricas del laboratorio](../apps-practica/laboratorio/BANCO.md):
+ejecuciones reales, conteos de detecciones y falsos positivos, datos incompletos o
+alterados y reproducción idéntica de sus tablas desde los informes guardados.
+También comprueba el [banco con inventario de GUI](../apps-practica/laboratorio/AMPLIACION-BANCO.md):
+pasos fallidos, eventos duplicados, datos ausentes, referencia de permisos e
+integridad y reproducción de las métricas de cobertura.
+
+`IntegracionV03IT` valida la [matriz completa de integración](../apps-practica/laboratorio/INTEGRACION-V03.md).
+Su aceptación de los veinte perfiles solo se activa con `-Dopsec.integracion.v03=true`;
+la ejecución normal comprueba la preparación y registra los bloqueos. Una omisión
+de la aceptación completa no significa que #67 esté terminada.
+
 Desde la raíz del repositorio:
 
 ```sh

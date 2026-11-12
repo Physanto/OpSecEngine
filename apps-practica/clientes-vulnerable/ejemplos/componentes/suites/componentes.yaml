@@ -1,0 +1,29 @@
+# Referencia escrita a mano; no es una salida de la grabadora todavía pendiente.
+suite: componentes
+version: "1"
+enfoques: [FUNCIONAL]
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: TABLA
+    pasos:
+      - pulsar: Componentes
+      - pulsar: Ver tabla
+      - pulsar: Siguiente persona
+      - esperar: {texto: "Persona seleccionada: P002"}
+  - id: LISTA
+    pasos:
+      - pulsar: Componentes
+      - pulsar: Ver lista
+      - seleccionar: {Categorías: Soporte}
+      - esperar: {texto: "Categoría seleccionada: Soporte"}
+  - id: DIALOGOS
+    pasos:
+      - pulsar: Componentes
+      - pulsar: Abrir detalle
+      - esperar: {tituloVentana: Detalle de práctica}
+      - pulsar: Abrir confirmación
+      - esperar: {tituloVentana: Confirmación de práctica}
+      - pulsar: Aceptar confirmación
+      - pulsar: Cerrar detalle

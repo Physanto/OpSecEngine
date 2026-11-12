@@ -1,0 +1,17 @@
+# F4 queda activo para provocar el error de consulta; falta el oráculo TRAZA-EN-DIALOGO.
+# Validar el formato no demuestra que la ejecución detecte el fallo.
+suite: f7
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F7-CASO
+    descripcion: "Provocar un error SQL y observar la pila del diálogo."
+    oraculos: [TRAZA-EN-DIALOGO]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "'", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "tiempoMaximoSegundos": 120,
+  "escenarios": [
+    {
+      "id": "f6-vulnerable",
+      "aplicacion": "clientes-vulnerable",
+      "version": "F6 activo",
+      "proyecto": "../../demo/proyecto.yaml",
+      "suite": "../../demo/suites/login.yaml",
+      "esperados": {"LOGIN-ADMIN": ["CONTRASENA-EN-CONSOLA"]}
+    },
+    {
+      "id": "f6-corregido",
+      "aplicacion": "clientes-vulnerable",
+      "version": "F6 corregido",
+      "proyecto": "../../demo/proyecto-corregido.yaml",
+      "suite": "../../demo/suites/login.yaml",
+      "esperados": {"LOGIN-ADMIN": []}
+    },
+    {
+      "id": "f8-vulnerable",
+      "aplicacion": "clientes-vulnerable",
+      "version": "F8 activo",
+      "proyecto": "../clientes-vulnerable/ejemplos/f8/proyecto.yaml",
+      "suite": "../clientes-vulnerable/ejemplos/f8/suites/f8.yaml",
+      "esperados": {"F8-CASO": ["EXCEPCION-NO-CAPTURADA"]}
+    },
+    {
+      "id": "f8-corregido",
+      "aplicacion": "clientes-vulnerable",
+      "version": "F8 corregido",
+      "proyecto": "../clientes-vulnerable/ejemplos/f8/proyecto-corregido.yaml",
+      "suite": "../clientes-vulnerable/ejemplos/f8/suites/f8.yaml",
+      "esperados": {"F8-CASO": []}
+    }
+  ]
+}

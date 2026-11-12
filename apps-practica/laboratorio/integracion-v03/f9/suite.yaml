@@ -1,0 +1,26 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f9
+version: "1"
+enfoques: [VALIDACION]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F9-INVALIDO
+    rol: admin
+    pasos:
+      - pulsar: Registrar Persona
+      - llenar: {Uid: P006, Nombre: "", Documento: abc, Correo: correo-invalido}
+      - pulsar: Guardar
+      - esperar: {nombreComponente: resultadoRegistrarPersona}
+  - id: F9-VALIDO
+    rol: admin
+    pasos:
+      - pulsar: Registrar Persona
+      - llenar: {Uid: P007, Nombre: Control registro, Documento: "123456789", Correo: control@ejemplo.com}
+      - pulsar: Guardar
+      - esperar: {texto: Persona registrada.}
+extensiones:
+  integracion:
+    fallo: F9
+    oraculoPendiente: "#38: completar ID y oraculos de los casos tras acordar el contrato"
