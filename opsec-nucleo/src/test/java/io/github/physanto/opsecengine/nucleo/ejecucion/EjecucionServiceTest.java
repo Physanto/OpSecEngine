@@ -31,14 +31,18 @@ import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.soporte.AgenteFalso;
+import java.io.Closeable;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Ejemplo de referencia: prueba un servicio del núcleo contra {@link AgenteFalso}, sin lanzar
@@ -176,6 +180,65 @@ class EjecucionServiceTest {
     }
 
     @Test
+    void capturarPideLaImagenLaGuardaYRegistraElEvento(@TempDir Path resultados) throws Exception {
+        Paso captura = new Paso(2, Accion.CAPTURAR, Localizador.porTexto("Menú"), null, null, null);
+        ArranqueApp conCarpeta =
+                new ArranqueApp() {
+                    @Override
+                    public Closeable arrancar(Proyecto proyecto, int puerto, String token)
+                            throws IOException {
+                        return conAgenteFalso.arrancar(proyecto, puerto, token);
+                    }
+
+                    @Override
+                    public Optional<Path> carpetaResultados() {
+                        return Optional.of(resultados);
+                    }
+                };
+
+        ResultadoSuite resultado =
+                ejecutar(conCarpeta, List.of(), caso("C/01", pulsar(1, "Avanzar"), captura));
+
+        ResultadoCaso caso = resultado.casos().get(0);
+        assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.CUMPLE);
+        assertThat(caso.traza().eventos())
+                .extracting(Evento::tipo)
+                .containsSubsequence(
+                        TipoEvento.PASO_INICIO, TipoEvento.CAPTURA, TipoEvento.PASO_FIN);
+        Evento evento = caso.traza().primero(TipoEvento.CAPTURA).orElseThrow();
+        assertThat(evento.datos())
+                .containsEntry("archivo", "capturas/C_01-2.png")
+                .containsEntry("formato", "PNG");
+        assertThat(evento.contexto().numeroPaso()).isEqualTo(2);
+        assertThat(resultados.resolve("capturas").resolve("C_01-2.png"))
+                .hasBinaryContent(AgenteFalso.imagenPng());
+        assertThat(agentes.get(0).mensajesRecibidos())
+                .extracting(Mensaje::getTipo)
+                .contains(TipoMensaje.CAPTURAR)
+                .containsOnlyOnce(TipoMensaje.EJECUTAR_PASO);
+        assertThat(
+                        agentes.get(0)
+                                .esperarMensaje(TipoMensaje.CAPTURAR, ESPERA)
+                                .orElseThrow()
+                                .getCuerpo()
+                                .get("ventana")
+                                .asText())
+                .isEqualTo("Menú");
+    }
+
+    @Test
+    void capturarSinCarpetaDeResultadosTerminaConError() throws Exception {
+        Paso captura = new Paso(1, Accion.CAPTURAR, null, null, null, null);
+
+        ResultadoSuite resultado = ejecutar(List.of(), caso("SIN", captura));
+
+        ResultadoCaso caso = resultado.casos().get(0);
+        assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(caso.veredicto().motivo()).contains("CAPTURAR", "carpeta de resultados");
+        assertThat(caso.traza().deTipo(TipoEvento.CAPTURA)).isEmpty();
+    }
+
+    @Test
     void armaElManifiestoYLosTiemposDeLaSuite() throws Exception {
         ResultadoSuite resultado = ejecutar(List.of(), caso("OK", pulsar(1, "Avanzar")));
 
@@ -187,10 +250,14 @@ class EjecucionServiceTest {
     }
 
     private ResultadoSuite ejecutar(List<Oraculo> oraculos, Caso... casos) {
+        return ejecutar(conAgenteFalso, oraculos, casos);
+    }
+
+    private ResultadoSuite ejecutar(ArranqueApp arranque, List<Oraculo> oraculos, Caso... casos) {
         EvaluacionService evaluacion =
                 new EvaluacionService(
                         new RegistroExtensiones(oraculos, List.of(), List.of(), List.of()));
-        try (SesionService sesiones = new SesionService(conAgenteFalso, ESPERA, ESPERA)) {
+        try (SesionService sesiones = new SesionService(arranque, ESPERA, ESPERA)) {
             Suite suite = new Suite("suite-prueba", "1", null, null, List.of(casos), null);
             return new EjecucionService(PROYECTO, sesiones, evaluacion).ejecutar(suite);
         }
