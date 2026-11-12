@@ -4,8 +4,10 @@ import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -69,6 +71,15 @@ public final class SesionService implements AutoCloseable {
         this.arranque = Objects.requireNonNull(arranque, "El arranque no puede ser null");
         this.esperaHola = positiva(esperaHola, "La espera del saludo");
         this.tiempoMaximoRespuesta = positiva(tiempoMaximoRespuesta, "El tiempo máximo");
+    }
+
+    /**
+     * Devuelve la carpeta de resultados del arranque, donde se guardan las capturas.
+     *
+     * @return la carpeta, o vacío si el arranque no tiene una
+     */
+    public Optional<Path> carpetaResultados() {
+        return arranque.carpetaResultados();
     }
 
     /**
