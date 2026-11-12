@@ -48,9 +48,24 @@
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- Solo ordena el reactor para probar el agente contra el jar real; no entra en su classpath. -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-clientes-vulnerable</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>${project.groupId}:opsec-clientes-vulnerable</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -121,6 +136,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>${project.groupId}:opsec-clientes-vulnerable</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
                     <systemPropertyVariables>
                         <opsec.agente.jar>${project.build.directory}/${project.build.finalName}-agente.jar</opsec.agente.jar>
                     </systemPropertyVariables>

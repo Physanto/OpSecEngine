@@ -21,6 +21,9 @@ import java.util.UUID;
  * escapa dentro de los textos. Los campos null se omiten al escribir y los campos desconocidos se
  * ignoran al leer, para que versiones distintas del motor y del agente puedan entenderse.
  *
+ * <p>Los nodos de ARBOL conservan ruta, alcanzable y acciones. Al leer nodos antiguos, esos campos
+ * toman los valores null, false y lista vacía definidos por el DTO.
+ *
  * <p>Es inmutable y seguro entre hilos; conviene compartir una sola instancia.
  */
 public final class CodecMensajes {

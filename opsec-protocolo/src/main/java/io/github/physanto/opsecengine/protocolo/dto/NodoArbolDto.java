@@ -2,6 +2,7 @@ package io.github.physanto.opsecengine.protocolo.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -21,6 +22,9 @@ public final class NodoArbolDto {
     private final boolean habilitado;
     private final boolean editable;
     private final List<NodoArbolDto> hijos;
+    private final String ruta;
+    private final boolean alcanzable;
+    private final List<String> acciones;
 
     /**
      * Crea un nodo del árbol.
@@ -38,7 +42,6 @@ public final class NodoArbolDto {
      * @throws NullPointerException si {@code tipo} es null o si algún hijo es null
      * @throws IllegalArgumentException si {@code tipo} está vacío
      */
-    @JsonCreator
     public NodoArbolDto(
             @JsonProperty("tipo") String tipo,
             @JsonProperty("texto") String texto,
@@ -48,6 +51,52 @@ public final class NodoArbolDto {
             @JsonProperty("habilitado") boolean habilitado,
             @JsonProperty("editable") boolean editable,
             @JsonProperty("hijos") List<NodoArbolDto> hijos) {
+        this(
+                tipo,
+                texto,
+                nombre,
+                nombreAccesible,
+                visible,
+                habilitado,
+                editable,
+                hijos,
+                null,
+                false,
+                Collections.<String>emptyList());
+    }
+
+    /**
+     * Crea un nodo con su localizador por ruta y sus posibilidades de interacción.
+     *
+     * @param tipo nombre completo de la clase; no puede ser null ni estar vacío
+     * @param texto texto visible o título; puede ser null
+     * @param nombre nombre asignado al componente; puede ser null
+     * @param nombreAccesible nombre accesible; puede ser null
+     * @param visible si se muestra en pantalla
+     * @param habilitado si acepta interacción
+     * @param editable si permite escribir
+     * @param hijos componentes contenidos; null equivale a una lista vacía
+     * @param ruta localizador Ventana/Clase[indice]/... con índices desde cero; null si se
+     *     desconoce
+     * @param alcanzable si está visible, habilitado, con ancestros visibles y área dentro de su
+     *     ventana
+     * @param acciones acciones aplicables; null equivale a una lista vacía
+     * @throws NullPointerException si tipo, algún hijo o alguna acción es null
+     * @throws IllegalArgumentException si tipo está vacío
+     */
+    @JsonCreator
+    public NodoArbolDto(
+            @JsonProperty("tipo") String tipo,
+            @JsonProperty("texto") String texto,
+            @JsonProperty("nombre") String nombre,
+            @JsonProperty("nombreAccesible") String nombreAccesible,
+            @JsonProperty("visible") boolean visible,
+            @JsonProperty("habilitado") boolean habilitado,
+            @JsonProperty("editable") boolean editable,
+            @JsonProperty("hijos") List<NodoArbolDto> hijos,
+            @JsonProperty("ruta") String ruta,
+            @JsonProperty("alcanzable") boolean alcanzable,
+            @JsonProperty("acciones") List<String> acciones) {
         this.tipo = Copias.texto(tipo, "El tipo del nodo");
         this.texto = texto;
         this.nombre = nombre;
@@ -56,6 +105,9 @@ public final class NodoArbolDto {
         this.habilitado = habilitado;
         this.editable = editable;
         this.hijos = Copias.lista(hijos, "Los hijos del nodo");
+        this.ruta = ruta;
+        this.alcanzable = alcanzable;
+        this.acciones = Copias.lista(acciones, "Las acciones del nodo");
     }
 
     /**
@@ -131,6 +183,33 @@ public final class NodoArbolDto {
     }
 
     /**
+     * Devuelve la ruta del componente, incluidos los contenedores internos de la interfaz.
+     *
+     * @return ruta con índices desde cero entre hermanos de la misma clase; null si se desconoce
+     */
+    public String getRuta() {
+        return ruta;
+    }
+
+    /**
+     * Indica si el componente tiene área visible dentro de su ventana y admite interacción.
+     *
+     * @return true si es alcanzable; false si se desconoce o no puede interactuarse con él
+     */
+    public boolean isAlcanzable() {
+        return alcanzable;
+    }
+
+    /**
+     * Devuelve las acciones aplicables al tipo de control, independientemente de su estado.
+     *
+     * @return lista inmutable de acciones; vacía si no tiene o se desconocen
+     */
+    public List<String> getAcciones() {
+        return acciones;
+    }
+
+    /**
      * Compara este nodo con otro objeto campo por campo, incluidos sus hijos.
      *
      * @param otro objeto a comparar
@@ -152,7 +231,10 @@ public final class NodoArbolDto {
                 && Objects.equals(texto, nodo.texto)
                 && Objects.equals(nombre, nodo.nombre)
                 && Objects.equals(nombreAccesible, nodo.nombreAccesible)
-                && hijos.equals(nodo.hijos);
+                && hijos.equals(nodo.hijos)
+                && Objects.equals(ruta, nodo.ruta)
+                && alcanzable == nodo.alcanzable
+                && acciones.equals(nodo.acciones);
     }
 
     /**
@@ -163,7 +245,17 @@ public final class NodoArbolDto {
     @Override
     public int hashCode() {
         return Objects.hash(
-                tipo, texto, nombre, nombreAccesible, visible, habilitado, editable, hijos);
+                tipo,
+                texto,
+                nombre,
+                nombreAccesible,
+                visible,
+                habilitado,
+                editable,
+                hijos,
+                ruta,
+                alcanzable,
+                acciones);
     }
 
     /**

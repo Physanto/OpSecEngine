@@ -64,6 +64,6 @@ La prueba de integración `opsec-cli/src/test/java/.../DemoIT.java` ejecuta esta
 
 ## Qué todavía no hace
 
-- El informe es solo JSON; el informe HTML llega con el reportero de `opsec-informes`.
+- El informe HTML se pide con `--formato html,json`; la suite SEC-001 completa está en `sec-001/`.
 - Las ventanas se ven en pantalla; el modo oculto llega con el agente completo.
 - El caso escribe las credenciales a mano; el inicio de sesión por rol (`rol: admin` en el caso) llega con el núcleo de la v0.1.

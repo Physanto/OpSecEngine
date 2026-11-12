@@ -6,16 +6,19 @@ package io.github.physanto.opsecengine.agente;
  * <p>El formato es una lista de pares {@code clave=valor} separados por comas, por ejemplo {@code
  * puerto=51234,token=abc}. Son obligatorios {@code puerto} (entre 1 y 65535) y {@code token} (no
  * vacío). Las claves desconocidas se ignoran para que versiones nuevas del motor puedan agregar
- * opciones. Es inmutable.
+ * opciones. El argumento opcional {@code oculto=true} impide el foco y desplaza las ventanas fuera
+ * de las pantallas; por defecto es false. Es inmutable.
  */
 final class ArgumentosAgente {
 
     private final int puerto;
     private final String token;
+    private final boolean oculto;
 
-    private ArgumentosAgente(int puerto, String token) {
+    private ArgumentosAgente(int puerto, String token, boolean oculto) {
         this.puerto = puerto;
         this.token = token;
+        this.oculto = oculto;
     }
 
     /**
@@ -33,6 +36,7 @@ final class ArgumentosAgente {
         }
         String puerto = null;
         String token = null;
+        boolean oculto = false;
         for (String par : texto.split(",")) {
             int igual = par.indexOf('=');
             if (igual < 0) {
@@ -44,13 +48,18 @@ final class ArgumentosAgente {
                 puerto = valor;
             } else if (clave.equals("token")) {
                 token = valor;
+            } else if (clave.equals("oculto")) {
+                if (!"true".equals(valor) && !"false".equals(valor)) {
+                    throw new IllegalArgumentException("El argumento oculto debe ser true o false");
+                }
+                oculto = Boolean.parseBoolean(valor);
             }
         }
         if (puerto == null || token == null || token.isEmpty()) {
             throw new IllegalArgumentException(
                     "El agente necesita los argumentos puerto y token: " + sinToken(texto));
         }
-        return new ArgumentosAgente(leerPuerto(puerto), token);
+        return new ArgumentosAgente(leerPuerto(puerto), token, oculto);
     }
 
     /**
@@ -69,6 +78,11 @@ final class ArgumentosAgente {
      */
     String token() {
         return token;
+    }
+
+    /** Indica si las ventanas deben ejecutarse fuera de pantalla y sin foco. */
+    boolean oculto() {
+        return oculto;
     }
 
     private static int leerPuerto(String texto) {

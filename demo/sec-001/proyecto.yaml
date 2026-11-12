@@ -1,0 +1,20 @@
+# SEC-001 (integración v0.1): la app de práctica con todos sus fallos activos.
+# Formato: contratos/esquemas/proyecto.schema.json
+#
+# Antes de ejecutar, construya el proyecto desde la raíz del repositorio: ./mvnw -B package
+# (en Windows: mvnw.cmd -B package). Las rutas son relativas a esta carpeta.
+
+nombre: sec-001-vulnerable
+
+app:
+  jar: ../../apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
+
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}
+
+login:
+  pasos:
+    - pulsar: Avanzar
+    - pulsar: Nube
+    - llenar: {Usuario: "{usuario}", Contraseña: "{contrasena}"}
+    - pulsar: Iniciar Sesion
