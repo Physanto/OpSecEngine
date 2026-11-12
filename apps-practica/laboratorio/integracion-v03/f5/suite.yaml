@@ -1,0 +1,24 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f5
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: C01
+    oraculos: [ENUMERACION-USUARIOS]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "NoExiste", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - esperar: {texto: "El usuario no existe."}
+  - id: C02
+    oraculos: [ENUMERACION-USUARIOS]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "Admin", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - esperar: {texto: "La contraseña es incorrecta."}

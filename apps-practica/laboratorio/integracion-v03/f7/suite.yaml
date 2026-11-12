@@ -1,0 +1,16 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f7
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F7-CASO
+    oraculos: [TRAZA-EN-DIALOGO]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "'", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - esperar: {tipo: JOptionPane}

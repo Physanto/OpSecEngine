@@ -1,0 +1,41 @@
+# Rutas relativas a la raíz del repo, que es el contexto de docker build.
+# Solo se envían los archivos necesarios para compilar y ejecutar la demo.
+**
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/**
+!build-tools/
+!build-tools/**
+!contratos/
+!contratos/**
+!opsec-*/
+!opsec-*/pom.xml
+!opsec-*/src/
+!opsec-*/src/**
+!apps-practica/
+!apps-practica/laboratorio/
+!apps-practica/laboratorio/BancoEvaluacion.java
+!apps-practica/laboratorio/banco.json
+!apps-practica/laboratorio/banco-ampliado.json
+!apps-practica/laboratorio/inventario.json
+!apps-practica/laboratorio/integracion-v03/
+!apps-practica/laboratorio/integracion-v03/**
+!apps-practica/clientes-vulnerable/
+!apps-practica/clientes-vulnerable/pom.xml
+!apps-practica/clientes-vulnerable/src/
+!apps-practica/clientes-vulnerable/src/**
+!apps-practica/clientes-vulnerable/ejemplos/
+!apps-practica/clientes-vulnerable/ejemplos/f8/
+!apps-practica/clientes-vulnerable/ejemplos/f8/**
+!demo/
+!demo/proyecto.yaml
+!demo/proyecto-corregido.yaml
+!demo/suites/
+!demo/suites/**
+**/target/
+# No excluir los datos de prueba src/main/resources/resultados/.
+demo/resultados/
+apps-practica/clientes-vulnerable/ejemplos/f8/resultados/
+**/*.jar
+**/*.log

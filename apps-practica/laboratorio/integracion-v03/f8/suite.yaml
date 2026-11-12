@@ -1,0 +1,14 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f8
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F8-CASO
+    oraculos: [EXCEPCION-NO-CAPTURADA]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - pulsar: Probar excepción

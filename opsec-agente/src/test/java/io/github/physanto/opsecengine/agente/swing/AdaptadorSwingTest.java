@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Pruebas del adaptador que no necesitan ventanas: funcionan también sin pantalla. Las acciones
- * sobre ventanas reales están en {@code AgenteSwingIT}.
+ * sobre ventanas reales están en {@code AgenteIT}.
  */
 class AdaptadorSwingTest {
 
@@ -21,11 +21,10 @@ class AdaptadorSwingTest {
     @Test
     void rechazaLosModosQueTodaviaNoEstanImplementados() {
         ResultadoPasoDto resultado =
-                adaptador.ejecutar(
-                        new PasoDto("PULSAR", porTexto("Aceptar"), null, "EVENTOS", 100));
+                adaptador.ejecutar(new PasoDto("PULSAR", porTexto("Aceptar"), null, "ROBOT", 100));
 
         assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.ERROR);
-        assertThat(resultado.getDetalle()).contains("EVENTOS", "SEMANTICO");
+        assertThat(resultado.getDetalle()).contains("ROBOT", "EVENTOS", "SEMANTICO");
     }
 
     @Test
@@ -36,6 +35,26 @@ class AdaptadorSwingTest {
 
         assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.ERROR);
         assertThat(resultado.getDetalle()).contains("SELECCIONAR");
+    }
+
+    @Test
+    void eventosExigeUnObjetivoParaPulsarYLlenar() {
+        for (String accion : List.of("PULSAR", "LLENAR")) {
+            ResultadoPasoDto resultado =
+                    adaptador.ejecutar(new PasoDto(accion, null, "texto", "EVENTOS", 100));
+
+            assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.ERROR);
+            assertThat(resultado.getDetalle()).contains("necesita un objetivo");
+        }
+    }
+
+    @Test
+    void eventosConservaElResultadoSiElComponenteNoExiste() {
+        ResultadoPasoDto resultado =
+                adaptador.ejecutar(
+                        new PasoDto("PULSAR", porTexto("Inexistente"), null, "EVENTOS", 100));
+
+        assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.NO_ENCONTRADO);
     }
 
     @Test

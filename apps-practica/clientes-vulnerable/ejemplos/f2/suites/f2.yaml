@@ -1,0 +1,18 @@
+# Pendientes: oráculo SIN-SESION, ganchos JDBC y resolución de Uid sin etiqueta asociada.
+# Validar el formato no demuestra que la ejecución detecte el fallo.
+suite: f2
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F2-CASO
+    descripcion: "Eliminar P001 desde Local sin iniciar sesión."
+    oraculos: [SIN-SESION]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Local
+      - pulsar: Eliminar Persona
+      - llenar: {Uid: P001}
+      - pulsar: Eliminar

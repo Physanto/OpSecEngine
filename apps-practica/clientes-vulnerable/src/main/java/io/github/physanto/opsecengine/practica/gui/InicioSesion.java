@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.practica.gui;
 
 import io.github.physanto.opsecengine.practica.ContextoApp;
+import io.github.physanto.opsecengine.practica.servicio.DiagnosticoServicio;
 import io.github.physanto.opsecengine.practica.servicio.ResultadoLogin;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -58,6 +59,11 @@ public final class InicioSesion extends JFrame {
         volver.addActionListener(e -> Navegacion.cambiar(this, new EscogerModo(contexto)));
 
         JPanel botones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton probarExcepcion = new JButton("Probar excepción");
+        probarExcepcion.setName("botonProbarExcepcion");
+        probarExcepcion.addActionListener(
+                e -> new DiagnosticoServicio(contexto.interruptores()).probarExcepcion());
+        botones.add(probarExcepcion);
         botones.add(volver);
         botones.add(iniciar);
 
@@ -81,7 +87,7 @@ public final class InicioSesion extends JFrame {
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(
                     this,
-                    "No se pudo consultar la base de datos.",
+                    new DiagnosticoServicio(contexto.interruptores()).mensajeConsulta(e),
                     "Iniciar sesión",
                     JOptionPane.ERROR_MESSAGE);
             return;

@@ -1,0 +1,33 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "UNICODE-EMOJI"
+  categoria: "UNICODE"
+  aplica_a: ["CUALQUIERA"]
+  payload: "\ud83d\ude42{canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Emoji suplementario junto a una marca rastreable."
+
+- id: "UNICODE-NULO"
+  categoria: "UNICODE"
+  aplica_a: ["CUALQUIERA"]
+  payload: "{canario}\u0000"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Carácter nulo después de la marca; puede truncar conversiones o escrituras."
+
+- id: "UNICODE-DIRECCION"
+  categoria: "UNICODE"
+  aplica_a: ["CUALQUIERA"]
+  payload: "\u202e{canario}\u202c"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Controles de dirección explícitos alrededor de la marca."
+
+- id: "UNICODE-COMBINADO"
+  categoria: "UNICODE"
+  aplica_a: ["CUALQUIERA"]
+  payload: "e\u0301{canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Letra y acento combinante, sin normalizar el texto."

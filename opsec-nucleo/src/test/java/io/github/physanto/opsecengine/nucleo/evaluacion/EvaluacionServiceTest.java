@@ -78,6 +78,22 @@ class EvaluacionServiceTest {
     }
 
     @Test
+    void unOraculoSinEvidenciaSuficienteDejaElCasoNoConcluyente() {
+        Oraculo dudoso =
+                new OraculoFijo("DUDOSO", Momento.CASO, null) {
+                    @Override
+                    public Veredicto evaluarResultado(Traza traza, Contexto ctx) {
+                        return Veredicto.noConcluyente("falta el envío del formulario");
+                    }
+                };
+
+        Veredicto veredicto = evaluar(List.of(dudoso), caso(), null);
+
+        assertThat(veredicto.estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(veredicto.motivo()).isEqualTo("DUDOSO: falta el envío del formulario");
+    }
+
+    @Test
     void unOraculoPedidoQueNoEstaRegistradoDejaElCasoNoConcluyente() {
         Veredicto veredicto = evaluar(List.of(), caso("SIN-SESION"), null);
 

@@ -1,0 +1,28 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "FIRESTORE-SEPARADOR-CANARIO"
+  categoria: "FIRESTORE"
+  aplica_a: ["IDENTIFICADOR", "TEXTO"]
+  payload: "clientes/{canario}"
+  usa_canario: true
+  oraculos: ["FIRESTORE-RUTA-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Identificador con un separador de ruta."
+
+- id: "FIRESTORE-NOMBRE-CANARIO"
+  categoria: "FIRESTORE"
+  aplica_a: ["IDENTIFICADOR", "TEXTO"]
+  payload: "__name__/{canario}"
+  usa_canario: true
+  oraculos: ["FIRESTORE-RUTA-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Nombre especial de Firestore combinado con un separador y una marca."
+
+- id: "FIRESTORE-PUNTOS-CANARIO"
+  categoria: "FIRESTORE"
+  aplica_a: ["IDENTIFICADOR", "TEXTO"]
+  payload: "../{canario}"
+  usa_canario: true
+  oraculos: ["FIRESTORE-RUTA-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Segmento de puntos dentro de un valor usado como ruta."

@@ -1,0 +1,17 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "HTML-NEGRITA-CANARIO"
+  categoria: "HTML_SWING"
+  aplica_a: ["TEXTO", "BUSQUEDA"]
+  payload: "<html><b>{canario}</b></html>"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "HTML que Swing puede interpretar como texto en negrita."
+
+- id: "HTML-COLOR-CANARIO"
+  categoria: "HTML_SWING"
+  aplica_a: ["TEXTO", "BUSQUEDA"]
+  payload: "<html><font color=\"red\">{canario}</font></html>"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "HTML que cambia la presentación sin cargar recursos externos."

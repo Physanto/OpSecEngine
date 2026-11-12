@@ -1,0 +1,13 @@
+# Semilla #69; validar el YAML no acredita detección del oráculo.
+suite: rendimiento-f11
+version: "1"
+enfoques: [RENDIMIENTO, ROBUSTEZ]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F11-CASO
+    oraculos: [INTERFAZ-CONGELADA]
+    pasos:
+      - pulsar: Probar EDT
+      - esperar: {texto: EDT terminado.}

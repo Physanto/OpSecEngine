@@ -1,0 +1,4 @@
+{"secuencia":0,"instante":"2026-10-31T10:00:00Z","tipo":"CONSOLA","contexto":{"casoId":"CANARIO39","numeroPaso":0,"sesionActiva":false},"datos":{"flujo":"SALIDA","texto":"Marca anterior: K7Q2CANARIO39"}}
+{"secuencia":1,"instante":"2026-10-31T10:00:01Z","tipo":"PASO_INICIO","contexto":{"casoId":"CANARIO39","numeroPaso":1,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre_componente=dato2","valor":"prefijo-K7Q2CANARIO39-sufijo","modo":"SEMANTICO"}}
+{"secuencia":2,"instante":"2026-10-31T10:00:02Z","tipo":"PASO_FIN","contexto":{"casoId":"CANARIO39","numeroPaso":1,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":20,"componente":"javax.swing.JPasswordField"}}
+{"secuencia":3,"instante":"2026-10-31T10:00:03Z","tipo":"CONSOLA","contexto":{"casoId":"CANARIO39","numeroPaso":2,"sesionActiva":false},"datos":{"flujo":"SALIDA","texto":"Se procesó el intento sin registrar el valor escrito."}}

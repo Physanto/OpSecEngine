@@ -1,0 +1,2 @@
+{"secuencia":0,"instante":"2026-11-11T12:00:00Z","tipo":"PASO_INICIO","contexto":{"casoId":"VISIBLE45","numeroPaso":1,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=txtPassword","valor":"ClavePrueba45","modo":"SEMANTICO"}}
+{"secuencia":1,"instante":"2026-11-11T12:00:01Z","tipo":"PASO_FIN","contexto":{"casoId":"VISIBLE45","numeroPaso":1,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1,"componente":"javax.swing.JTextField"}}
