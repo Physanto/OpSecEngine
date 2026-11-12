@@ -83,6 +83,48 @@ de enumeración. Un mapa de YAML no se transforma en el adaptador automáticamen
 la carga y conexión al núcleo siguen pendientes. No se infieren escenarios desde ids,
 descripciones, nombres de usuario ni frases propias de una aplicación.
 
+## Credenciales débiles y bloqueo de login (#44)
+
+`OraculoCredencialesDebiles` (`CREDENCIALES-DEBILES`, CWE-521) y `OraculoSinBloqueo`
+(`SIN-BLOQUEO`, CWE-307) se registran por SPI y se evalúan al terminar el caso.
+El llamador aporta una instancia Java de `PoliticaAutenticacion` en
+`Caso.extensiones().get("autenticacion")`, con:
+
+- `intentos`: lista ordenada de `Intento(pasoUsuario, pasoContrasena, pasoEnvio, usuario,
+  contrasena, debil)`. Los valores ya deben estar materializados; pueden estar vacíos.
+- `fallosPermitidos`: N rechazos consecutivos antes de exigir protección.
+- `retardoMinimo`: duración positiva considerada protección desde el último rechazo.
+- `rechazo` y `bloqueo`: listas no vacías de `PoliticaValidacionTemporal.Senal`, con igualdades
+  sobre datos de eventos. El integrador define su significado para la aplicación.
+
+El rastreador exige dos `LLENAR` de campos distintos con los valores declarados y sus finales
+`OK`, sin sobrescrituras, sesión previa ni envíos intermedios. El envío debe ser un `PULSAR`
+único con final `OK`. Solo atribuye respuestas al mismo caso y paso, antes de la siguiente
+acción; descarta respuestas tardías o contradictorias. Un `OK`, un rol o una ventana abierta
+no prueban autenticación: debe observarse `SESION` con `activa=true`. Si ese evento aporta
+`usuario`, debe coincidir exactamente con el payload.
+
+La aceptación de un payload declarado débil produce un hallazgo `CONFIRMADO`. Las trazas de
+F1 prueban `soporte` / `soporte123` aceptado y rechazado; esas credenciales no están fijadas
+en el código del oráculo. La declaración `debil` procede de la biblioteca o política del
+llamador; no se infiere fortaleza ni se leen los payloads de `opsec-ataques`.
+
+`SIN-BLOQUEO` requiere N rechazos observados seguidos del mismo usuario y una aceptación
+posterior antes del retardo mínimo, sin bloqueo observado. Produce un hallazgo `PROBABLE`.
+Un cambio de usuario, intento incompleto, bloqueo, sesión o reinicio intermedio, envío no
+declarado, intervalo al menos igual al umbral o tiempos no monótonos rompen la serie.
+El intervalo se mide desde el rechazo anterior hasta la respuesta siguiente, incluyendo la
+escritura y la espera del cliente: puede ocultar una falta de protección, pero no atribuye
+una pausa del cliente a un fallo del servidor. La política debe describir el mismo ámbito
+de bloqueo sin reinicios que borren su contador. N no se fija en cinco ni se confunde con
+`ConfigEjecucion.reintentos`, que repite casos completos.
+
+Los hallazgos solo referencian secuencias; no copian credenciales ni mensajes de la aplicación.
+Sin política o evidencia suficiente no hay hallazgos y el `CUMPLE` del evaluador no demuestra
+seguridad. Un mapa YAML no se convierte en el adaptador automáticamente. La
+[solicitud de contrato](solicitud-contrato-44.md) propone formalizar esos datos; la carga de
+payloads y la conexión al núcleo siguen pendientes.
+
 ## Evaluación por momento
 
 `OraculoSinSesion` (id `SIN-SESION`, momento `CASO`, CWE-306) detecta operaciones SQL o
@@ -198,7 +240,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos de seguridad del catálogo (v0.3): `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos de seguridad del catálogo (v0.3): `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
 ## Dependencias permitidas
 

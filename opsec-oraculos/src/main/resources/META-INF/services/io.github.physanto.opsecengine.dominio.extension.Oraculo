@@ -7,3 +7,5 @@ io.github.physanto.opsecengine.oraculos.OraculoAutorizacionDiferencial
 io.github.physanto.opsecengine.oraculos.OraculoSqliCanario
 io.github.physanto.opsecengine.oraculos.OraculoFirestoreRutaCanario
 io.github.physanto.opsecengine.oraculos.OraculoEnumeracionUsuarios
+io.github.physanto.opsecengine.oraculos.OraculoCredencialesDebiles
+io.github.physanto.opsecengine.oraculos.OraculoSinBloqueo
