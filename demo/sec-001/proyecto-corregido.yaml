@@ -1,0 +1,18 @@
+# SEC-001 (integración v0.1): la misma app con todos sus fallos corregidos.
+# Formato: contratos/esquemas/proyecto.schema.json
+
+nombre: sec-001-corregido
+
+app:
+  jar: ../../apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=todos"]
+
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}
+
+login:
+  pasos:
+    - pulsar: Avanzar
+    - pulsar: Nube
+    - llenar: {Usuario: "{usuario}", Contraseña: "{contrasena}"}
+    - pulsar: Iniciar Sesion
