@@ -52,4 +52,4 @@ logs/
 *~
 
 # Resultados de la demo
-demo/resultados/
+demo/**/resultados/
