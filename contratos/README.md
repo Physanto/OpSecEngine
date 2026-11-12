@@ -1,6 +1,6 @@
 # Contratos de OpSecEngine
 
-Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman los contratos, hoy en la versión 1.1.
+Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman los contratos, hoy en la versión 1.2.
 
 Todo lo que hay aquí es un contrato: se usa tal como está y los cambios se piden con una solicitud de cambio de contrato (ver más abajo). El módulo `opsec-verificacion` valida en cada build que los ejemplos cumplan sus esquemas y que los catálogos coincidan con el código.
 
@@ -53,6 +53,28 @@ Variables que el motor reemplaza en los valores:
 | `{payload}` | Cada payload de la lista `ataques` del caso; el caso se ejecuta una vez por payload. |
 | `{canario}` | Marca única que genera el motor para rastrear un payload hasta SQL, Firestore o la consola. |
 
+#### Canario, políticas y comparación de login (v1.2)
+
+Algunos oráculos necesitan saber qué espera quien escribe la suite; sin esos datos se abstienen. Los números de paso empiezan en 1 y cuentan cada campo de un `llenar` como un paso (el mismo número que lleva `contexto.numeroPaso` en la traza). El motor comprueba que cada número apunte a un paso con la acción correcta.
+
+| Sección | Dónde | Oráculos | Qué declara |
+|---|---|---|---|
+| `canario` | caso | `SQLI-CANARIO`, `FIRESTORE-RUTA-CANARIO`, `CONTRASENA-EN-CONSOLA` | La marca exacta que el caso escribe (al menos 4 caracteres, sin espacios ni llaves). Si el caso usa `{canario}`, el motor la genera y la guarda aquí. |
+| `validacion` | caso | `ENTRADA-INVALIDA-ACEPTADA` | El paso `llenar` con el valor inválido, el paso `pulsar` que lo envía y las señales de aceptación y de rechazo. |
+| `autenticacion` | caso | `CREDENCIALES-DEBILES`, `SIN-BLOQUEO` | Los intentos de login (pasos de usuario, contraseña y envío, valores y si la contraseña es débil), los fallos permitidos, el retardo mínimo y las señales de rechazo y de bloqueo. |
+| `enumeracionUsuarios` | suite | `ENUMERACION-USUARIOS` | Los dos casos que se comparan (usuario inexistente y contraseña incorrecta) y el paso `pulsar` de cada envío. |
+
+Una **señal** es un evento de la traza con ciertos valores en sus datos, sin depender de los textos de la app:
+
+```yaml
+rechazo:
+  - {tipo: DIALOGO, campos: {tipoMensaje: ERROR}}
+aceptacion:
+  - {tipo: SESION, campos: {activa: true}}
+```
+
+Un login aceptado se reconoce por un evento `SESION` con `activa: true`, no por un paso que termina en `OK`. La suite `ejemplos/suites/login.yaml` usa las cuatro secciones.
+
 ### `catalogos/`
 
 | Archivo | Qué contiene |
@@ -86,6 +108,7 @@ Un ejemplo JSON por tipo de mensaje del protocolo motor ↔ agente. Ver `protoco
 |---|---|---|
 | 1 | `contratos-v1` | Versión inicial. |
 | 1.1 | `contratos-v1.1` | Aditivo: campo opcional `app.java` en `proyecto.yaml` (carpeta del JDK o JRE con que se lanza la app) y componente `javaApp` del record `Proyecto`, que conserva el constructor de la v1. |
+| 1.2 | `contratos-v1.2` | Aditivo (#38, #42, #43, #44, #47): secciones opcionales `canario`, `validacion` y `autenticacion` del caso y `enumeracionUsuarios` de la suite, con sus records (`Senal`, `PoliticaValidacion`, `IntentoLogin`, `PoliticaAutenticacion`, `ComparacionLogin`); `Caso` y `Suite` conservan los constructores anteriores. Método por defecto `Oraculo.evaluarResultado`, que permite responder `NO_CONCLUYENTE`. Oráculo `ENTRADA-INVALIDA-ACEPTADA` y `CWE-20`; ids reservados de calidad de la interfaz (`RESPUESTA-LENTA`, `VENTANA-NO-LIBERADA`, `CONTROL-SIN-ETIQUETA`, `ORDEN-TABULACION`, `ACCION-TECLADO-NO-ALCANZADA`, `RESULTADO-ROBUSTEZ-INCORRECTO`); campo opcional `liberada` en `VENTANA_CERRADA`. |
 
 ## Cambiar un contrato
 

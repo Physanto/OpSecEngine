@@ -1,0 +1,17 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "COMANDO-PUNTO-COMA-CANARIO"
+  categoria: "COMANDOS"
+  aplica_a: ["TEXTO", "IDENTIFICADOR"]
+  payload: "; echo {canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Separador de comandos de shell seguido de una impresión de la marca."
+
+- id: "COMANDO-AMPERSAND-CANARIO"
+  categoria: "COMANDOS"
+  aplica_a: ["TEXTO", "IDENTIFICADOR"]
+  payload: "& echo {canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Separador de comandos seguido de una impresión de la marca."

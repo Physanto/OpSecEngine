@@ -1,0 +1,21 @@
+# Plantilla funcional: adapta localizadores, datos y resultado a tu aplicación.
+# La espera del resultado comprueba su aparición; la captura permite revisar el estado visible.
+# Formato: contratos/esquemas/suite.schema.json. Sin rol, el caso comienza sin sesión.
+suite: plantilla-funcional
+version: "1"
+enfoques: [FUNCIONAL]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+  reintentos: 0
+  paralelismo: 1
+casos:
+  - id: FUN-001
+    descripcion: Completa una operación con datos válidos y espera su resultado.
+    pasos:
+      - esperar: {tituloVentana: Formulario de ejemplo}
+      - llenar: {Dato: "valor válido de prueba"}
+      - pulsar: {nombreComponente: btnConfirmar, texto: Confirmar}
+      - esperar: {texto: Operación completada}
+      - capturar:
+    oraculos: [EXCEPCION-NO-CAPTURADA, APP-TERMINADA]

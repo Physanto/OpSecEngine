@@ -1,0 +1,25 @@
+# El oráculo es de SUITE y compara C01 y C02; todavía no está implementado.
+# Validar el formato no demuestra que la ejecución detecte el fallo.
+suite: f5
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: C01
+    descripcion: "C01: usuario inexistente; comparar el diálogo con C02."
+    oraculos: [ENUMERACION-USUARIOS]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "NoExiste", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+  - id: C02
+    descripcion: "Contraseña incorrecta de un usuario existente; comparar con C01."
+    oraculos: [ENUMERACION-USUARIOS]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "Admin", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion

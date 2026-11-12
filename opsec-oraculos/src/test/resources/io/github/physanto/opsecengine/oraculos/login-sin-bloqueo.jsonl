@@ -1,0 +1,21 @@
+{"secuencia":0,"instante":"2026-11-11T12:00:00.000Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":1,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=Usuario","valor":"usuario","modo":"SEMANTICO"}}
+{"secuencia":1,"instante":"2026-11-11T12:00:00.010Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":1,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":2,"instante":"2026-11-11T12:00:00.020Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":2,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=Clave","valor":"incorrecta0","modo":"SEMANTICO"}}
+{"secuencia":3,"instante":"2026-11-11T12:00:00.030Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":2,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":4,"instante":"2026-11-11T12:00:00.040Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":3,"sesionActiva":false},"datos":{"accion":"PULSAR","objetivo":"nombre=Entrar","modo":"SEMANTICO"}}
+{"secuencia":5,"instante":"2026-11-11T12:00:00.050Z","tipo":"DIALOGO","contexto":{"casoId":"BLOQUEO","numeroPaso":3,"sesionActiva":false},"datos":{"texto":"Credenciales inválidas"}}
+{"secuencia":6,"instante":"2026-11-11T12:00:00.060Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":3,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":7,"instante":"2026-11-11T12:00:00.070Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":4,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=Usuario","valor":"usuario","modo":"SEMANTICO"}}
+{"secuencia":8,"instante":"2026-11-11T12:00:00.080Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":4,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":9,"instante":"2026-11-11T12:00:00.090Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":5,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=Clave","valor":"incorrecta1","modo":"SEMANTICO"}}
+{"secuencia":10,"instante":"2026-11-11T12:00:00.100Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":5,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":11,"instante":"2026-11-11T12:00:00.110Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":6,"sesionActiva":false},"datos":{"accion":"PULSAR","objetivo":"nombre=Entrar","modo":"SEMANTICO"}}
+{"secuencia":12,"instante":"2026-11-11T12:00:00.120Z","tipo":"DIALOGO","contexto":{"casoId":"BLOQUEO","numeroPaso":6,"sesionActiva":false},"datos":{"texto":"Credenciales inválidas"}}
+{"secuencia":13,"instante":"2026-11-11T12:00:00.130Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":6,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":14,"instante":"2026-11-11T12:00:00.140Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":7,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=Usuario","valor":"usuario","modo":"SEMANTICO"}}
+{"secuencia":15,"instante":"2026-11-11T12:00:00.150Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":7,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":16,"instante":"2026-11-11T12:00:00.160Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":8,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=Clave","valor":"valida","modo":"SEMANTICO"}}
+{"secuencia":17,"instante":"2026-11-11T12:00:00.170Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":8,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":18,"instante":"2026-11-11T12:00:00.180Z","tipo":"PASO_INICIO","contexto":{"casoId":"BLOQUEO","numeroPaso":9,"sesionActiva":false},"datos":{"accion":"PULSAR","objetivo":"nombre=Entrar","modo":"SEMANTICO"}}
+{"secuencia":19,"instante":"2026-11-11T12:00:00.190Z","tipo":"SESION","contexto":{"casoId":"BLOQUEO","numeroPaso":9,"sesionActiva":true},"datos":{"activa":true,"usuario":"usuario","rol":"admin"}}
+{"secuencia":20,"instante":"2026-11-11T12:00:00.200Z","tipo":"PASO_FIN","contexto":{"casoId":"BLOQUEO","numeroPaso":9,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}

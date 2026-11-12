@@ -1,0 +1,7 @@
+# Control corregido de F8 para la suite de humo. Usa la misma suite f8.yaml.
+nombre: ejemplo-f8-corregido
+app:
+  jar: ../../target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=todos"]
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}

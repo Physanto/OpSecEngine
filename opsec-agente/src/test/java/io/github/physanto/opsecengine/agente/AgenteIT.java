@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Pruebas de integración: lanzan una aplicación en otra JVM con {@code -javaagent} apuntando al jar
@@ -73,8 +75,9 @@ class AgenteIT {
                 .doesNotContain(RegistroAgente.PREFIJO);
     }
 
-    @Test
-    void elAgenteManejaUnaVentanaSwing() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"SEMANTICO", "EVENTOS"})
+    void elAgenteManejaUnaVentanaSwing(String modo) throws Exception {
         assumeThat(GraphicsEnvironment.isHeadless()).as("necesita pantalla").isFalse();
         Path salida = carpeta.resolve("ventana.log");
         try (MotorFalso motor = new MotorFalso()) {
@@ -85,17 +88,27 @@ class AgenteIT {
                 assertThat(
                                 paso(
                                         motor,
+                                        modo,
                                         "ESPERAR",
                                         criterio("TITULO_VENTANA", VentanaDePrueba.TITULO),
                                         null))
                         .isEqualTo(CodigoResultado.OK);
-                assertThat(paso(motor, "LLENAR", criterio("ETIQUETA", "Nombre"), "Ana"))
+                assertThat(paso(motor, modo, "LLENAR", criterio("ETIQUETA", "Nombre"), "Ana"))
                         .isEqualTo(CodigoResultado.OK);
-                assertThat(paso(motor, "PULSAR", criterio("TEXTO", "Saludar"), null))
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Saludar"), null))
                         .isEqualTo(CodigoResultado.OK);
                 assertThat(eventos(motor, "CONSOLA"))
                         .anySatisfy(
                                 e -> assertThat(e.getDatos()).containsEntry("texto", "Hola, Ana"));
+                if ("EVENTOS".equals(modo)) {
+                    assertThat(eventos(motor, "CONSOLA"))
+                            .extracting(e -> e.getDatos().get("texto"))
+                            .contains("Tecla en Nombre", "Ratón en Saludar");
+                } else {
+                    assertThat(eventos(motor, "CONSOLA"))
+                            .extracting(e -> e.getDatos().get("texto"))
+                            .doesNotContain("Tecla en Nombre", "Ratón en Saludar");
+                }
                 assertThat(eventos(motor, "DIALOGO"))
                         .singleElement()
                         .satisfies(e ->
@@ -105,14 +118,14 @@ class AgenteIT {
                                         .containsEntry("tipoMensaje", "INFORMACION")
                                         .containsEntry("opciones", List.of("Cerrar")));
 
-                assertThat(paso(motor, "PULSAR", criterio("TEXTO", "Fallar"), null))
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Fallar"), null))
                         .as("un diálogo modal tapa la ventana")
                         .isEqualTo(CodigoResultado.NO_ALCANZABLE);
-                assertThat(paso(motor, "PULSAR", criterio("TEXTO", "Cerrar"), null))
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Cerrar"), null))
                         .isEqualTo(CodigoResultado.OK);
-                assertThat(paso(motor, "PULSAR", criterio("TEXTO", "Bloqueado"), null))
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Bloqueado"), null))
                         .isEqualTo(CodigoResultado.NO_ALCANZABLE);
-                assertThat(paso(motor, "PULSAR", criterio("TEXTO", "Fallar"), null))
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Fallar"), null))
                         .isEqualTo(CodigoResultado.OK);
                 assertThat(eventos(motor, "EXCEPCION"))
                         .singleElement()
@@ -135,10 +148,10 @@ class AgenteIT {
     }
 
     private static CodigoResultado paso(
-            MotorFalso motor, String accion, LocalizadorDto localizador, String valor)
+            MotorFalso motor, String modo, String accion, LocalizadorDto localizador, String valor)
             throws IOException {
         ResultadoPasoDto resultado =
-                motor.enviarPaso(new PasoDto(accion, localizador, valor, "SEMANTICO", 3000));
+                motor.enviarPaso(new PasoDto(accion, localizador, valor, modo, 3000));
         return resultado.getCodigo();
     }
 

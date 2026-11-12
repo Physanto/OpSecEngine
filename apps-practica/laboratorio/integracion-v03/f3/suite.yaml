@@ -1,0 +1,13 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f3
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F3-CASO
+    oraculos: [SIN-SESION]
+    pasos:
+      - llenar: {Uid: P002}
+      - pulsar: Eliminar

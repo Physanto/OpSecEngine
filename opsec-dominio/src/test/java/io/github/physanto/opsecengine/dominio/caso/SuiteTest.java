@@ -90,4 +90,23 @@ class SuiteTest {
         assertThatThrownBy(() -> new ConfigEjecucion(ModoAccion.ROBOT, false, espera, 0, 0, 0))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void laComparacionDeEnumeracionDebeUsarCasosDeLaSuite() {
+        List<Caso> casos =
+                List.of(
+                        new Caso("C01", null, null, null, null, null, null),
+                        new Caso("C02", null, null, null, null, null, null));
+        ComparacionLogin comparacion = new ComparacionLogin("C01", 5, "C02", 5);
+
+        Suite suite = new Suite("login", null, null, null, casos, comparacion, null);
+        assertThat(suite.enumeracionUsuarios()).isEqualTo(comparacion);
+        assertThat(new Suite("login", null, null, null, casos, null).enumeracionUsuarios())
+                .isNull();
+
+        ComparacionLogin ajena = new ComparacionLogin("C01", 5, "C99", 5);
+        assertThatThrownBy(() -> new Suite("login", null, null, null, casos, ajena, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("C99");
+    }
 }
