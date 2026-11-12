@@ -2,7 +2,7 @@
 # Formato: contratos/esquemas/suite.schema.json
 #
 # No hay "esperado" escrito: el oráculo CONTRASENA-EN-CONSOLA decide el veredicto.
-# Modo SEMANTICO: el agente de la demo todavía no implementa el modo EVENTOS.
+# Modo SEMANTICO y ventanas fuera de pantalla para no tomar el foco del escritorio.
 
 suite: login
 version: "1"
@@ -10,6 +10,7 @@ enfoques: [SEGURIDAD]
 
 config:
   modo: SEMANTICO
+  oculto: true
   esperaMaximaPasoMs: 10000
 
 casos:
