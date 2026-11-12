@@ -1,12 +1,16 @@
 package io.github.physanto.opsecengine.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.jar.JarFile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -76,6 +80,96 @@ class ComandoEjecutarTest {
     void laAyudaMuestraElComando() {
         assertThat(ejecutar()).isZero();
         assertThat(salida.toString()).contains("ejecutar");
+    }
+
+    @Test
+    void laAyudaDeEjecutarDescribeLaOpcionFormato() {
+        String ayuda =
+                ComandoOpsec.linea()
+                        .getSubcommands()
+                        .get("ejecutar")
+                        .getUsageMessage(CommandLine.Help.Ansi.OFF);
+
+        assertThat(ayuda)
+                .contains("-f, --formato=<formato>[,<formato>...]")
+                .contains("Formatos del informe")
+                .contains("html,json");
+    }
+
+    @Test
+    void unFormatoDesconocidoTerminaConCodigoDeArgumentoInvalido() {
+        int codigo = ejecutar("ejecutar", carpeta.resolve("proyecto.yaml").toString(), "-f", "pdf");
+
+        assertThat(codigo).isEqualTo(2);
+        assertThat(errores.toString())
+                .contains("Formato desconocido: pdf")
+                .contains("los disponibles son")
+                .contains("json");
+    }
+
+    @Test
+    void unFormatoDesconocidoEntreVariosSeRechazaAntesDeCargarElProyecto() {
+        int codigo =
+                ejecutar(
+                        "ejecutar",
+                        carpeta.resolve("no-existe.yaml").toString(),
+                        "--formato",
+                        "json,pdf");
+
+        assertThat(codigo).isEqualTo(2);
+        assertThat(errores.toString())
+                .contains("Formato desconocido: pdf")
+                .doesNotContain("No existe el archivo");
+    }
+
+    @Test
+    void losFormatosValidosPasanLaValidacionEnMayusculasYRepetidos() throws Exception {
+        Path proyecto = escribir("proyecto.yaml", "app: {jar: app.jar}\n");
+
+        int codigo = ejecutar("ejecutar", proyecto.toString(), "-f", "JSON,json", "-f", "json");
+
+        assertThat(codigo).isEqualTo(ComandoEjecutar.CODIGO_ERROR);
+        assertThat(errores.toString())
+                .contains("No hay suites que ejecutar")
+                .doesNotContain("Formato");
+    }
+
+    @Test
+    void sinFormatoSeUsaJson() {
+        assertThat(ComandoEjecutar.resolverFormatos(List.of(), Set.of("json", "html")))
+                .containsExactly("json");
+    }
+
+    @Test
+    void losFormatosSeNormalizanSinRepetirYEnElOrdenPedido() {
+        assertThat(
+                        ComandoEjecutar.resolverFormatos(
+                                List.of("HTML", " json ", "html", "Json"), Set.of("json", "html")))
+                .containsExactly("html", "json");
+    }
+
+    @Test
+    void unFormatoVacioSeRechaza() {
+        assertThatThrownBy(() ->
+                        ComandoEjecutar.resolverFormatos(List.of("json", " "), Set.of("json")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("vacío");
+    }
+
+    @Test
+    void elMensajeDeFormatoDesconocidoListaLosDisponibles() {
+        assertThatThrownBy(() ->
+                        ComandoEjecutar.resolverFormatos(
+                                List.of("Xml"), new TreeSet<>(Set.of("json", "html"))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Formato desconocido: Xml; los disponibles son html, json");
+    }
+
+    @Test
+    void sinReporteroDeJsonElFormatoPorDefectoTambienSeRechaza() {
+        assertThatThrownBy(() -> ComandoEjecutar.resolverFormatos(List.of(), Set.of("html")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Formato desconocido: json");
     }
 
     private Path escribir(String nombre, String contenido) throws Exception {
