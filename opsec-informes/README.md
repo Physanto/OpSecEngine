@@ -26,7 +26,22 @@ Contenido:
 
 **Comparación entre ejecuciones.** `ComparadorResultados.comparar(anterior, actual)` empareja los casos por id y los clasifica: *empeoró* o *mejoró* según la gravedad del veredicto (`CUMPLE` < `NO_CONCLUYENTE` < `NO_CUMPLE`), *nuevo*, *eliminado* o *igual*, con los hallazgos resueltos y nuevos de cada caso (un hallazgo se identifica por su oráculo y su título). `ComparacionHtml.escribir(anterior, actual, carpeta)` escribe `comparacion.html` con los casos ordenados por importancia (primero los que empeoraron), los hallazgos de suite y los dos manifiestos, y avisa si cambió la aplicación, la suite o el motor. No es un `Reportero`, porque ese contrato recibe un solo resultado: la presentación (por ejemplo el futuro comando `opsec informe`) debe llamarla con dos resultados ya leídos.
 
-Pendiente de este módulo: explicaciones de CWE a partir de `cwe.yaml` (#57, necesita acceso al catálogo, que está en `contratos/`) y gráficos de rendimiento (#59, necesita los eventos de tiempo del agente).
+**Explicaciones de CWE.** Cada hallazgo con un CWE del catálogo oficial muestra, debajo de su explicación, un bloque desplegable «¿Qué es CWE-n (nombre) y cómo se corrige?» con la explicación en lenguaje sencillo y la recomendación de corrección; la etiqueta del CWE lleva su nombre como texto emergente. Un CWE que no está en el catálogo se muestra solo con su identificador. El HTML no enlaza a sitios externos, para seguir siendo autocontenido (el enlace a MITRE va en SARIF).
+
+**Rendimiento y robustez.** Al final del informe, una sección muestra los datos medidos, en tablas y barras hechas solo con CSS. No decide nada: los veredictos los dan los oráculos `RESPUESTA-LENTA`, `INTERFAZ-CONGELADA` y `VENTANA-NO-LIBERADA`.
+
+- *Tiempos de respuesta por acción:* eventos `TIEMPO` con medida `RESPUESTA_ACCION`, agrupados por la acción, el objetivo de su paso y el umbral declarado, con muestras, mediana, percentil 95 (por rango más próximo, igual que el oráculo), máximo y umbral. La barra se pone roja si el p95 supera el umbral.
+- *Pasos más lentos:* los 10 pasos de mayor duración (`duracionMs` de `PASO_FIN`, que el motor registra siempre).
+- *Interfaz bloqueada:* eventos `TIEMPO` con medida `EDT_BLOQUEADO` y su umbral.
+- *Ventanas:* cuántas se abrieron y cuáles no consta que se liberaran: cerradas con `liberada=false` (posible fuga), cerradas sin ese dato o abiertas al terminar el caso.
+
+Cada parte aparece solo si la traza trae sus datos. Se descartan duraciones negativas, fraccionarias, no finitas o fuera del rango de enteros de 64 bits; los umbrales distintos se muestran en grupos separados para no ocultar excesos. La mediana y las barras admiten valores grandes sin desbordar. Hoy el agente emite las ventanas con `liberada` (contratos v1.2), pero todavía no emite eventos `TIEMPO` (#18): esas dos partes están probadas con trazas sintéticas.
+
+## Catálogo de CWE
+
+`CatalogoCwe` lee el catálogo oficial `contratos/catalogos/cwe.yaml`. El archivo **no se copia a mano**: el `pom.xml` del módulo lo toma del contrato al construir y lo deja como recurso en `io/github/physanto/opsecengine/informes/catalogos/cwe.yaml` (igual que hace `opsec-oraculos`), así que siempre coincide con `main`. `CatalogoCweTest` comprueba que el recurso es idéntico al contrato y que todo CWE de `contratos/catalogos/oraculos.yaml` tiene nombre, explicación y recomendación; si alguien agrega un oráculo con un CWE nuevo sin explicarlo, el build falla.
+
+Lo usan el reportero HTML (bloque de explicación por hallazgo) y el SARIF (`help` y `helpUri` de cada regla).
 
 ## Reportero JUnit XML
 
@@ -51,13 +66,15 @@ Se escribe en UTF-8 y se descartan los caracteres que XML 1.0 no admite (por eje
 - Cada **hallazgo** es un resultado con su regla, un `level` según la confianza (`CONFIRMADO` es `error`, `PROBABLE` es `warning`, `INFO` es `note`), la explicación como mensaje y una huella estable (`partialFingerprints`) para que el sistema receptor reconozca el mismo hallazgo entre ejecuciones.
 - **Ubicación:** una aplicación de escritorio no tiene archivos de código que señalar, así que la ubicación física es `suites/<suite>.yaml` (línea 1, por convención del proyecto) y el caso va como ubicación lógica. No apunta a una línea del código de la aplicación.
 - Un caso **no concluyente** no es un resultado: se informa como notificación de la ejecución (`toolExecutionNotifications`) con su motivo.
+- Si el CWE de la regla está en el catálogo, la regla lleva `help` (texto y Markdown: qué es y cómo corregirlo) y `helpUri` con la ficha de MITRE, que GitHub code scanning muestra junto al hallazgo.
 
 Las pruebas comprueban las propiedades obligatorias y los valores permitidos de SARIF 2.1.0 para lo que se escribe. **No** se valida contra el esquema JSON oficial, porque ese archivo no está en el repositorio, y no se ha subido a GitHub code scanning.
 
 ## Dependencias permitidas
 
 - `opsec-dominio`.
-- Jackson (`jackson-databind` y `jackson-datatype-jsr310`).
+- Jackson (`jackson-databind`, `jackson-datatype-jsr310` y `jackson-dataformat-yaml`, este último para leer `cwe.yaml`; versiones fijadas en el `pom.xml` raíz).
+- Como recurso copiado al construir: `contratos/catalogos/cwe.yaml` (y, solo en pruebas, `oraculos.yaml`).
 - Solo para pruebas: `opsec-soporte-pruebas`.
 
 No puede depender del núcleo, del agente ni del protocolo.

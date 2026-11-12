@@ -29,6 +29,11 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
         <dependency>
+            <!-- Lee el catálogo contratos/catalogos/cwe.yaml (versión fijada en el pom raíz) -->
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
+        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>opsec-soporte-pruebas</artifactId>
             <scope>test</scope>
@@ -44,4 +49,33 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <!-- Catálogo oficial de CWE, copiado del contrato al construir: no se duplica -->
+                <directory>${project.basedir}/../contratos/catalogos</directory>
+                <targetPath>io/github/physanto/opsecengine/informes/catalogos</targetPath>
+                <includes>
+                    <include>cwe.yaml</include>
+                </includes>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+            <testResource>
+                <!-- Solo para comprobar que todo CWE de los oráculos tiene explicación -->
+                <directory>${project.basedir}/../contratos/catalogos</directory>
+                <targetPath>io/github/physanto/opsecengine/informes/catalogos</targetPath>
+                <includes>
+                    <include>oraculos.yaml</include>
+                </includes>
+            </testResource>
+        </testResources>
+    </build>
 </project>
