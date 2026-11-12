@@ -11,6 +11,19 @@ Reporteros de resultados: HTML con capturas, JSON, JUnit XML y SARIF. Cada uno i
 
 Su prueba, `ReporteroJsonTest`, escribe el resultado de ejemplo (`DatosEjemplo.resultadoSuite()`) y comprueba que el archivo se vuelve a leer igual.
 
+## Reportero HTML
+
+`ReporteroHtml` (formato `html`) escribe `informe.html` en la carpeta de resultados: un solo archivo autocontenido, sin JavaScript ni recursos externos (lleva una política de seguridad de contenido que lo impide), con modo claro y oscuro según el navegador. Todo texto que viene de la traza se escapa.
+
+Contenido:
+
+- Resumen de la suite (casos que cumplen, no cumplen, no concluyentes e inestables) y manifiesto de la ejecución.
+- Por cada caso: veredicto, duración, intentos, motivo (si es no concluyente), hallazgos con su oráculo, CWE y confianza, y la línea de tiempo de la traza. Los eventos que respaldan un hallazgo se resaltan y se enlazan desde él.
+- Capturas: los eventos `CAPTURA` se incrustan en el HTML si el archivo (PNG, hasta 8 MB) existe dentro de la carpeta de resultados; si no, se muestra un aviso. Nunca se leen archivos fuera de esa carpeta.
+- Un informe sin fallos dice «No se encontraron fallos en lo probado», nunca que la aplicación sea segura.
+
+Pendiente de este reportero: filtros y comparación entre ejecuciones, explicaciones de CWE a partir de `cwe.yaml` y gráficos de rendimiento (ver los issues del módulo).
+
 ## Dependencias permitidas
 
 - `opsec-dominio`.
