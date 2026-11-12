@@ -49,12 +49,22 @@ class ServidorProtocoloTest {
                             org.assertj.core.groups.Tuple.tuple(1L, "durante el paso"));
 
             assertThat(motor.pedirArbol().getVentanas()).isEmpty();
-            assertThatThrownBy(() -> motor.pedirCaptura(null))
+            assertThat(motor.pedirCaptura("Principal"))
+                    .isEqualTo(new CapturaDto("Principal", "png", "AAAA"));
+            assertThatThrownBy(() -> motor.pedirCaptura("Otra"))
+                    .isInstanceOfSatisfying(
+                            ExcepcionErrorRemoto.class,
+                            error -> {
+                                assertThat(error.getError().getCodigo())
+                                        .isEqualTo(ErrorDto.ERROR_INTERNO);
+                                assertThat(error.getError().getMensaje()).contains("Otra");
+                            });
+            assertThatThrownBy(() -> motor.pedirCaptura("Rota"))
                     .isInstanceOfSatisfying(
                             ExcepcionErrorRemoto.class,
                             error ->
-                                    assertThat(error.getError().getCodigo())
-                                            .isEqualTo(ErrorDto.NO_IMPLEMENTADO));
+                                    assertThat(error.getError().getMensaje())
+                                            .contains("No se pudo tomar la captura", "pintar"));
 
             assertThat(motor.cerrar()).isTrue();
             hilo.join(ESPERA.toMillis());
@@ -129,7 +139,10 @@ class ServidorProtocoloTest {
 
         @Override
         public CapturaDto capturar(String ventana) {
-            throw new UnsupportedOperationException();
+            if ("Rota".equals(ventana)) {
+                throw new IllegalStateException("no se pudo pintar");
+            }
+            return "Principal".equals(ventana) ? new CapturaDto(ventana, "png", "AAAA") : null;
         }
     }
 }

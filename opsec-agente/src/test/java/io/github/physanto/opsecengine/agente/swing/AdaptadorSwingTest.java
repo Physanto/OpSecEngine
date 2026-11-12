@@ -28,12 +28,17 @@ class AdaptadorSwingTest {
     }
 
     @Test
-    void rechazaLasAccionesQueTodaviaNoEstanImplementadas() {
+    void laAccionCapturarSePideConElMensajeCapturar() {
         ResultadoPasoDto resultado =
                 adaptador.ejecutar(new PasoDto("CAPTURAR", null, null, "SEMANTICO", 100));
 
         assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.ERROR);
-        assertThat(resultado.getDetalle()).contains("CAPTURAR");
+        assertThat(resultado.getDetalle()).contains("mensaje CAPTURAR");
+    }
+
+    @Test
+    void capturarDevuelveNullSiNingunaVentanaCoincide() {
+        assertThat(adaptador.capturar("Inexistente")).isNull();
     }
 
     @Test
