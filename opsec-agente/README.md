@@ -24,7 +24,7 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `Seleccion` | `agente.swing` | Busca una opción por su texto en un combo, una lista, una tabla o un árbol y la selecciona. |
 | `Navegacion` | `agente.swing` | `IR_A` (elige pestañas y trae la ventana al frente) y `CERRAR_VENTANA` (envía `WINDOW_CLOSING`). |
 | `Capturas` | `agente.swing` | Elige la ventana que se captura, la pinta en un `BufferedImage` y la codifica en PNG y Base64. |
-| `BuscadorComponentes` | `agente.swing` | Resuelve localizadores: `ETIQUETA` (`setLabelFor`), `TEXTO`, `NOMBRE_COMPONENTE`, `NOMBRE_ACCESIBLE`, `TIPO`, `TITULO_VENTANA`, `CLASE_VENTANA`; verifica que el componente sea alcanzable. |
+| `BuscadorComponentes` | `agente.swing` | Resuelve localizadores: `ETIQUETA` (asociación explícita o cercanía), `RUTA`, `TEXTO`, `NOMBRE_COMPONENTE`, `NOMBRE_ACCESIBLE`, `TIPO`, `TITULO_VENTANA`, `CLASE_VENTANA`; verifica que el componente sea alcanzable. |
 | `EjecutorEdt` | `agente.swing` | Ejecuta en el EDT con tiempo máximo; detecta cuando una acción abre un diálogo modal. |
 | `ObservadorExcepciones` | `agente.swing` | Manejador por defecto de excepciones no capturadas: emite `EXCEPCION` (`capturada=false`) por las del EDT y las de los demás hilos y las pasa al manejador anterior. |
 | `ObservadorVentanas` | `agente.swing` | Emite `VENTANA_ABIERTA`, `VENTANA_CERRADA` (con `liberada`) y `DIALOGO` (con el texto de los `JOptionPane`). |
@@ -47,13 +47,41 @@ Comportamiento que conviene conocer:
 - `CAPTURAR` (mensaje) responde `CAPTURA` con la ventana pintada en PNG con `printAll`, sin `Robot`: funciona aunque la ventana esté tapada o fuera de la pantalla, pero no incluye la barra de título del sistema operativo. La ventana se elige por título o clase (completa o simple); sin nombre, la ventana activa o, si no hay, el último diálogo modal visible o la última ventana visible. Si ninguna coincide, responde `ERROR` con el código `ERROR_INTERNO`. La acción `CAPTURAR` dentro de un `EJECUTAR_PASO` responde `ERROR`: la imagen no cabe en el resultado del paso y el motor debe pedirla con el mensaje.
 - `CERRAR` cierra la app de forma ordenada. El agente emite `APP_TERMINADA` con `esperada=true` y `causa=CERRAR`, cierra la conexión (es la respuesta que espera el motor: así no lo toma como una caída) y le envía `WINDOW_CLOSING` a cada ventana visible, como el botón de cierre. Si la app no termina sola en 1 s (sus ventanas solo se ocultan, pide confirmación, tiene otros hilos vivos o no tiene ventanas), el agente termina la JVM con `System.exit(0)`. El plazo es menor que los 2 s que espera el motor antes de detener el proceso. Si el motor corta la conexión sin `CERRAR`, la app sigue corriendo.
 
+### Localizadores robustos
+
+`ETIQUETA` prefiere la asociación `JLabel.setLabelFor`. Si ninguna etiqueta coincidente
+la tiene, busca controles editables en el mismo contenedor padre: primero a la derecha,
+con el centro vertical dentro de la altura de la etiqueta; en su defecto, debajo, con el
+centro horizontal dentro del ancho de la etiqueta. Elige la distancia euclídea mínima entre
+bordes, calculada en coordenadas de la ventana. Admite campos de texto editables, combos,
+spinners y botones seleccionables. Los empates producen `NO_ENCONTRADO` con motivo
+`ambiguo`, al igual que varias etiquetas que apuntan a controles distintos.
+
+`RUTA` usa `Ventana/Clase[indice]/Clase[indice]/...`. El primer segmento coincide exactamente
+con el título, el nombre (`setName`) o la clase simple de la ventana. Cada segmento posterior
+corresponde a un hijo directo, incluidos los contenedores internos de Swing. El índice es
+opcional y empieza en cero entre hermanos de la misma clase simple. Por ejemplo:
+
+```text
+InicioSesion/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JTextField[0]
+```
+
+Sin índice se consideran todos los hermanos de esa clase; si la ruta completa deja varios
+resultados, se rechaza como ambigua. Una ruta inexistente o mal formada devuelve
+`NO_ENCONTRADO`.
+
+`TEXTO`, `ETIQUETA`, `NOMBRE_ACCESIBLE` y `TITULO_VENTANA` intentan primero la coincidencia
+exacta, sin espacios a los lados. Solo si no encuentran resultados, normalizan a minúsculas
+con `Locale.ROOT`, eliminan diacríticos y colapsan espacios. Así, `contrasena` encuentra
+`Contraseña` y `  iniciar   sesion ` encuentra `Iniciar Sesión`. Varias coincidencias flexibles
+producen `NO_ENCONTRADO` con motivo `ambiguo`; no se elige arbitrariamente.
+
 ### Pendiente para el dueño del módulo (P1)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
-1. Localizadores robustos: etiqueta sin `setLabelFor` (por cercanía), estrategia `RUTA`, comparación flexible (mayúsculas, dos puntos finales).
-2. Modo oculto y supresión de foco; modo `ROBOT`.
-3. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
+1. Modo oculto y supresión de foco; modo `ROBOT`.
+2. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
@@ -70,7 +98,9 @@ Nunca puede depender del núcleo ni del dominio.
 
 Las pruebas unitarias usan `MotorFalso` de `opsec-soporte-pruebas` para probar el servidor sin el núcleo (`ServidorProtocoloTest`), incluido que `CERRAR` emita `APP_TERMINADA` y cierre la app solo cuando el motor lo pide; prueban el plazo del cierre (`CierreAplicacionTest`) y la consola, el adaptador, los eventos sintéticos, la selección de opciones, la navegación entre pestañas, las capturas y el observador de excepciones sin ventanas (`ObservadorConsolaTest`, `AdaptadorSwingTest`, `AccionesEventosTest`, `SeleccionTest`, `NavegacionTest`, `CapturasTest`, `ObservadorExcepcionesTest`). Se verifica la entrega de eventos de ratón y teclado, el reemplazo y borrado del texto, las contraseñas, el texto multilínea y el respeto de las teclas consumidas por la aplicación.
 
-La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol; además selecciona en un combo, marca una casilla, va a una pestaña, cierra un diálogo y pide capturas de la ventana y del diálogo modal; otra prueba lanza excepciones sin capturar en el EDT y en otro hilo y comprueba sus eventos. También se comprueba que un diálogo reutilizado emita `liberada=false` al ocultarse y `true` al destruirse, y que después de `CERRAR` la app termine con código 0: la ventana recibe el pedido de cierre y, sin ventanas, el agente fuerza la salida. Repite las pruebas con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
+`BuscadorComponentesTest` comprueba en ventanas reales la cercanía horizontal y vertical, los empates, la prioridad de `setLabelFor`, las rutas y la comparación flexible. Se omite sin pantalla.
+
+La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo mediante una etiqueta sin `setLabelFor`, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol; además selecciona en un combo, marca una casilla, va a una pestaña, cierra un diálogo y pide capturas de la ventana y del diálogo modal; otra prueba lanza excepciones sin capturar en el EDT y en otro hilo y comprueba sus eventos. También se comprueba que un diálogo reutilizado emita `liberada=false` al ocultarse y `true` al destruirse, y que después de `CERRAR` la app termine con código 0: la ventana recibe el pedido de cierre y, sin ventanas, el agente fuerza la salida. Repite las pruebas con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
 
 Desde la raíz del repositorio:
 
