@@ -171,3 +171,22 @@ del ejemplo de evaluación ahora contiene un evento real para activar el momento
 ## Ejecución oculta
 
 `EjecucionService` transmite `suite.config().oculto()` al abrir cada caso. `SesionService` y `ArranqueApp` conservan sus firmas anteriores y añaden sobrecargas para esta opción. `LanzadorProceso` agrega `oculto=true` a los argumentos de `-javaagent` solo cuando se solicita; el agente mantiene las ventanas fuera de pantalla y sin foco. Las sesiones sin esta opción conservan el comando anterior.
+
+## Payloads explícitos por caso
+
+Un caso puede declarar `extensiones.payloads` como una lista no vacía de textos y usar
+`{payload}` en uno o más valores de `llenar`. Antes de abrir sesiones, el ejecutor genera
+una copia independiente por valor, en orden, con ids `<caso>-P1`, `<caso>-P2`, etc.
+La sustitución es literal y admite cadenas vacías, comillas, Unicode y saltos de línea;
+no vuelve a interpretar el texto insertado como una plantilla. Conserva rol, políticas,
+oráculos y configuración, y cada copia tiene sesión, resultado, traza y capturas propios.
+El progreso y la evaluación de suite reciben los casos materializados.
+
+Se rechazan antes de ejecutar: listas vacías, valores que no sean textos, ausencia de
+`{payload}` en LLENAR, marcadores en valores de otras acciones, colisiones de ids,
+mezcla con `ataques` y expansión de un caso usado por `enumeracionUsuarios`.
+La lista se elimina de las copias para que no se expandan de nuevo.
+
+Esta opción usa la sección de extensiones existente y no modifica contratos.
+No conecta los ids de `caso.ataques` con la biblioteca, no genera canarios y no instala
+ganchos JDBC/Firestore. Véase la demostración completa en `demo/payloads/`.

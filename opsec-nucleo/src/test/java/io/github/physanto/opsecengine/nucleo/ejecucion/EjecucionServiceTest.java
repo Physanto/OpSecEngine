@@ -114,6 +114,52 @@ class EjecucionServiceTest {
     }
 
     @Test
+    void ejecutaCadaPayloadEnUnaSesionYConUnResultadoIndependiente() {
+        Caso plantilla =
+                new Caso(
+                        "DATOS",
+                        "Entradas",
+                        null,
+                        List.of(llenar(1, "Usuario", "{payload}")),
+                        null,
+                        null,
+                        Map.of("payloads", List.of("", "'", "texto largo")));
+        ResultadoSuite resultado = ejecutar(List.of(), plantilla);
+        assertThat(resultado.casos())
+                .extracting(ResultadoCaso::casoId)
+                .containsExactly("DATOS-P1", "DATOS-P2", "DATOS-P3");
+        assertThat(resultado.casos())
+                .allSatisfy(caso ->
+                        assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.CUMPLE));
+        assertThat(agentes).hasSize(3);
+        for (int i = 0; i < agentes.size(); i++) {
+            String esperado = List.of("", "'", "texto largo").get(i);
+            assertThat(agentes.get(i).mensajesRecibidos())
+                    .filteredOn(mensaje -> mensaje.getTipo() == TipoMensaje.EJECUTAR_PASO)
+                    .singleElement()
+                    .satisfies(mensaje ->
+                            assertThat(mensaje.getCuerpo().path("valor").asText())
+                                    .isEqualTo(esperado));
+        }
+    }
+
+    @Test
+    void unPayloadInvalidoNoAbreNingunaSesion() {
+        Caso plantilla =
+                new Caso(
+                        "DATOS",
+                        null,
+                        null,
+                        List.of(llenar(1, "Usuario", "fijo")),
+                        null,
+                        null,
+                        Map.of("payloads", List.of("x")));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> ejecutar(List.of(), plantilla))
+                .hasMessageContaining("falta {payload}");
+        assertThat(agentes).isEmpty();
+    }
+
+    @Test
     void transmiteElModoOcultoDeLaSuiteAlArranqueDeCadaCaso() {
         List<Boolean> modos = new ArrayList<>();
         ArranqueApp arranque =
