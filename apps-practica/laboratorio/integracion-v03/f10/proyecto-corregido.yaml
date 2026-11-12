@@ -1,0 +1,18 @@
+# Integración #67: F10 corregido. Validar no equivale a detectar.
+nombre: integracion-f10-corregido
+app:
+  jar: ../../../clientes-vulnerable/target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=todos"]
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}
+  cliente: {usuario: Cliente, contrasena: "Cliente#2026"}
+login:
+  pasos:
+    - pulsar: Avanzar
+    - pulsar: Nube
+    - llenar: {Usuario: "{usuario}", Contraseña: "{contrasena}"}
+    - pulsar: Iniciar Sesion
+sensibles:
+  sql: [UPDATE]
+politica:
+  Modificar Persona: [admin]

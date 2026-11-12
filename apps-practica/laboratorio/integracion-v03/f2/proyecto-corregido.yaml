@@ -1,0 +1,11 @@
+# Integración #67: F2 corregido. Validar no equivale a detectar.
+nombre: integracion-f2-corregido
+app:
+  jar: ../../../clientes-vulnerable/target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=todos"]
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}
+sensibles:
+  sql: [DELETE]
+politica:
+  Eliminar Persona: [admin]

@@ -1,0 +1,16 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f6
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F6-CASO
+    oraculos: [CONTRASENA-EN-CONSOLA]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "Admin", Contraseña: "Admin#2026"}
+      - pulsar: Iniciar Sesion
+      - esperar: {tituloVentana: Menú administrador}

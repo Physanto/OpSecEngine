@@ -1,0 +1,29 @@
+# Plantilla de seguridad: adapta la navegación y usa solo cuentas y datos de prueba.
+# El caso no tiene rol: prueba el login desde una sesión no iniciada.
+# Sustituye ambos valores por una pareja inválida conocida y configura la señal real de rechazo.
+# Los oráculos requieren los eventos correspondientes de la aplicación; un clic OK no prueba rechazo.
+suite: plantilla-seguridad
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+  reintentos: 0
+  paralelismo: 1
+casos:
+  - id: SEG-001
+    descripcion: Prueba un login inválido y observa posibles exposiciones de información.
+    pasos:
+      - esperar: {tituloVentana: Inicio de sesión}
+      - llenar: {Usuario: "cuenta_inexistente_de_prueba"}
+      - llenar: {Contraseña: "credencial_invalida_de_prueba"}
+      - pulsar: {nombreComponente: btnIniciarSesion, texto: Iniciar sesión}
+      - esperar: {texto: Credenciales inválidas}
+      - capturar:
+    oraculos:
+      - TRAZA-EN-DIALOGO
+      - CONTRASENA-EN-CONSOLA
+      - CONTRASENA-EN-CAMPO-VISIBLE
+      - JDBC-SIN-CIFRADO
+      - EXCEPCION-NO-CAPTURADA
+      - APP-TERMINADA

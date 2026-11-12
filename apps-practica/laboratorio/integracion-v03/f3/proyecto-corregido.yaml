@@ -1,0 +1,12 @@
+# Integración #67: F3 corregido. Validar no equivale a detectar.
+nombre: integracion-f3-corregido
+app:
+  jar: ../../../clientes-vulnerable/target/clientes-vulnerable.jar
+  principal: io.github.physanto.opsecengine.practica.gui.EliminarPersona
+  argumentosJvm: ["-Dpractica.corregir=todos"]
+roles:
+  admin: {usuario: Admin, contrasena: "Admin#2026"}
+sensibles:
+  sql: [DELETE]
+politica:
+  Eliminar Persona: [admin]

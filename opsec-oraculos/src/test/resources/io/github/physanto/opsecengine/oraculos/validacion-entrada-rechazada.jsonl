@@ -1,0 +1,5 @@
+{"secuencia":0,"instante":"2026-10-30T10:00:00Z","tipo":"PASO_INICIO","contexto":{"casoId":"VAL38","numeroPaso":3,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"etiqueta=Usuario","valor":"","modo":"SEMANTICO"}}
+{"secuencia":1,"instante":"2026-10-30T10:00:01Z","tipo":"PASO_FIN","contexto":{"casoId":"VAL38","numeroPaso":3,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":20}}
+{"secuencia":2,"instante":"2026-10-30T10:00:02Z","tipo":"PASO_INICIO","contexto":{"casoId":"VAL38","numeroPaso":5,"sesionActiva":false},"datos":{"accion":"PULSAR","objetivo":"texto=Iniciar Sesion","modo":"SEMANTICO"}}
+{"secuencia":3,"instante":"2026-10-30T10:00:03Z","tipo":"DIALOGO","contexto":{"casoId":"VAL38","numeroPaso":5,"sesionActiva":false},"datos":{"texto":"Debe escribir usuario y contraseña.","titulo":"Validación","tipoMensaje":"ERROR"}}
+{"secuencia":4,"instante":"2026-10-30T10:00:04Z","tipo":"PASO_FIN","contexto":{"casoId":"VAL38","numeroPaso":5,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":20}}
