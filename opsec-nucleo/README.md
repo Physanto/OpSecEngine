@@ -46,3 +46,33 @@ En Windows:
 ```bat
 mvnw.cmd -B -pl opsec-nucleo -am verify
 ```
+
+## Progreso de la ejecución
+
+La presentación puede suscribirse sin conocer la implementación del servicio:
+
+```java
+ObservadorProgreso observador = progreso -> mostrarAvance(progreso);
+EjecucionService ejecucion =
+        new EjecucionService(proyecto, sesiones, evaluacion, observador);
+ResultadoSuite resultado = ejecucion.ejecutar(suite);
+```
+
+`ObservadorProgreso` y `ProgresoEjecucion` están en `nucleo.ejecucion`.
+El constructor de tres argumentos sigue disponible y usa `ObservadorProgreso.VACIO`.
+Se notifica el inicio y fin de suite, caso y paso, con nombre de suite, total de casos,
+identificador del caso, orden y total de pasos y, al terminar un paso, su código de resultado.
+Los pasos de login llevan `login=true` y el orden de su plantilla; los valores y las
+credenciales no se incluyen. Los totales son los previstos: tras un paso fallido no
+se notifican los pasos que no llegaron a ejecutarse. Un caso no ejecutable tiene
+inicio y fin, sin pasos; una suite vacía tiene inicio y fin de suite.
+
+Las llamadas son síncronas y siguen el orden de ejecución. El observador debe regresar
+pronto; una interfaz gráfica debe trasladar sus cambios al hilo de presentación.
+Si el observador lanza una excepción de ejecución, se registra y la suite continúa.
+El fin de caso se notifica después de evaluarlo y el de suite cuando su resultado está
+listo; una excepción que interrumpa la ejecución no garantiza una notificación de fin.
+
+`EjecucionServiceTest` comprueba las notificaciones con `AgenteFalso`, su orden,
+los fallos de pasos y del observador, el login sin credenciales en los avisos,
+los casos no ejecutables y las suites vacías.
