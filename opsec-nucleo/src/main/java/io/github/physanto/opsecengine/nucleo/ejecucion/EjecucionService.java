@@ -76,6 +76,19 @@ import java.util.logging.Logger;
  * declara pasos de login o el rol, los pasos del caso no se ejecutan y el caso queda {@code
  * NO_CONCLUYENTE} con el motivo.
  *
+ * <p>Las esperas por condición usan {@code ESPERAR} con un localizador objetivo: el agente espera a
+ * que aparezca. Cada intento usa {@link Paso#esperaMaxima()} o, si no se define, {@link
+ * ConfigEjecucion#esperaMaximaPaso()}. El cliente añade su margen de comunicación al plazo. Los
+ * constructores originales no reintentan. Los que reciben {@code reintentosEspera} repiten
+ * únicamente {@code ESPERAR} cuando el agente responde {@code TIEMPO_AGOTADO}, en la misma sesión y
+ * hasta esa cantidad de repeticiones adicionales. No se reintentan errores de comunicación ni otras
+ * acciones: una acción que agota el plazo puede seguir ejecutándose. Una interrupción impide el
+ * siguiente reintento. Cada intento conserva sus propios {@code PASO_INICIO}, eventos del agente y
+ * {@code PASO_FIN}, y sus avisos de progreso, con el mismo número de paso. El último resultado
+ * decide si se continúa; todos los eventos se evalúan para no ocultar hallazgos. Esto no modifica
+ * {@link ConfigEjecucion#reintentos()}, el número de intentos del caso ni su marca de inestable,
+ * reservados para la v0.3.
+ *
  * <p>Los pasos {@code CAPTURAR} no se envían como {@code EJECUTAR_PASO}: el motor pide la imagen
  * con el mensaje {@code CAPTURAR}, la guarda como {@code capturas/<caso>-<paso>.png} en la carpeta
  * de resultados de {@link SesionService#carpetaResultados()} y registra un evento {@code CAPTURA}
@@ -85,11 +98,11 @@ import java.util.logging.Logger;
  * de resultados o la imagen no se puede guardar, el paso termina con {@code ERROR}. Las capturas de
  * los pasos de login se guardan como {@code capturas/<caso>-login-<paso>.png}.
  *
- * <p>Si un paso no termina con {@code OK} (el agente responde {@code ERROR}, {@code NO_ENCONTRADO},
- * {@code NO_ALCANZABLE} o {@code TIEMPO_AGOTADO}, o no responde), los pasos siguientes no se
- * ejecutan y el motivo pasa a {@link EvaluacionService}: el caso queda {@code NO_CONCLUYENTE} con
- * ese motivo, salvo que un oráculo encuentre un fallo. Lo mismo pasa si la sesión no se puede
- * abrir. Al final se evalúan los oráculos de suite y se arma el manifiesto.
+ * <p>Si el último intento de un paso no termina con {@code OK} (el agente responde {@code ERROR},
+ * {@code NO_ENCONTRADO}, {@code NO_ALCANZABLE} o {@code TIEMPO_AGOTADO}, o no responde), los pasos
+ * siguientes no se ejecutan y el motivo pasa a {@link EvaluacionService}: el caso queda {@code
+ * NO_CONCLUYENTE} con ese motivo, salvo que un oráculo encuentre un fallo. Lo mismo pasa si la
+ * sesión no se puede abrir. Al final se evalúan los oráculos de suite y se arma el manifiesto.
  *
  * <p>Ejemplo:
  *
@@ -117,9 +130,9 @@ import java.util.logging.Logger;
  *       final; inferir la sesión activa cuando el caso inicia sesión con sus propios pasos.
  *   <li>v0.2: expandir los ataques del caso, un intento por payload (hoy un caso con ataques queda
  *       {@code NO_CONCLUYENTE} sin ejecutarse).
- *   <li>v0.3: reintentos y marca de inestables; casos en paralelo según {@code paralelismo};
- *       manifiesto completo para re-ejecutar exactamente (hoy el hash de la suite se calcula sobre
- *       su contenido traducido, no sobre el archivo).
+ *   <li>v0.3: reintentos de casos y marca de inestables; casos en paralelo según {@code
+ *       paralelismo}; manifiesto completo para re-ejecutar exactamente (hoy el hash de la suite se
+ *       calcula sobre su contenido traducido, no sobre el archivo).
  * </ul>
  */
 public final class EjecucionService {
@@ -157,6 +170,7 @@ public final class EjecucionService {
     private final SesionService sesiones;
     private final EvaluacionService evaluacion;
     private final ObservadorProgreso observador;
+    private final int reintentosEspera;
 
     /**
      * Crea el servicio.
@@ -188,6 +202,52 @@ public final class EjecucionService {
             SesionService sesiones,
             EvaluacionService evaluacion,
             ObservadorProgreso observador) {
+        this(proyecto, sesiones, evaluacion, observador, 0);
+    }
+
+    /**
+     * Crea el servicio con reintentos de espera y sin notificaciones de progreso.
+     *
+     * @param proyecto proyecto con la aplicación probada; no puede ser null
+     * @param sesiones servicio que abre una sesión por caso; no puede ser null ni tener sesión
+     *     abierta
+     * @param evaluacion servicio que aplica los oráculos; no puede ser null
+     * @param reintentosEspera repeticiones adicionales de un {@code ESPERAR} que responde {@code
+     *     TIEMPO_AGOTADO}; cero o más
+     * @throws NullPointerException si algún servicio o el proyecto es null
+     * @throws IllegalArgumentException si {@code reintentosEspera} es negativo
+     */
+    public EjecucionService(
+            Proyecto proyecto,
+            SesionService sesiones,
+            EvaluacionService evaluacion,
+            int reintentosEspera) {
+        this(proyecto, sesiones, evaluacion, ObservadorProgreso.VACIO, reintentosEspera);
+    }
+
+    /**
+     * Crea el servicio con observador y reintentos de espera. No es seguro entre hilos.
+     *
+     * @param proyecto proyecto con la aplicación probada; no puede ser null
+     * @param sesiones servicio que abre una sesión por caso; no puede ser null ni tener sesión
+     *     abierta
+     * @param evaluacion servicio que aplica los oráculos; no puede ser null
+     * @param observador receptor síncrono de las notificaciones; no puede ser null
+     * @param reintentosEspera repeticiones adicionales de {@code ESPERAR} tras recibir {@code
+     *     TIEMPO_AGOTADO}; cero o más; no se repiten acciones con efectos ni errores de conexión
+     * @throws NullPointerException si algún parámetro de referencia es null
+     * @throws IllegalArgumentException si {@code reintentosEspera} es negativo
+     */
+    public EjecucionService(
+            Proyecto proyecto,
+            SesionService sesiones,
+            EvaluacionService evaluacion,
+            ObservadorProgreso observador,
+            int reintentosEspera) {
+        if (reintentosEspera < 0) {
+            throw new IllegalArgumentException("Los reintentos de espera no pueden ser negativos");
+        }
+        this.reintentosEspera = reintentosEspera;
         this.observador = Objects.requireNonNull(observador, "El observador no puede ser null");
         this.proyecto = Objects.requireNonNull(proyecto, "El proyecto no puede ser null");
         this.sesiones = Objects.requireNonNull(sesiones, "El servicio de sesiones es null");
@@ -363,6 +423,40 @@ public final class EjecucionService {
             String valorTraza,
             ConfigEjecucion config,
             TrazaEnCurso traza) {
+        int restantes = reintentosEspera;
+        ResultadoPasoDto resultado;
+        while (true) {
+            resultado = ejecutarIntento(cliente, paso, numero, valorTraza, config, traza);
+            if (paso.accion() != Accion.ESPERAR
+                    || resultado.getCodigo() != CodigoResultado.TIEMPO_AGOTADO
+                    || restantes == 0
+                    || Thread.currentThread().isInterrupted()) {
+                break;
+            }
+            restantes--;
+        }
+        if (resultado.getCodigo() == CodigoResultado.OK) {
+            return null;
+        }
+        String objetivo =
+                paso.objetivo() == null ? null : TraductorProtocolo.describir(paso.objetivo());
+        return nombre
+                + " ("
+                + paso.accion()
+                + (objetivo == null ? "" : " " + objetivo)
+                + ") terminó con "
+                + resultado.getCodigo()
+                + (resultado.getDetalle() == null ? "" : ": " + resultado.getDetalle());
+    }
+
+    /** Ejecuta un intento y conserva todos sus eventos, incluso si termina por tiempo agotado. */
+    private ResultadoPasoDto ejecutarIntento(
+            ClienteAgente cliente,
+            Paso paso,
+            int numero,
+            String valorTraza,
+            ConfigEjecucion config,
+            TrazaEnCurso traza) {
         PasoDto dto = TraductorProtocolo.aPasoDto(paso, config);
         String objetivo =
                 paso.objetivo() == null ? null : TraductorProtocolo.describir(paso.objetivo());
@@ -418,16 +512,7 @@ public final class EjecucionService {
                 numero == 0,
                 resultado.getCodigo());
 
-        if (resultado.getCodigo() == CodigoResultado.OK) {
-            return null;
-        }
-        return nombre
-                + " ("
-                + paso.accion()
-                + (objetivo == null ? "" : " " + objetivo)
-                + ") terminó con "
-                + resultado.getCodigo()
-                + (resultado.getDetalle() == null ? "" : ": " + resultado.getDetalle());
+        return resultado;
     }
 
     /**
