@@ -28,6 +28,15 @@ Contenido:
 
 **Explicaciones de CWE.** Cada hallazgo con un CWE del catálogo oficial muestra, debajo de su explicación, un bloque desplegable «¿Qué es CWE-n (nombre) y cómo se corrige?» con la explicación en lenguaje sencillo y la recomendación de corrección; la etiqueta del CWE lleva su nombre como texto emergente. Un CWE que no está en el catálogo se muestra solo con su identificador. El HTML no enlaza a sitios externos, para seguir siendo autocontenido (el enlace a MITRE va en SARIF).
 
+**Rendimiento y robustez.** Al final del informe, una sección muestra los datos medidos, en tablas y barras hechas solo con CSS. No decide nada: los veredictos los dan los oráculos `RESPUESTA-LENTA`, `INTERFAZ-CONGELADA` y `VENTANA-NO-LIBERADA`.
+
+- *Tiempos de respuesta por acción:* eventos `TIEMPO` con medida `RESPUESTA_ACCION`, agrupados por la acción y el objetivo de su paso, con muestras, mediana, percentil 95 (por rango más próximo, igual que el oráculo), máximo y umbral. La barra se pone roja si el p95 supera el umbral.
+- *Pasos más lentos:* los 10 pasos de mayor duración (`duracionMs` de `PASO_FIN`, que el motor registra siempre).
+- *Interfaz bloqueada:* eventos `TIEMPO` con medida `EDT_BLOQUEADO` y su umbral.
+- *Ventanas:* cuántas se abrieron y cuáles no consta que se liberaran: cerradas con `liberada=false` (posible fuga), cerradas sin ese dato o abiertas al terminar el caso.
+
+Cada parte aparece solo si la traza trae sus datos. Hoy el agente emite las ventanas con `liberada` (contratos v1.2), pero todavía no emite eventos `TIEMPO` (#18): esas dos partes están probadas con trazas sintéticas.
+
 ## Catálogo de CWE
 
 `CatalogoCwe` lee el catálogo oficial `contratos/catalogos/cwe.yaml`. El archivo **no se copia a mano**: el `pom.xml` del módulo lo toma del contrato al construir y lo deja como recurso en `io/github/physanto/opsecengine/informes/catalogos/cwe.yaml` (igual que hace `opsec-oraculos`), así que siempre coincide con `main`. `CatalogoCweTest` comprueba que el recurso es idéntico al contrato y que todo CWE de `contratos/catalogos/oraculos.yaml` tiene nombre, explicación y recomendación; si alguien agrega un oráculo con un CWE nuevo sin explicarlo, el build falla.

@@ -102,7 +102,7 @@ public final class ReporteroHtml implements Reportero {
         h.append("img-src data:; style-src 'unsafe-inline'\">\n");
         h.append("<title>").append(Html.escapar(titulo)).append("</title>\n");
         Filtros filtros = new Filtros(resultado);
-        h.append("<style>\n").append(ESTILO).append(filtros.css());
+        h.append("<style>\n").append(ESTILO).append(RendimientoHtml.ESTILO).append(filtros.css());
         h.append("</style>\n</head>\n<body>\n");
         h.append("<header>\n<h1>").append(Html.escapar(titulo)).append("</h1>\n");
         h.append("<p class=\"sub\">OpSecEngine · ");
@@ -132,6 +132,7 @@ public final class ReporteroHtml implements Reportero {
             }
             h.append("</ul>\n</section>\n");
         }
+        RendimientoHtml.seccion(h, resultado);
         h.append(
                 "</main>\n<footer>Generado por OpSecEngine. Un informe sin hallazgos solo indica ");
         h.append("que no se encontraron fallos en lo probado.</footer>\n</body>\n</html>\n");
