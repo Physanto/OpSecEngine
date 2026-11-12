@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -79,6 +80,16 @@ public final class LanzadorProceso implements ArranqueApp {
         this.carpetaResultados =
                 Objects.requireNonNull(
                         carpetaResultados, "La carpeta de resultados no puede ser null");
+    }
+
+    /**
+     * Devuelve la carpeta de resultados que recibió el lanzador.
+     *
+     * @return la carpeta; nunca vacío
+     */
+    @Override
+    public Optional<Path> carpetaResultados() {
+        return Optional.of(carpetaResultados);
     }
 
     /**

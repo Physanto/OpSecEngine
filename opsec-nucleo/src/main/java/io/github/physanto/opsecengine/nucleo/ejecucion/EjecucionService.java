@@ -1,8 +1,10 @@
 package io.github.physanto.opsecengine.nucleo.ejecucion;
 
+import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
 import io.github.physanto.opsecengine.dominio.caso.ConfigEjecucion;
 import io.github.physanto.opsecengine.dominio.caso.Criterio;
+import io.github.physanto.opsecengine.dominio.caso.EstrategiaLocalizacion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
@@ -21,6 +23,7 @@ import io.github.physanto.opsecengine.nucleo.evaluacion.EvaluacionService;
 import io.github.physanto.opsecengine.nucleo.sesion.ClienteAgente;
 import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
 import io.github.physanto.opsecengine.nucleo.sesion.TraductorProtocolo;
+import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
@@ -37,11 +40,14 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,6 +64,14 @@ import java.util.logging.Logger;
  *   <li>los eventos que el agente emite durante el paso, en orden de llegada;
  *   <li>un evento {@code PASO_FIN} con el código del resultado, su detalle y la duración.
  * </ul>
+ *
+ * <p>Los pasos {@code CAPTURAR} no se envían como {@code EJECUTAR_PASO}: el motor pide la imagen
+ * con el mensaje {@code CAPTURAR}, la guarda como {@code capturas/<caso>-<paso>.png} en la carpeta
+ * de resultados de {@link SesionService#carpetaResultados()} y registra un evento {@code CAPTURA}
+ * con la ruta relativa, antes del {@code PASO_FIN}. La ventana se toma del primer criterio del
+ * objetivo que sea {@code TITULO_VENTANA}, {@code CLASE_VENTANA}, {@code TEXTO} o {@code ETIQUETA};
+ * sin objetivo se captura la ventana activa. Si el agente no encuentra la ventana, no hay carpeta
+ * de resultados o la imagen no se puede guardar, el paso termina con {@code ERROR}.
  *
  * <p>Si un paso no termina con {@code OK} (el agente responde {@code ERROR}, {@code NO_ENCONTRADO},
  * {@code NO_ALCANZABLE} o {@code TIEMPO_AGOTADO}, o no responde), los pasos siguientes no se
@@ -101,8 +115,19 @@ public final class EjecucionService {
      */
     public static final String HASH_NO_DISPONIBLE = "no-disponible";
 
+    /** Carpeta, dentro de la de resultados, donde se guardan las capturas. */
+    public static final String CARPETA_CAPTURAS = "capturas";
+
     private static final Logger REGISTRO = Logger.getLogger(EjecucionService.class.getName());
     private static final String PREFIJO_HASH = "sha256:";
+
+    /** Estrategias cuyo valor se usa como título o clase de la ventana que se captura. */
+    private static final Set<EstrategiaLocalizacion> ESTRATEGIAS_VENTANA =
+            Set.of(
+                    EstrategiaLocalizacion.TITULO_VENTANA,
+                    EstrategiaLocalizacion.CLASE_VENTANA,
+                    EstrategiaLocalizacion.TEXTO,
+                    EstrategiaLocalizacion.ETIQUETA);
 
     private final Proyecto proyecto;
     private final SesionService sesiones;
@@ -214,13 +239,23 @@ public final class EjecucionService {
 
         long comienzo = System.nanoTime();
         ResultadoPasoDto resultado;
+        Map<String, Object> captura = null;
         try {
-            resultado = cliente.enviarPaso(dto);
+            if (paso.accion() == Accion.CAPTURAR) {
+                captura = capturar(cliente, traza.caso.id(), paso);
+                resultado = new ResultadoPasoDto(CodigoResultado.OK, null, milisDesde(comienzo));
+            } else {
+                resultado = cliente.enviarPaso(dto);
+            }
         } catch (IOException e) {
-            long duracion = Duration.ofNanos(System.nanoTime() - comienzo).toMillis();
-            resultado = new ResultadoPasoDto(CodigoResultado.ERROR, e.getMessage(), duracion);
+            resultado =
+                    new ResultadoPasoDto(
+                            CodigoResultado.ERROR, e.getMessage(), milisDesde(comienzo));
         }
         traza.agente(cliente.tomarEventos(), paso.orden());
+        if (captura != null) {
+            traza.motor(TipoEvento.CAPTURA, paso.orden(), captura);
+        }
 
         Map<String, Object> fin = new LinkedHashMap<>();
         fin.put("codigo", resultado.getCodigo().name());
@@ -239,6 +274,60 @@ public final class EjecucionService {
                 + ") terminó con "
                 + resultado.getCodigo()
                 + (resultado.getDetalle() == null ? "" : ": " + resultado.getDetalle());
+    }
+
+    /**
+     * Pide la captura al agente y la guarda en la carpeta de resultados.
+     *
+     * @return los datos del evento {@code CAPTURA}
+     * @throws IOException si el agente no la toma, no hay carpeta o no se puede guardar
+     */
+    private Map<String, Object> capturar(ClienteAgente cliente, String idCaso, Paso paso)
+            throws IOException {
+        Optional<Path> carpeta = sesiones.carpetaResultados();
+        if (carpeta.isEmpty()) {
+            throw new IOException("No hay carpeta de resultados donde guardar la captura");
+        }
+        CapturaDto captura = cliente.pedirCaptura(ventanaACapturar(paso));
+        if (!"png".equalsIgnoreCase(captura.getFormato())) {
+            throw new IOException("El agente envió una captura en formato " + captura.getFormato());
+        }
+        byte[] imagen;
+        try {
+            imagen = Base64.getDecoder().decode(captura.getBase64());
+        } catch (IllegalArgumentException e) {
+            throw new IOException("El agente envió una captura que no está en Base64", e);
+        }
+        String nombre = nombreArchivo(idCaso) + "-" + paso.orden() + ".png";
+        Path capturas = carpeta.get().resolve(CARPETA_CAPTURAS);
+        Files.createDirectories(capturas);
+        Files.write(capturas.resolve(nombre), imagen);
+        Map<String, Object> datos = new LinkedHashMap<>();
+        datos.put("archivo", CARPETA_CAPTURAS + "/" + nombre);
+        datos.put("formato", "PNG");
+        return datos;
+    }
+
+    /** Título o clase de la ventana que pide el paso, o null para la ventana activa. */
+    private static String ventanaACapturar(Paso paso) {
+        if (paso.objetivo() == null) {
+            return null;
+        }
+        for (Criterio criterio : paso.objetivo().criterios()) {
+            if (ESTRATEGIAS_VENTANA.contains(criterio.estrategia())) {
+                return criterio.valor();
+            }
+        }
+        return null;
+    }
+
+    /** Id del caso con solo letras ASCII, dígitos, punto, guion y guion bajo. */
+    private static String nombreArchivo(String idCaso) {
+        return idCaso.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private static long milisDesde(long comienzo) {
+        return Duration.ofNanos(System.nanoTime() - comienzo).toMillis();
     }
 
     private Manifiesto manifiesto(Suite suite, Instant fecha) {
