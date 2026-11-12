@@ -39,6 +39,17 @@ Pendiente de este reportero: filtros y comparación entre ejecuciones, explicaci
 
 Se escribe en UTF-8 y se descartan los caracteres que XML 1.0 no admite (por ejemplo, el nulo de un payload de ataque). Las pruebas leen el archivo con un analizador XML estándar; no se ha probado contra el visor de GitHub Actions.
 
+## Reportero SARIF
+
+`ReporteroSarif` (formato `sarif`) escribe `resultado.sarif` en SARIF 2.1.0, el formato estándar de resultados de análisis (GitHub code scanning, Visual Studio Code).
+
+- Cada **oráculo** con algún hallazgo es una regla (`tool.driver.rules`), con el título de su primer hallazgo y, si lo tiene, su CWE como etiqueta `external/cwe/cwe-<n>`.
+- Cada **hallazgo** es un resultado con su regla, un `level` según la confianza (`CONFIRMADO` es `error`, `PROBABLE` es `warning`, `INFO` es `note`), la explicación como mensaje y una huella estable (`partialFingerprints`) para que el sistema receptor reconozca el mismo hallazgo entre ejecuciones.
+- **Ubicación:** una aplicación de escritorio no tiene archivos de código que señalar, así que la ubicación física es `suites/<suite>.yaml` (línea 1, por convención del proyecto) y el caso va como ubicación lógica. No apunta a una línea del código de la aplicación.
+- Un caso **no concluyente** no es un resultado: se informa como notificación de la ejecución (`toolExecutionNotifications`) con su motivo.
+
+Las pruebas comprueban las propiedades obligatorias y los valores permitidos de SARIF 2.1.0 para lo que se escribe. **No** se valida contra el esquema JSON oficial, porque ese archivo no está en el repositorio, y no se ha subido a GitHub code scanning.
+
 ## Dependencias permitidas
 
 - `opsec-dominio`.
