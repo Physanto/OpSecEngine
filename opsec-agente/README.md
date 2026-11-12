@@ -28,6 +28,7 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `EjecutorEdt` | `agente.swing` | Ejecuta en el EDT con tiempo máximo; detecta cuando una acción abre un diálogo modal. |
 | `ObservadorExcepciones` | `agente.swing` | Manejador por defecto de excepciones no capturadas: emite `EXCEPCION` (`capturada=false`) por las del EDT y las de los demás hilos y las pasa al manejador anterior. |
 | `ObservadorVentanas` | `agente.swing` | Emite `VENTANA_ABIERTA`, `VENTANA_CERRADA` (con `liberada`) y `DIALOGO` (con el texto de los `JOptionPane`). |
+| `CierreAplicacion` | `agente.swing` | Cierra la app después de `CERRAR`: pide el cierre de sus ventanas y, si no termina sola en 1 s, llama a `System.exit(0)`. |
 | `DescriptorComponentes` | `agente.swing` | Describe componentes como `NodoArbolDto`; nunca incluye el texto de un `JPasswordField`. |
 
 Comportamiento que conviene conocer:
@@ -44,14 +45,14 @@ Comportamiento que conviene conocer:
 - Cada ventana emite `VENTANA_ABIERTA` al mostrarse, también cuando vuelve a mostrarse después de ocultarla (con el mismo `ventanaId`). Ocultarla con `setVisible(false)` emite `VENTANA_CERRADA` con `liberada=false`; destruirla con `dispose` emite `VENTANA_CERRADA` con `liberada=true`, también si ya estaba oculta. El último `VENTANA_CERRADA` de cada `ventanaId` dice si la ventana quedó liberada; si se oculta y se destruye en la misma tarea del EDT, como un `JOptionPane`, sale uno solo con `liberada=true`.
 - Las excepciones que nadie captura, en el EDT (escuchadores, tareas de `invokeLater`) o en otro hilo, llegan como `EXCEPCION` con `capturada=false`, el nombre del hilo y hasta 30 líneas de pila. Después siguen al manejador que hubiera; si no había, la pila se escribe en `System.err` como sin el agente. No se ven las de hilos con manejador propio ni las que ocurran si la app reemplaza después el manejador por defecto.
 - `CAPTURAR` (mensaje) responde `CAPTURA` con la ventana pintada en PNG con `printAll`, sin `Robot`: funciona aunque la ventana esté tapada o fuera de la pantalla, pero no incluye la barra de título del sistema operativo. La ventana se elige por título o clase (completa o simple); sin nombre, la ventana activa o, si no hay, el último diálogo modal visible o la última ventana visible. Si ninguna coincide, responde `ERROR` con el código `ERROR_INTERNO`. La acción `CAPTURAR` dentro de un `EJECUTAR_PASO` responde `ERROR`: la imagen no cabe en el resultado del paso y el motor debe pedirla con el mensaje.
-- `CERRAR` termina la conversación pero no cierra la app; la detiene el motor.
+- `CERRAR` cierra la app de forma ordenada. El agente emite `APP_TERMINADA` con `esperada=true` y `causa=CERRAR`, cierra la conexión (es la respuesta que espera el motor: así no lo toma como una caída) y le envía `WINDOW_CLOSING` a cada ventana visible, como el botón de cierre. Si la app no termina sola en 1 s (sus ventanas solo se ocultan, pide confirmación, tiene otros hilos vivos o no tiene ventanas), el agente termina la JVM con `System.exit(0)`. El plazo es menor que los 2 s que espera el motor antes de detener el proceso. Si el motor corta la conexión sin `CERRAR`, la app sigue corriendo.
 
 ### Pendiente para el dueño del módulo (P1)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
 1. Localizadores robustos: etiqueta sin `setLabelFor` (por cercanía), estrategia `RUTA`, comparación flexible (mayúsculas, dos puntos finales).
-2. `CERRAR` que termine la app de forma ordenada; modo oculto y supresión de foco; modo `ROBOT`.
+2. Modo oculto y supresión de foco; modo `ROBOT`.
 3. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
@@ -67,9 +68,9 @@ Nunca puede depender del núcleo ni del dominio.
 
 ## Pruebas
 
-Las pruebas unitarias usan `MotorFalso` de `opsec-soporte-pruebas` para probar el servidor sin el núcleo (`ServidorProtocoloTest`), y prueban la consola, el adaptador, los eventos sintéticos, la selección de opciones, la navegación entre pestañas, las capturas y el observador de excepciones sin ventanas (`ObservadorConsolaTest`, `AdaptadorSwingTest`, `AccionesEventosTest`, `SeleccionTest`, `NavegacionTest`, `CapturasTest`, `ObservadorExcepcionesTest`). Se verifica la entrega de eventos de ratón y teclado, el reemplazo y borrado del texto, las contraseñas, el texto multilínea y el respeto de las teclas consumidas por la aplicación.
+Las pruebas unitarias usan `MotorFalso` de `opsec-soporte-pruebas` para probar el servidor sin el núcleo (`ServidorProtocoloTest`), incluido que `CERRAR` emita `APP_TERMINADA` y cierre la app solo cuando el motor lo pide; prueban el plazo del cierre (`CierreAplicacionTest`) y la consola, el adaptador, los eventos sintéticos, la selección de opciones, la navegación entre pestañas, las capturas y el observador de excepciones sin ventanas (`ObservadorConsolaTest`, `AdaptadorSwingTest`, `AccionesEventosTest`, `SeleccionTest`, `NavegacionTest`, `CapturasTest`, `ObservadorExcepcionesTest`). Se verifica la entrega de eventos de ratón y teclado, el reemplazo y borrado del texto, las contraseñas, el texto multilínea y el respeto de las teclas consumidas por la aplicación.
 
-La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol; además selecciona en un combo, marca una casilla, va a una pestaña, cierra un diálogo y pide capturas de la ventana y del diálogo modal; otra prueba lanza excepciones sin capturar en el EDT y en otro hilo y comprueba sus eventos. También se comprueba que un diálogo reutilizado emita `liberada=false` al ocultarse y `true` al destruirse. Repite las pruebas con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
+La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol; además selecciona en un combo, marca una casilla, va a una pestaña, cierra un diálogo y pide capturas de la ventana y del diálogo modal; otra prueba lanza excepciones sin capturar en el EDT y en otro hilo y comprueba sus eventos. También se comprueba que un diálogo reutilizado emita `liberada=false` al ocultarse y `true` al destruirse, y que después de `CERRAR` la app termine con código 0: la ventana recibe el pedido de cierre y, sin ventanas, el agente fuerza la salida. Repite las pruebas con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
 
 Desde la raíz del repositorio:
 
