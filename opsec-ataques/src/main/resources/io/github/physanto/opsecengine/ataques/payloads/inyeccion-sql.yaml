@@ -1,0 +1,46 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "SQLI-TAUTOLOGIA-CANARIO"
+  categoria: "INYECCION_SQL"
+  aplica_a: ["TEXTO", "BUSQUEDA", "IDENTIFICADOR"]
+  payload: "' OR '1'='1' -- {canario}"
+  usa_canario: true
+  oraculos: ["SQLI-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Tautología clásica con comentario y canario."
+
+- id: "SQLI-COMILLA-CANARIO"
+  categoria: "INYECCION_SQL"
+  aplica_a: ["CUALQUIERA"]
+  payload: "{canario}'"
+  usa_canario: true
+  oraculos: ["SQLI-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Comilla suelta para revelar concatenación o errores de sintaxis."
+
+- id: "SQLI-BOOLEANA-CANARIO"
+  categoria: "INYECCION_SQL"
+  aplica_a: ["TEXTO", "BUSQUEDA", "IDENTIFICADOR"]
+  payload: "' AND '1'='2' -- {canario}"
+  usa_canario: true
+  oraculos: ["SQLI-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Condición falsa para comparar el comportamiento con una tautología."
+
+- id: "SQLI-COMENTARIO-CANARIO"
+  categoria: "INYECCION_SQL"
+  aplica_a: ["TEXTO", "BUSQUEDA", "IDENTIFICADOR"]
+  payload: "{canario}'/**/"
+  usa_canario: true
+  oraculos: ["SQLI-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Comilla y comentario de bloque para probar el tratamiento de separadores."
+
+- id: "SQLI-APILADA-CANARIO"
+  categoria: "INYECCION_SQL"
+  aplica_a: ["TEXTO", "BUSQUEDA", "IDENTIFICADOR"]
+  payload: "{canario}'; SELECT '{canario}' -- "
+  usa_canario: true
+  oraculos: ["SQLI-CANARIO", "TRAZA-EN-DIALOGO"]
+  cwe: "CWE-89"
+  descripcion: "Consulta SELECT apilada sin operaciones de escritura."

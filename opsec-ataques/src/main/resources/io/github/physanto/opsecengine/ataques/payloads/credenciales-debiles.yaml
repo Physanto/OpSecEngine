@@ -1,0 +1,25 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "CREDENCIAL-NUMERICA-SECUENCIAL"
+  categoria: "NUMERICOS"
+  aplica_a: ["CONTRASENA"]
+  payload: "123456"
+  oraculos: ["CREDENCIALES-DEBILES", "CONTRASENA-EN-CONSOLA"]
+  cwe: "CWE-521"
+  descripcion: "Contraseña numérica secuencial de prueba."
+
+- id: "CREDENCIAL-NUMERICA-REPETIDA"
+  categoria: "NUMERICOS"
+  aplica_a: ["CONTRASENA"]
+  payload: "0000"
+  oraculos: ["CREDENCIALES-DEBILES", "CONTRASENA-EN-CONSOLA"]
+  cwe: "CWE-521"
+  descripcion: "Contraseña numérica repetida de prueba."
+
+- id: "CREDENCIAL-CORTA"
+  categoria: "LONGITUD"
+  aplica_a: ["CONTRASENA"]
+  payload: "a"
+  oraculos: ["CREDENCIALES-DEBILES", "CONTRASENA-EN-CONSOLA"]
+  cwe: "CWE-521"
+  descripcion: "Contraseña de prueba de un solo carácter."
