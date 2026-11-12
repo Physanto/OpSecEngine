@@ -82,6 +82,25 @@ public final class ObservadorVentanas implements AWTEventListener {
     }
 
     /**
+     * Informa las ventanas visibles que todavía no se informaron como abiertas. Sirve para que un
+     * diálogo que ya se ve, pero cuyo {@code WINDOW_OPENED} aún no se despachó, se informe antes
+     * del resultado del paso que lo abrió. No repite eventos: una ventana ya informada se ignora.
+     *
+     * <p>Se debe llamar en el EDT.
+     */
+    public void informarVisibles() {
+        for (Window ventana : Window.getWindows()) {
+            try {
+                if (ventana.isShowing()) {
+                    abierta(ventana);
+                }
+            } catch (RuntimeException e) {
+                registro.accept("No se pudo observar una ventana: " + e);
+            }
+        }
+    }
+
+    /**
      * Atiende un evento de AWT; solo le interesan las ventanas que se abren, se muestran, se
      * ocultan o se cierran.
      *
