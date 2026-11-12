@@ -10,6 +10,7 @@ import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.configuracion.Rol;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
+import io.github.physanto.opsecengine.dominio.extension.EvaluacionCaso;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
 import io.github.physanto.opsecengine.dominio.resultado.Manifiesto;
 import io.github.physanto.opsecengine.dominio.resultado.ResultadoCaso;
@@ -290,7 +291,11 @@ public final class EjecucionService {
     private ResultadoCaso ejecutarCaso(Suite suite, Caso caso) {
         long comienzo = System.nanoTime();
         notificar(suite, caso, ProgresoEjecucion.Tipo.CASO_INICIO, 0, false, null);
-        TrazaEnCurso traza = new TrazaEnCurso(suite, caso);
+        TrazaEnCurso traza =
+                new TrazaEnCurso(
+                        suite,
+                        caso,
+                        evaluacion.iniciarCaso(Contexto.deCaso(proyecto, suite, caso)));
         String motivo;
         Optional<Rol> rol = caso.rol() == null ? Optional.empty() : proyecto.buscarRol(caso.rol());
         if (caso.rol() != null && rol.isEmpty()) {
@@ -307,8 +312,7 @@ public final class EjecucionService {
             motivo = ejecutarPasos(caso, rol.orElse(null), suite.config(), traza);
         }
         Traza completa = traza.terminar();
-        Veredicto veredicto =
-                evaluacion.evaluarCaso(completa, Contexto.deCaso(proyecto, suite, caso), motivo);
+        Veredicto veredicto = traza.evaluacion.terminar(motivo);
         ResultadoCaso resultado =
                 new ResultadoCaso(
                         caso.id(),
@@ -664,27 +668,35 @@ public final class EjecucionService {
         private final Suite suite;
         private final Caso caso;
         private final List<Evento> eventos = new ArrayList<>();
+        private final EvaluacionCaso evaluacion;
         private boolean sesionActiva;
 
-        TrazaEnCurso(Suite suite, Caso caso) {
+        TrazaEnCurso(Suite suite, Caso caso, EvaluacionCaso evaluacion) {
             this.suite = suite;
             this.caso = caso;
+            this.evaluacion = evaluacion;
         }
 
         void motor(TipoEvento tipo, int numeroPaso, Map<String, Object> datos) {
-            eventos.add(
-                    new Evento(eventos.size(), Instant.now(), tipo, contexto(numeroPaso), datos));
+            registrar(new Evento(eventos.size(), Instant.now(), tipo, contexto(numeroPaso), datos));
         }
 
         void agente(List<EventoDto> recibidos, int numeroPaso) {
             for (EventoDto dto : recibidos) {
+                Evento evento;
                 try {
-                    eventos.add(
-                            TraductorProtocolo.aEvento(dto, eventos.size(), contexto(numeroPaso)));
+                    evento = TraductorProtocolo.aEvento(dto, eventos.size(), contexto(numeroPaso));
                 } catch (IllegalArgumentException e) {
                     REGISTRO.log(Level.WARNING, "Se descartó un evento del agente: " + dto, e);
+                    continue;
                 }
+                registrar(evento);
             }
+        }
+
+        private void registrar(Evento evento) {
+            evaluacion.registrarEvento(evento);
+            eventos.add(evento);
         }
 
         /** Desde aquí los eventos llevan el rol del caso y {@code sesionActiva=true}. */

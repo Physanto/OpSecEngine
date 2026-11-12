@@ -1,10 +1,14 @@
 package io.github.physanto.opsecengine.nucleo.extensiones;
 
 import io.github.physanto.opsecengine.dominio.caso.Enfoque;
+import io.github.physanto.opsecengine.dominio.extension.Evaluador;
 import io.github.physanto.opsecengine.dominio.extension.GeneradorCasos;
 import io.github.physanto.opsecengine.dominio.extension.Oraculo;
 import io.github.physanto.opsecengine.dominio.extension.ProveedorDatos;
+import io.github.physanto.opsecengine.dominio.extension.ProveedorEvaluacion;
 import io.github.physanto.opsecengine.dominio.extension.Reportero;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,6 +49,7 @@ import java.util.function.Supplier;
 public final class RegistroExtensiones {
 
     private final Map<String, Oraculo> oraculos;
+    private final ClassLoader cargador;
     private final Map<Enfoque, GeneradorCasos> generadores;
     private final Map<String, Reportero> reporteros;
     private final Map<String, Supplier<ProveedorDatos>> proveedores;
@@ -66,6 +71,21 @@ public final class RegistroExtensiones {
             Collection<? extends GeneradorCasos> generadores,
             Collection<? extends Reportero> reporteros,
             Collection<? extends Supplier<? extends ProveedorDatos>> proveedores) {
+        this(
+                oraculos,
+                generadores,
+                reporteros,
+                proveedores,
+                Thread.currentThread().getContextClassLoader());
+    }
+
+    private RegistroExtensiones(
+            Collection<? extends Oraculo> oraculos,
+            Collection<? extends GeneradorCasos> generadores,
+            Collection<? extends Reportero> reporteros,
+            Collection<? extends Supplier<? extends ProveedorDatos>> proveedores,
+            ClassLoader cargador) {
+        this.cargador = cargador;
         this.oraculos = indexar(oraculos, "oráculos", "id", Oraculo::id);
         this.generadores =
                 indexar(generadores, "generadores de casos", "enfoque", GeneradorCasos::enfoque);
@@ -100,7 +120,8 @@ public final class RegistroExtensiones {
                 instancias(Oraculo.class, cargador),
                 instancias(GeneradorCasos.class, cargador),
                 instancias(Reportero.class, cargador),
-                fabricas(ProveedorDatos.class, cargador));
+                fabricas(ProveedorDatos.class, cargador),
+                cargador);
     }
 
     /**
@@ -182,6 +203,34 @@ public final class RegistroExtensiones {
         Supplier<ProveedorDatos> fabrica =
                 proveedores.get(Objects.requireNonNull(tipo, "El tipo es null"));
         return fabrica == null ? Optional.empty() : Optional.of(crear(fabrica));
+    }
+
+    /**
+     * Descubre el único proveedor de evaluación y crea un evaluador independiente.
+     *
+     * <p>Usa el mismo cargador de clases que el registro. El constructor de colecciones conserva el
+     * cargador de contexto del hilo que lo crea. No se selecciona por orden del classpath.
+     *
+     * @param carpetaReglas carpeta explícita de reglas YAML; null para no cargar reglas
+     * @return evaluador con los oráculos registrados y las reglas opcionales; nunca null
+     * @throws IllegalStateException si falta el proveedor, hay varios, no puede cargarse o devuelve
+     *     null
+     * @throws IllegalArgumentException si hay reglas inválidas o ids duplicados
+     * @throws IOException si la carpeta indicada o sus archivos no pueden leerse
+     */
+    public Evaluador crearEvaluador(Path carpetaReglas) throws IOException {
+        List<ProveedorEvaluacion> proveedoresEvaluacion =
+                instancias(ProveedorEvaluacion.class, cargador);
+        if (proveedoresEvaluacion.size() != 1) {
+            throw new IllegalStateException(
+                    "Se requiere exactamente un ProveedorEvaluacion; encontrados: "
+                            + proveedoresEvaluacion.size());
+        }
+        Evaluador evaluador = proveedoresEvaluacion.getFirst().crear(oraculos(), carpetaReglas);
+        if (evaluador == null) {
+            throw new IllegalStateException("El proveedor de evaluación devolvió null");
+        }
+        return evaluador;
     }
 
     private static <E, K> Map<K, E> indexar(
