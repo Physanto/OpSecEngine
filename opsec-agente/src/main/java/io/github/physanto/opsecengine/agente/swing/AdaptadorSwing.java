@@ -13,6 +13,7 @@ import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import java.awt.Component;
 import java.awt.Window;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -61,8 +62,10 @@ import javax.swing.text.JTextComponent;
  * evento {@code EXCEPCION} con {@code capturada=false}, como si la hubiera recibido el manejador
  * del EDT, y el paso termina con {@code OK}: la acción se hizo y el fallo es de la aplicación.
  *
- * <p>El modo {@code ROBOT} y la acción {@code CAPTURAR} responden {@code ERROR} con un detalle que
- * dice que no están implementados. Las capturas lanzan {@link UnsupportedOperationException}.
+ * <p>Las capturas se toman con {@link #capturar(String)}, que pinta la ventana en una imagen PNG.
+ * La acción {@code CAPTURAR} dentro de un paso responde {@code ERROR}: la imagen no cabe en el
+ * resultado del paso, así que el motor la pide con el mensaje {@code CAPTURAR}. El modo {@code
+ * ROBOT} responde {@code ERROR} con un detalle que dice que no está implementado.
  *
  * <p>Es seguro entre hilos; todo acceso a componentes ocurre en el EDT.
  */
@@ -162,15 +165,47 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     }
 
     /**
-     * Todavía no implementado.
+     * Toma una captura pintando la ventana en una imagen, sin {@code java.awt.Robot}.
      *
-     * @param ventana título o clase de la ventana
-     * @return nunca devuelve
-     * @throws UnsupportedOperationException siempre
+     * <p>Con un nombre, captura la primera ventana visible con ese título o esa clase (completa o
+     * simple). Sin nombre, la ventana activa; si no hay, el último diálogo modal visible o la
+     * última ventana visible. La imagen no incluye la barra de título del sistema operativo.
+     *
+     * @param ventana título o clase de la ventana; null para la ventana activa
+     * @return la captura en PNG, con el título de la ventana o, si no tiene, su clase; null si
+     *     ninguna ventana visible coincide
+     * @throws IllegalStateException si la interfaz no responde a tiempo o la imagen no se puede
+     *     pintar o codificar
      */
     @Override
     public CapturaDto capturar(String ventana) {
-        throw new UnsupportedOperationException("Las capturas todavía no están implementadas");
+        Object[] pintada;
+        try {
+            pintada =
+                    EjecutorEdt.leer(
+                            () -> {
+                                Window elegida = Capturas.elegirVentana(ventana);
+                                if (elegida == null) {
+                                    return null;
+                                }
+                                return new Object[] {
+                                    Capturas.nombre(elegida), Capturas.pintar(elegida)
+                                };
+                            },
+                            ESPERA_LECTURA_MS);
+        } catch (TimeoutException e) {
+            throw new IllegalStateException("La interfaz no respondió a la captura", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("No se pudo pintar la ventana", e.getCause());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Se interrumpió la captura", e);
+        }
+        if (pintada == null) {
+            return null;
+        }
+        return new CapturaDto(
+                (String) pintada[0], "png", Capturas.codificarPng((BufferedImage) pintada[1]));
     }
 
     private Resultado ejecutarPaso(PasoDto paso, long inicio) throws InterruptedException {
@@ -209,6 +244,11 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
                 return actuar(paso, limite);
             case "ESPERAR":
                 return esperar(paso, limite);
+            case "CAPTURAR":
+                return new Resultado(
+                        CodigoResultado.ERROR,
+                        "La acción CAPTURAR no se ejecuta como paso; el motor debe pedir la"
+                                + " imagen con el mensaje CAPTURAR");
             default:
                 return new Resultado(
                         CodigoResultado.ERROR,
