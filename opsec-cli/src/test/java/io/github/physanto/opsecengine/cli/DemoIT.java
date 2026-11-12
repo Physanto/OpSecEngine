@@ -51,6 +51,10 @@ class DemoIT {
                 .contains(caso)
                 .contains("NO_CUMPLE")
                 .contains(oraculo)
+                .contains("Ejecutando la suite " + suite)
+                .contains("] Caso " + caso)
+                .contains("Paso 1/")
+                .contains("Suite " + suite + " terminada")
                 .doesNotContain("Admin#2026");
         comprobarInforme(resultados.resolve("vulnerable"), suite, caso, "NO_CUMPLE", oraculo, cwe);
 

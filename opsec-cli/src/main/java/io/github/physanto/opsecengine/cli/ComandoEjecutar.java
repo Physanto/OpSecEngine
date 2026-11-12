@@ -7,6 +7,7 @@ import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
 import io.github.physanto.opsecengine.dominio.resultado.ResultadoCaso;
 import io.github.physanto.opsecengine.dominio.resultado.ResultadoSuite;
 import io.github.physanto.opsecengine.nucleo.ejecucion.EjecucionService;
+import io.github.physanto.opsecengine.nucleo.ejecucion.ObservadorProgreso;
 import io.github.physanto.opsecengine.nucleo.evaluacion.EvaluacionService;
 import io.github.physanto.opsecengine.nucleo.extensiones.RegistroExtensiones;
 import io.github.physanto.opsecengine.nucleo.informe.InformeService;
@@ -42,8 +43,12 @@ import picocli.CommandLine.Spec;
  * EjecucionService}, lanzando la aplicación con el agente que trae la CLI, y su resultado se
  * escribe con los reporteros de los formatos pedidos con {@code --formato} (por defecto {@value
  * #FORMATO_POR_DEFECTO}) en {@code <resultados>/<suite>/}. Por defecto {@code <resultados>} es
- * {@code resultados/<AAAA-MM-DD_HHmmss>} junto al proyecto. En la consola se muestra el veredicto
- * de cada caso y sus hallazgos.
+ * {@code resultados/<AAAA-MM-DD_HHmmss>} junto al proyecto. En la salida estándar se muestra el
+ * veredicto de cada caso y sus hallazgos.
+ *
+ * <p>Mientras se ejecuta, el avance de suites, casos y pasos se muestra en la salida de error con
+ * {@link ProgresoConsola}, para que la salida estándar solo tenga resultados. {@code
+ * --sin-progreso} lo desactiva.
  *
  * <p>Los formatos se validan contra los reporteros registrados antes de lanzar la aplicación.
  *
@@ -114,6 +119,13 @@ public final class ComandoEjecutar implements Callable<Integer> {
             description = "Jar del agente a usar en lugar del que trae la CLI.")
     private Path agente;
 
+    @Option(
+            names = "--sin-progreso",
+            description =
+                    "No muestra el avance de suites, casos y pasos (por defecto se muestra en la"
+                            + " salida de error).")
+    private boolean sinProgreso;
+
     /** Crea el comando; lo usa picocli. */
     public ComandoEjecutar() {}
 
@@ -177,13 +189,18 @@ public final class ComandoEjecutar implements Callable<Integer> {
                                 .resolve("resultados")
                                 .resolve(LocalDateTime.now().format(FECHA));
         Resumen resumen = new Resumen();
+        ObservadorProgreso progreso = observadorProgreso(spec.commandLine().getErr());
         for (Suite suite : cargadas) {
             Path carpetaSuite = carpetaResultados.resolve(suite.nombre());
             ResultadoSuite resultado;
             try (SesionService sesiones =
                     new SesionService(new LanzadorProceso(jarAgente, carpetaSuite))) {
                 resultado =
-                        new EjecucionService(proyecto, sesiones, new EvaluacionService(registro))
+                        new EjecucionService(
+                                        proyecto,
+                                        sesiones,
+                                        new EvaluacionService(registro),
+                                        progreso)
                                 .ejecutar(suite);
             }
             new InformeService(registro).generar(resultado, carpetaSuite, formatosPedidos);
@@ -202,6 +219,17 @@ public final class ComandoEjecutar implements Callable<Integer> {
             return CODIGO_NO_CUMPLE;
         }
         return resumen.noConcluyentes > 0 ? CODIGO_NO_CONCLUYENTE : 0;
+    }
+
+    /**
+     * Devuelve el observador que muestra el avance, según {@code --sin-progreso}.
+     *
+     * @param errores salida de error del comando, donde se escribe el avance; no puede ser null
+     * @return {@link ObservadorProgreso#VACIO} con {@code --sin-progreso}; si no, un observador que
+     *     escribe en {@code errores}
+     */
+    ObservadorProgreso observadorProgreso(PrintWriter errores) {
+        return sinProgreso ? ObservadorProgreso.VACIO : new ProgresoConsola(errores);
     }
 
     /**
