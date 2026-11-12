@@ -235,14 +235,19 @@ public final class ReporteroHtml implements Reportero {
         h.append(Html.escapar(hallazgo.titulo())).append("</div>\n<div class=\"etiquetas\">");
         h.append("<span class=\"etiqueta\">").append(Html.escapar(hallazgo.oraculoId()));
         h.append("</span>");
+        Optional<CatalogoCwe.DescripcionCwe> debilidad =
+                CatalogoCwe.oficial().buscar(hallazgo.cwe());
         if (hallazgo.cwe() != null) {
-            h.append("<span class=\"etiqueta\">").append(Html.escapar(hallazgo.cwe()));
-            h.append("</span>");
+            h.append("<span class=\"etiqueta\"");
+            debilidad.ifPresent(
+                    d -> h.append(" title=\"").append(Html.escapar(d.nombre())).append('"'));
+            h.append('>').append(Html.escapar(hallazgo.cwe())).append("</span>");
         }
         h.append("<span class=\"etiqueta conf-")
                 .append(hallazgo.confianza().name().toLowerCase(Locale.ROOT));
         h.append("\">").append(hallazgo.confianza().name()).append("</span></div>\n");
         h.append("<p>").append(Html.escapar(hallazgo.explicacion())).append("</p>\n");
+        debilidad.ifPresent(d -> explicacionCwe(h, d));
         if (!hallazgo.evidencia().isEmpty() && indiceCaso >= 0) {
             h.append("<p class=\"evidencia-enlaces\">Evidencia: eventos ");
             for (int i = 0; i < hallazgo.evidencia().size(); i++) {
@@ -253,6 +258,15 @@ public final class ReporteroHtml implements Reportero {
             h.append("</p>\n");
         }
         h.append("</li>\n");
+    }
+
+    /** Explica la debilidad del hallazgo con el catálogo oficial: qué es y cómo corregirla. */
+    private static void explicacionCwe(StringBuilder h, CatalogoCwe.DescripcionCwe d) {
+        h.append("<details class=\"cwe\"><summary>¿Qué es ").append(Html.escapar(d.id()));
+        h.append(" (").append(Html.escapar(d.nombre())).append(") y cómo se corrige?</summary>\n");
+        h.append("<p>").append(Html.escapar(d.explicacion())).append("</p>\n");
+        h.append("<p><strong>Cómo corregirlo:</strong> ");
+        h.append(Html.escapar(d.recomendacion())).append("</p>\n</details>\n");
     }
 
     private static void traza(
@@ -508,5 +522,9 @@ public final class ReporteroHtml implements Reportero {
             legend{font-weight:700;padding:0 6px}
             fieldset label{display:block;cursor:pointer;padding:1px 0}
             fieldset input{margin-right:6px}
+            details.cwe{margin:6px 0;padding:4px 10px;border-left:3px solid var(--info);\
+            background:var(--info-fondo);border-radius:4px}
+            details.cwe summary{cursor:pointer;padding:2px 0;font-size:.9rem}
+            details.cwe p{margin:6px 0}
             """;
 }

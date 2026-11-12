@@ -214,10 +214,49 @@ public final class ReporteroSarif implements Reportero {
             regla.put("name", id);
             regla.put("shortDescription", Map.of("text", primero.titulo()));
             regla.put("fullDescription", Map.of("text", primero.explicacion()));
+            CatalogoCwe.oficial()
+                    .buscar(primero.cwe())
+                    .ifPresent(d -> {
+                        regla.put("helpUri", d.enlace());
+                        regla.put("help", ayuda(d));
+                    });
             regla.put("properties", Map.of("tags", List.copyOf(etiquetas)));
             definiciones.add(regla);
         }
         return definiciones;
+    }
+
+    /**
+     * Arma la ayuda de una regla con la explicación del catálogo oficial de CWE, en texto y en
+     * Markdown (GitHub code scanning muestra la versión Markdown).
+     */
+    private static Map<String, Object> ayuda(CatalogoCwe.DescripcionCwe d) {
+        Map<String, Object> ayuda = new LinkedHashMap<>();
+        ayuda.put(
+                "text",
+                d.id()
+                        + " ("
+                        + d.nombre()
+                        + "). "
+                        + d.explicacion()
+                        + " Cómo corregirlo: "
+                        + d.recomendacion());
+        ayuda.put(
+                "markdown",
+                "**"
+                        + d.id()
+                        + ": "
+                        + d.nombre()
+                        + "**\n\n"
+                        + d.explicacion()
+                        + "\n\n**Cómo corregirlo:** "
+                        + d.recomendacion()
+                        + "\n\n["
+                        + d.id()
+                        + " en MITRE]("
+                        + d.enlace()
+                        + ")");
+        return ayuda;
     }
 
     private static Map<String, Object> invocacion(ResultadoSuite resultado) {
