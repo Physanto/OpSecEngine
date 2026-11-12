@@ -3,6 +3,8 @@ package io.github.physanto.opsecengine.cli;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.physanto.opsecengine.nucleo.ejecucion.ObservadorProgreso;
+import io.github.physanto.opsecengine.nucleo.ejecucion.ProgresoEjecucion;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -94,6 +96,45 @@ class ComandoEjecutarTest {
                 .contains("-f, --formato=<formato>[,<formato>...]")
                 .contains("Formatos del informe")
                 .contains("html,json");
+    }
+
+    @Test
+    void laAyudaDeEjecutarDescribeLaOpcionSinProgreso() {
+        String ayuda =
+                ComandoOpsec.linea()
+                        .getSubcommands()
+                        .get("ejecutar")
+                        .getUsageMessage(CommandLine.Help.Ansi.OFF);
+
+        assertThat(ayuda).contains("--sin-progreso").contains("salida de error");
+    }
+
+    @Test
+    void porDefectoElAvanceSeMuestraEnLaSalidaDeError() {
+        ComandoEjecutar comando = analizar("ejecutar", "proyecto.yaml");
+        StringWriter destino = new StringWriter();
+
+        ObservadorProgreso observador = comando.observadorProgreso(new PrintWriter(destino));
+        observador.actualizar(
+                new ProgresoEjecucion(
+                        ProgresoEjecucion.Tipo.SUITE_INICIO, "login", 1, null, 0, 0, false, null));
+
+        assertThat(observador).isInstanceOf(ProgresoConsola.class);
+        assertThat(destino.toString()).contains("Ejecutando la suite login (1 caso)");
+    }
+
+    @Test
+    void conSinProgresoNoSeMuestraElAvance() {
+        ComandoEjecutar comando = analizar("ejecutar", "proyecto.yaml", "--sin-progreso");
+
+        assertThat(comando.observadorProgreso(new PrintWriter(new StringWriter())))
+                .isSameAs(ObservadorProgreso.VACIO);
+    }
+
+    /** Analiza los argumentos sin ejecutar el comando y devuelve el subcomando ya configurado. */
+    private static ComandoEjecutar analizar(String... argumentos) {
+        CommandLine.ParseResult resultado = ComandoOpsec.linea().parseArgs(argumentos);
+        return (ComandoEjecutar) resultado.subcommand().commandSpec().userObject();
     }
 
     @Test
