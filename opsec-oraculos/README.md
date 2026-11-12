@@ -81,7 +81,7 @@ La traza oficial `c13-sqli-login.jsonl`, con `K7Q2` declarado en su contexto, da
 por F4; su variante con `PREPARED` no activa el oráculo. Sin metadatos o sin escritura previa
 no hay hallazgos; una lista vacía no demuestra ausencia de inyección. El llamador debe aportar
 la marca y los eventos JDBC o Firestore. Los oráculos no instrumentan la aplicación ni extraen
-canarios de texto arbitrario. La [solicitud de contrato](solicitud-contrato-42.md) propone
+canarios de texto arbitrario. La solicitud de contrato de la #42 propone
 formalizar la asociación entre caso y canario; la conexión al núcleo sigue pendiente.
 
 ## Enumeración de usuarios (#43)
@@ -108,7 +108,7 @@ La explicación identifica los dos casos; la evidencia lista primero las secuenc
 del usuario inexistente y luego las de contraseña incorrecta. Sin configuración o evidencia
 suficiente no hay hallazgos: el `CUMPLE` del evaluador existente no acredita entonces ausencia
 de enumeración. Un mapa de YAML no se transforma en el adaptador automáticamente. La
-[solicitud de contrato](solicitud-contrato-43.md) propone formalizar esta configuración;
+solicitud de contrato de la #43 propone formalizar esta configuración;
 la carga y conexión al núcleo siguen pendientes. No se infieren escenarios desde ids,
 descripciones, nombres de usuario ni frases propias de una aplicación.
 
@@ -151,7 +151,7 @@ de bloqueo sin reinicios que borren su contador. N no se fija en cinco ni se con
 Los hallazgos solo referencian secuencias; no copian credenciales ni mensajes de la aplicación.
 Sin política o evidencia suficiente no hay hallazgos y el `CUMPLE` del evaluador no demuestra
 seguridad. Un mapa YAML no se convierte en el adaptador automáticamente. La
-[solicitud de contrato](solicitud-contrato-44.md) propone formalizar esos datos; la carga de
+solicitud de contrato de la #44 propone formalizar esos datos; la carga de
 payloads y la conexión al núcleo siguen pendientes.
 
 ## Contraseñas visibles y cifrado JDBC (#45)
@@ -243,7 +243,7 @@ sus veredictos completos y obtener observaciones fiables del ámbito que se prue
 Los ids de estas APIs locales son propuestas, no reservas nuevas. Sus observaciones de GUI
 referencian un registro local de evidencia, sin convertirlas en eventos inexistentes.
 Los resultados no certifican accesibilidad completa, ausencia de fugas ni rendimiento estable
-en otros entornos. La [solicitud de contrato](solicitud-contrato-47.md) detalla los datos y la
+en otros entornos. La solicitud de contrato de la #47 detalla los datos y la
 integración pendientes del líder; esta entrega no modifica agente, dominio, núcleo ni contratos.
 
 ## Evaluación por momento
@@ -314,7 +314,7 @@ el resultado no concluyente si todavía no se había observado una aceptación d
 
 Esta evaluación no se registra con `ServiceLoader` ni se conecta automáticamente a la CLI, al
 generador de la #37 o al núcleo. El llamador debe conservar el `Veredicto` completo y combinarlo
-con los oráculos implícitos existentes. La solicitud [solicitud-contrato-38.md](solicitud-contrato-38.md)
+con los oráculos implícitos existentes. La solicitud de contrato de la #38
 propone el id, el CWE y la ampliación necesaria para preservar los tres estados en el contrato.
 
 ## Generación de validación con adaptador temporal
@@ -361,7 +361,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Formalización e integración de las APIs locales de calidad de la [#47](solicitud-contrato-47.md).
+1. Formalización e integración de las APIs locales de calidad de la #47.
 
 ## Dependencias permitidas
 
