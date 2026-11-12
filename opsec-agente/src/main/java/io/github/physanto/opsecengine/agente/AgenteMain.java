@@ -4,6 +4,7 @@ import io.github.physanto.opsecengine.agente.swing.AdaptadorSwing;
 import io.github.physanto.opsecengine.agente.swing.CierreAplicacion;
 import io.github.physanto.opsecengine.agente.swing.ObservadorExcepciones;
 import io.github.physanto.opsecengine.agente.swing.ObservadorVentanas;
+import io.github.physanto.opsecengine.agente.swing.SupresorFoco;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import java.awt.AWTError;
 import java.lang.instrument.Instrumentation;
@@ -22,6 +23,7 @@ import java.lang.instrument.Instrumentation;
  *   <li>Instala el {@link ObservadorConsola}, para que la aplicación tome las salidas observadas.
  *   <li>Instala el {@link ObservadorExcepciones} como manejador por defecto de excepciones no
  *       capturadas.
+ *   <li>Si se pide {@code oculto=true}, instala {@link SupresorFoco}.
  *   <li>Registra el {@link ObservadorVentanas}.
  *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} y el {@link
  *       CierreAplicacion} en un hilo daemon, que se conecta con el motor sin retrasar a la
@@ -71,6 +73,13 @@ public final class AgenteMain {
             ObservadorExcepciones.instalar(emisor, RegistroAgente::error);
         } catch (RuntimeException e) {
             RegistroAgente.error("No se pudieron observar las excepciones: " + e);
+        }
+        if (leidos.oculto()) {
+            try {
+                SupresorFoco.instalar(RegistroAgente::error);
+            } catch (RuntimeException | AWTError | LinkageError e) {
+                RegistroAgente.error("No se pudo instalar el modo oculto: " + e);
+            }
         }
         ObservadorVentanas ventanas = null;
         try {
