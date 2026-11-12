@@ -76,3 +76,50 @@ listo; una excepción que interrumpa la ejecución no garantiza una notificació
 `EjecucionServiceTest` comprueba las notificaciones con `AgenteFalso`, su orden,
 los fallos de pasos y del observador, el login sin credenciales en los avisos,
 los casos no ejecutables y las suites vacías.
+
+## Esperas por condición y reintentos
+
+Una espera por condición usa el localizador del componente o ventana esperado y termina
+cuando el agente lo encuentra. Por ejemplo, dentro de los pasos de una suite:
+
+```yaml
+- esperar: {texto: "Menú administrador"}
+  esperaMaximaMs: 2000
+```
+
+`esperaMaximaMs` reemplaza el plazo `config.esperaMaximaPasoMs` de la suite para ese
+paso. El núcleo envía el plazo al agente; `ClienteAgente` añade su margen de respuesta
+para permitir que termine la espera antes de declarar un fallo de comunicación.
+
+Los reintentos se configuran desde la presentación, en el constructor del servicio:
+
+```java
+EjecucionService ejecucion =
+        new EjecucionService(proyecto, sesiones, evaluacion, observador, 2);
+```
+
+También se admite `new EjecucionService(proyecto, sesiones, evaluacion, 2)` sin observador.
+La cantidad debe ser no negativa y cuenta repeticiones adicionales: con 2 hay hasta
+3 intentos. Los constructores anteriores conservan cero reintentos por defecto.
+La configuración se aplica a los pasos de espera del caso y de su login.
+
+Se repite únicamente `ESPERAR` cuando el agente responde `TIEMPO_AGOTADO`. Cada intento
+usa el mismo plazo y la misma sesión. No hay una pausa fija entre intentos: cada solicitud
+vuelve a esperar la condición hasta su plazo. Si se agotan, el caso queda
+`NO_CONCLUYENTE` y no ejecuta sus pasos siguientes, salvo que los oráculos encuentren
+un fallo y determinen `NO_CUMPLE`. No se repiten otros códigos de error, desconexiones,
+respuestas que no llegan a tiempo ni acciones que cambian la aplicación: una acción
+que agota su tiempo podría seguir ejecutándose. Una interrupción impide el siguiente
+reintento y conserva la marca del hilo.
+
+Cada intento conserva su `PASO_INICIO`, los eventos del agente y su `PASO_FIN`, con el
+mismo número de paso, y emite los avisos de progreso correspondientes. Los totales del
+progreso describen pasos previstos y no incluyen intentos adicionales. Todos los eventos
+llegan a los oráculos, incluidos los de intentos que agotaron el tiempo; que la espera
+se recupere no elimina hallazgos. El número de intentos del caso sigue en 1 y su marca
+de inestable sigue en `false`. `ConfigEjecucion.reintentos` corresponde a la reejecución
+de casos completos de la v0.3 (#29) y no se usa para esta configuración.
+
+`EsperasEjecucionServiceTest` usa `AgenteFalso` con respuestas demoradas y guiones que
+agotan el plazo antes de responder bien. Comprueba los límites, la traza, el progreso,
+la conservación de hallazgos y los errores que no se deben reintentar.
