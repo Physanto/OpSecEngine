@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.oraculos;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.ComparacionLogin;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.extension.Momento;
 import io.github.physanto.opsecengine.dominio.extension.Oraculo;
@@ -41,18 +42,17 @@ public final class OraculoEnumeracionUsuarios implements Oraculo {
     }
 
     /**
-     * Comprueba que hay una comparación local explícita en la suite.
+     * Comprueba que la suite declara la comparación {@code enumeracionUsuarios} (contratos v1.2).
      *
      * @param caso caso recibido; no se utiliza
      * @param contexto contexto de suite; puede ser null
-     * @return true si la extensión enumeracionUsuarios contiene el adaptador requerido
+     * @return true si el contexto es de suite y la suite declara la comparación
      */
     @Override
     public boolean aplica(Caso caso, Contexto contexto) {
         return contexto != null
                 && contexto.caso() == null
-                && contexto.suite().extensiones().get("enumeracionUsuarios")
-                        instanceof ComparacionEnumeracionUsuarios;
+                && contexto.suite().enumeracionUsuarios() != null;
     }
 
     /**
@@ -67,9 +67,7 @@ public final class OraculoEnumeracionUsuarios implements Oraculo {
         if (!aplica(null, contexto)) {
             return List.of();
         }
-        var comparacion =
-                (ComparacionEnumeracionUsuarios)
-                        contexto.suite().extensiones().get("enumeracionUsuarios");
+        ComparacionLogin comparacion = contexto.suite().enumeracionUsuarios();
         Respuesta inexistente =
                 respuesta(
                         contexto,

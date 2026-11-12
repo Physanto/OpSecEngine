@@ -63,4 +63,28 @@ class CasoTest {
         assertThatThrownBy(() -> new Caso("C1", null, null, null, null, oraculos, null))
                 .isInstanceOf(NullPointerException.class);
     }
+
+    @Test
+    void elConstructorDeLaV1DejaSinCanarioNiPoliticas() {
+        Caso caso = new Caso("C1", null, null, null, null, null, null);
+
+        assertThat(caso.canario()).isNull();
+        assertThat(caso.validacion()).isNull();
+        assertThat(caso.autenticacion()).isNull();
+    }
+
+    @Test
+    void validaElCanario() {
+        assertThat(caso("K7Q2").canario()).isEqualTo("K7Q2");
+
+        assertThatThrownBy(() -> caso("K7Q"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("canario");
+        assertThatThrownBy(() -> caso("{canario}")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> caso("K7 Q2")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static Caso caso(String canario) {
+        return new Caso("C13", null, null, null, null, null, canario, null, null, null);
+    }
 }

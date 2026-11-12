@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.IntentoLogin;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaAutenticacion;
+import io.github.physanto.opsecengine.dominio.caso.Senal;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
@@ -15,8 +18,6 @@ import io.github.physanto.opsecengine.dominio.traza.ContextoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
-import io.github.physanto.opsecengine.oraculos.PoliticaAutenticacion.Intento;
-import io.github.physanto.opsecengine.oraculos.PoliticaValidacionTemporal.Senal;
 import io.github.physanto.opsecengine.soporte.CargadorTrazas;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -64,7 +65,7 @@ class OraculosAutenticacionTest {
                 datos(base, 2, Map.of("accion", "LLENAR", "objetivo", "nombre=Clave", "valor", ""));
         PoliticaAutenticacion politica =
                 politica(
-                        List.of(new Intento(1, 2, 3, "soporte", "", true)),
+                        List.of(new IntentoLogin(1, 2, 3, "soporte", "", true)),
                         2,
                         Duration.ofSeconds(5));
         assertThat(debiles.evaluar(vacia, contexto(vacia, politica))).hasSize(1);
@@ -182,7 +183,7 @@ class OraculosAutenticacionTest {
                         7,
                         Map.of("accion", "LLENAR", "objetivo", "nombre=Usuario", "valor", "otro"));
         var intentos = new ArrayList<>(repetidos().intentos());
-        intentos.set(1, new Intento(4, 5, 6, "otro", "incorrecta1", false));
+        intentos.set(1, new IntentoLogin(4, 5, 6, "otro", "incorrecta1", false));
         assertThat(
                         bloqueo.evaluar(
                                 otro, contexto(otro, politica(intentos, 2, Duration.ofSeconds(5)))))
@@ -267,11 +268,11 @@ class OraculosAutenticacionTest {
 
     @Test
     void validaPasosUmbralesYSeparacionDeLosPayloads() {
-        assertThatThrownBy(() -> new Intento(1, 1, 3, "u", "c", true))
+        assertThatThrownBy(() -> new IntentoLogin(1, 1, 3, "u", "c", true))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new Intento(1, 2, 2, "u", "c", true))
+        assertThatThrownBy(() -> new IntentoLogin(1, 2, 2, "u", "c", true))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new Intento(1, 2, 3, null, "c", true))
+        assertThatThrownBy(() -> new IntentoLogin(1, 2, 3, null, "c", true))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> politica(soporte(true).intentos(), 0, Duration.ofSeconds(1)))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -298,7 +299,7 @@ class OraculosAutenticacionTest {
 
     private static PoliticaAutenticacion soporte(boolean debil) {
         return politica(
-                List.of(new Intento(1, 2, 3, "soporte", "soporte123", debil)),
+                List.of(new IntentoLogin(1, 2, 3, "soporte", "soporte123", debil)),
                 2,
                 Duration.ofSeconds(5));
     }
@@ -306,18 +307,19 @@ class OraculosAutenticacionTest {
     private static PoliticaAutenticacion repetidos() {
         return politica(
                 List.of(
-                        new Intento(1, 2, 3, "usuario", "incorrecta0", false),
-                        new Intento(4, 5, 6, "usuario", "incorrecta1", false),
-                        new Intento(7, 8, 9, "usuario", "valida", false)),
+                        new IntentoLogin(1, 2, 3, "usuario", "incorrecta0", false),
+                        new IntentoLogin(4, 5, 6, "usuario", "incorrecta1", false),
+                        new IntentoLogin(7, 8, 9, "usuario", "valida", false)),
                 2,
                 Duration.ofSeconds(5));
     }
 
-    private static PoliticaAutenticacion politica(List<Intento> intentos, int n, Duration retardo) {
+    private static PoliticaAutenticacion politica(
+            List<IntentoLogin> intentos, int n, Duration retardo) {
         return new PoliticaAutenticacion(
                 intentos,
                 n,
-                retardo,
+                retardo.toMillis(),
                 List.of(new Senal(TipoEvento.DIALOGO, Map.of("texto", "Credenciales inválidas"))),
                 List.of(new Senal(TipoEvento.DIALOGO, Map.of("texto", "Cuenta bloqueada"))));
     }
@@ -343,7 +345,10 @@ class OraculosAutenticacionTest {
                         null,
                         null,
                         null,
-                        politica == null ? Map.of() : Map.of("autenticacion", politica));
+                        null,
+                        null,
+                        politica,
+                        Map.of());
         return Contexto.deCaso(
                 proyecto, new Suite("login", null, null, null, List.of(caso), null), caso);
     }

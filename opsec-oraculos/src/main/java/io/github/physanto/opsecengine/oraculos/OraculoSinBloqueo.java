@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.oraculos;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaAutenticacion;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.extension.Momento;
 import io.github.physanto.opsecengine.dominio.extension.Oraculo;
@@ -44,8 +45,8 @@ public final class OraculoSinBloqueo implements Oraculo {
      * Comprueba si se aporta una política explícita de autenticación.
      *
      * @param caso caso recibido; se usa el del contexto
-     * @param contexto contexto con extensiones.autenticacion; puede ser null
-     * @return true si hay PoliticaAutenticacion
+     * @param contexto contexto con la política de autenticación del caso; puede ser null
+     * @return true si el caso declara una política de autenticación
      */
     @Override
     public boolean aplica(Caso caso, Contexto contexto) {
@@ -111,7 +112,8 @@ public final class OraculoSinBloqueo implements Oraculo {
         }
         Duration intervalo =
                 Duration.between(anterior.senal().instante(), actual.senal().instante());
-        if (intervalo.isNegative() || intervalo.compareTo(politica.retardoMinimo()) >= 0) {
+        if (intervalo.isNegative()
+                || intervalo.compareTo(Duration.ofMillis(politica.retardoMinimoMs())) >= 0) {
             return false;
         }
         Evento previo = anterior.senal();

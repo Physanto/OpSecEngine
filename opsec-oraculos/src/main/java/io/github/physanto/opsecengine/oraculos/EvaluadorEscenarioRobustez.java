@@ -1,12 +1,12 @@
 package io.github.physanto.opsecengine.oraculos;
 
+import io.github.physanto.opsecengine.dominio.caso.Senal;
 import io.github.physanto.opsecengine.dominio.resultado.Confianza;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
 import io.github.physanto.opsecengine.dominio.resultado.Veredicto;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
-import io.github.physanto.opsecengine.oraculos.PoliticaValidacionTemporal.Senal;
 import java.util.ArrayList;
 import java.util.List;
 

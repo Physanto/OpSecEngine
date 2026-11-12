@@ -22,6 +22,13 @@ import java.util.Objects;
  *     queda vacía, y no admite elementos null
  * @param oraculos identificadores de los oráculos que se evalúan además de los implícitos; si es
  *     null queda vacía, y no admite elementos null
+ * @param canario marca exacta que el caso escribe para rastrearla hasta SQL, Firestore o la
+ *     consola, ya materializada (sin llaves de plantilla); puede ser null si el caso no usa
+ *     canario. Desde contratos v1.2
+ * @param validacion política de validación del caso para el oráculo {@code
+ *     ENTRADA-INVALIDA-ACEPTADA}; puede ser null. Desde contratos v1.2
+ * @param autenticacion política de autenticación del caso para los oráculos {@code
+ *     CREDENCIALES-DEBILES} y {@code SIN-BLOQUEO}; puede ser null. Desde contratos v1.2
  * @param extensiones campos adicionales para cambios aditivos del contrato; si es null queda vacío,
  *     y no admite claves ni valores null
  */
@@ -32,15 +39,22 @@ public record Caso(
         List<Paso> pasos,
         List<String> ataques,
         List<String> oraculos,
+        String canario,
+        PoliticaValidacion validacion,
+        PoliticaAutenticacion autenticacion,
         Map<String, Object> extensiones) {
+
+    /** Longitud mínima de un canario, para que no se confunda con datos normales. */
+    public static final int LONGITUD_MINIMA_CANARIO = 4;
 
     /**
      * Crea un caso con copias inmutables de sus colecciones y valida sus datos.
      *
      * @throws NullPointerException si {@code id} es null o si alguna colección contiene elementos,
      *     claves o valores null
-     * @throws IllegalArgumentException si {@code id} está en blanco o si {@code rol} no es null y
-     *     está en blanco
+     * @throws IllegalArgumentException si {@code id} está en blanco, si {@code rol} no es null y
+     *     está en blanco, o si {@code canario} no es null y tiene menos de {@value
+     *     #LONGITUD_MINIMA_CANARIO} caracteres, espacios o llaves
      */
     public Caso {
         Objects.requireNonNull(id, "El id del caso no puede ser null");
@@ -53,10 +67,46 @@ public record Caso(
                             + id
                             + " no puede estar en blanco; use null para sin sesión");
         }
+        if (canario != null
+                && (canario.length() < LONGITUD_MINIMA_CANARIO
+                        || canario.chars()
+                                .anyMatch(
+                                        c -> Character.isWhitespace(c) || c == '{' || c == '}'))) {
+            throw new IllegalArgumentException(
+                    "El canario del caso "
+                            + id
+                            + " debe tener al menos "
+                            + LONGITUD_MINIMA_CANARIO
+                            + " caracteres, sin espacios ni llaves");
+        }
         pasos = pasos == null ? List.of() : List.copyOf(pasos);
         ataques = ataques == null ? List.of() : List.copyOf(ataques);
         oraculos = oraculos == null ? List.of() : List.copyOf(oraculos);
         extensiones = extensiones == null ? Map.of() : Map.copyOf(extensiones);
+    }
+
+    /**
+     * Crea un caso sin canario ni políticas, con la forma de los contratos v1 y v1.1.
+     *
+     * @param id identificador del caso; ver {@link Caso}
+     * @param descripcion explicación legible del caso; puede ser null
+     * @param rol rol con el que se inicia sesión; null para sin sesión
+     * @param pasos pasos del caso; si es null queda vacía
+     * @param ataques ids de ataques; si es null queda vacía
+     * @param oraculos ids de oráculos adicionales; si es null queda vacía
+     * @param extensiones campos adicionales; si es null queda vacío
+     * @throws NullPointerException si {@code id} es null o si alguna colección contiene null
+     * @throws IllegalArgumentException si {@code id} o {@code rol} están en blanco
+     */
+    public Caso(
+            String id,
+            String descripcion,
+            String rol,
+            List<Paso> pasos,
+            List<String> ataques,
+            List<String> oraculos,
+            Map<String, Object> extensiones) {
+        this(id, descripcion, rol, pasos, ataques, oraculos, null, null, null, extensiones);
     }
 
     /**

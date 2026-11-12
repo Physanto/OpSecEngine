@@ -95,6 +95,10 @@ eventos:
         tipo: texto
         obligatorio: false
         descripcion: Título de la ventana, si tiene.
+      - nombre: liberada
+        tipo: booleano
+        obligatorio: false
+        descripcion: Desde contratos v1.2. true si la ventana ya no conserva recursos nativos (isDisplayable() es false); false si solo se ocultó. Ausente si el agente no lo comprobó.
 
   - tipo: DIALOGO
     origen: [agente]
