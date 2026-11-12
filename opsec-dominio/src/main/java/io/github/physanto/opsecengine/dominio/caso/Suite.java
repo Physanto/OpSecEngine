@@ -19,6 +19,9 @@ import java.util.Set;
  * @param config configuración de ejecución; si es null se usa {@link ConfigEjecucion#porDefecto()}
  * @param casos casos en el orden en que se ejecutan, con ids únicos; si es null queda vacía, y no
  *     admite elementos null
+ * @param enumeracionUsuarios par de intentos de login que compara el oráculo {@code
+ *     ENUMERACION-USUARIOS}; puede ser null, y si no lo es sus dos casos deben estar en {@code
+ *     casos}. Desde contratos v1.2
  * @param extensiones campos adicionales para cambios aditivos del contrato; si es null queda vacío,
  *     y no admite claves ni valores null
  */
@@ -28,6 +31,7 @@ public record Suite(
         Set<Enfoque> enfoques,
         ConfigEjecucion config,
         List<Caso> casos,
+        ComparacionLogin enumeracionUsuarios,
         Map<String, Object> extensiones) {
 
     /**
@@ -35,8 +39,8 @@ public record Suite(
      *
      * @throws NullPointerException si {@code nombre} es null o si alguna colección contiene
      *     elementos, claves o valores null
-     * @throws IllegalArgumentException si {@code nombre} está en blanco o si hay dos casos con el
-     *     mismo id
+     * @throws IllegalArgumentException si {@code nombre} está en blanco, si hay dos casos con el
+     *     mismo id o si {@code enumeracionUsuarios} nombra un caso que no está en la suite
      */
     public Suite {
         Objects.requireNonNull(nombre, "El nombre de la suite no puede ser null");
@@ -55,5 +59,42 @@ public record Suite(
                         "La suite " + nombre + " tiene casos repetidos con el id " + caso.id());
             }
         }
+        if (enumeracionUsuarios != null) {
+            for (String id :
+                    List.of(
+                            enumeracionUsuarios.casoUsuarioInexistente(),
+                            enumeracionUsuarios.casoContrasenaIncorrecta())) {
+                if (!ids.contains(id)) {
+                    throw new IllegalArgumentException(
+                            "La comparación de enumeración de la suite "
+                                    + nombre
+                                    + " usa el caso "
+                                    + id
+                                    + ", que no existe");
+                }
+            }
+        }
+    }
+
+    /**
+     * Crea una suite sin comparación de enumeración, con la forma de los contratos v1 y v1.1.
+     *
+     * @param nombre nombre de la suite; ver {@link Suite}
+     * @param version versión de la suite; puede ser null
+     * @param enfoques enfoques; si es null queda vacío
+     * @param config configuración; si es null se usa la configuración por defecto
+     * @param casos casos con ids únicos; si es null queda vacía
+     * @param extensiones campos adicionales; si es null queda vacío
+     * @throws NullPointerException si {@code nombre} es null o si alguna colección contiene null
+     * @throws IllegalArgumentException si {@code nombre} está en blanco o hay ids repetidos
+     */
+    public Suite(
+            String nombre,
+            String version,
+            Set<Enfoque> enfoques,
+            ConfigEjecucion config,
+            List<Caso> casos,
+            Map<String, Object> extensiones) {
+        this(nombre, version, enfoques, config, casos, null, extensiones);
     }
 }
