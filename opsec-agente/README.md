@@ -19,7 +19,7 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `EmisorProtocolo` | `agente` | Implementa `EmisorEventos`: numera y envía los `EVENTO`; guarda los anteriores a la conexión y los envía después del saludo. |
 | `ObservadorConsola` | `agente` | Envuelve `System.out` y `System.err`; emite `CONSOLA` por línea sin cambiar lo que la app muestra. |
 | `RegistroAgente` | `agente` | Mensajes propios del agente en la salida de error original, con el prefijo `[opsec-agente]`. |
-| `AdaptadorSwing` | `agente.swing` | Implementa `AdaptadorToolkit`: `PULSAR`, `LLENAR`, `SELECCIONAR`, `MARCAR`, `IR_A`, `CERRAR_VENTANA` y `ESPERAR` en los modos `SEMANTICO` y `EVENTOS`, y el árbol de componentes. |
+| `AdaptadorSwing` | `agente.swing` | Implementa `AdaptadorToolkit`: `PULSAR`, `LLENAR`, `SELECCIONAR`, `MARCAR`, `IR_A`, `CERRAR_VENTANA` y `ESPERAR` en los modos `SEMANTICO` y `EVENTOS`, y el árbol de componentes con rutas, alcance y acciones. |
 | `AccionesEventos` | `agente.swing` | Envía eventos sintéticos de ratón y teclado al componente elegido, en el EDT. |
 | `Seleccion` | `agente.swing` | Busca una opción por su texto en un combo, una lista, una tabla o un árbol y la selecciona. |
 | `Navegacion` | `agente.swing` | `IR_A` (elige pestañas y trae la ventana al frente) y `CERRAR_VENTANA` (envía `WINDOW_CLOSING`). |
@@ -76,6 +76,24 @@ con `Locale.ROOT`, eliminan diacríticos y colapsan espacios. Así, `contrasena`
 `Contraseña` y `  iniciar   sesion ` encuentra `Iniciar Sesión`. Varias coincidencias flexibles
 producen `NO_ENCONTRADO` con motivo `ambiguo`; no se elige arbitrariamente.
 
+### Árbol de la interfaz
+
+`ARBOL` describe todas las ventanas visibles en el EDT, incluidos diálogos y menús emergentes
+abiertos. Los menús ligeros forman parte de la ventana que los contiene; los pesados aparecen
+en su propia ventana. Cada nodo incluye `ruta`, `alcanzable` y `acciones` (contratos-v1.4).
+
+Las rutas conservan los contenedores internos y los índices reales del árbol Swing. Se prefiere
+el título de la ventana; si está vacío o contiene `/`, se usa su nombre y, si tampoco sirve,
+su clase simple. `alcanzable` exige visibilidad, estado habilitado, ancestros visibles,
+tamaño positivo e intersección con el área de su ventana. Funciona aunque esta esté fuera de
+las pantallas físicas. No comprueba si otra ventana del escritorio tapa el control.
+
+Las acciones describen las capacidades del tipo de control incluso cuando está oculto o
+deshabilitado: `PULSAR`, `LLENAR`, `SELECCIONAR`, `MARCAR` e `IR_A`. Los nodos internos
+`JRootPane`, `JLayeredPane`, el glass pane y sus descendientes no ofrecen acciones para la
+exploración. Se mantienen en la estructura y en las rutas. Las contraseñas se describen sin
+exponer su contenido.
+
 ### Pendiente para el dueño del módulo (P1)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
@@ -101,6 +119,13 @@ Las pruebas unitarias usan `MotorFalso` de `opsec-soporte-pruebas` para probar e
 `BuscadorComponentesTest` comprueba en ventanas reales la cercanía horizontal y vertical, los empates, la prioridad de `setLabelFor`, las rutas y la comparación flexible. Se omite sin pantalla.
 
 La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo mediante una etiqueta sin `setLabelFor`, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol; además selecciona en un combo, marca una casilla, va a una pestaña, cierra un diálogo y pide capturas de la ventana y del diálogo modal; otra prueba lanza excepciones sin capturar en el EDT y en otro hilo y comprueba sus eventos. También se comprueba que un diálogo reutilizado emita `liberada=false` al ocultarse y `true` al destruirse, y que después de `CERRAR` la app termine con código 0: la ventana recibe el pedido de cierre y, sin ventanas, el agente fuerza la salida. Repite las pruebas con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
+
+`DescriptorComponentesTest` comprueba las acciones por tipo (también sin pantalla), la
+protección de contraseñas, las rutas, el alcance, el glass pane y los menús ligeros y pesados.
+`ArbolAppPracticaIT` arranca el jar real, navega hasta `InicioSesion` y compara la estructura,
+los nombres y las acciones con `contratos/protocolo/ejemplos/arbol.json`. Verifica además las
+rutas de sus controles accionables. La dependencia de prueba en la app solo ordena el reactor;
+se excluye del classpath de las pruebas. Las pruebas que necesitan ventanas se omiten sin pantalla.
 
 Desde la raíz del repositorio:
 
