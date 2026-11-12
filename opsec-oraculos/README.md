@@ -55,6 +55,34 @@ la marca y los eventos JDBC o Firestore. Los oráculos no instrumentan la aplica
 canarios de texto arbitrario. La [solicitud de contrato](solicitud-contrato-42.md) propone
 formalizar la asociación entre caso y canario; la conexión al núcleo sigue pendiente.
 
+## Enumeración de usuarios (#43)
+
+`OraculoEnumeracionUsuarios` (`ENUMERACION-USUARIOS`, `SUITE`, CWE-204) compara los textos
+ordenados de los diálogos de dos intentos de login fallidos. El llamador debe aportar una
+instancia Java de `ComparacionEnumeracionUsuarios` en
+`Suite.extensiones().get("enumeracionUsuarios")`: caso de usuario inexistente y su paso de
+envío, caso de cuenta existente con contraseña incorrecta y su paso de envío. Debe garantizar
+que los datos representan esos escenarios y que ambos usan el mismo formulario.
+Para `c01-c02-mensajes.jsonl`, la instancia es
+`new ComparacionEnumeracionUsuarios("C01", 5, "C02", 5)`; la prueba produce `NO_CUMPLE` por F5.
+La traza corregida con el mismo mensaje en ambos casos no activa el oráculo.
+
+Cada caso debe pertenecer a la suite y tener una sola traza y un único inicio del paso de envío.
+Solo se comparan diálogos del propio caso y paso entre `PASO_INICIO` con `PULSAR` y `PASO_FIN`
+con `OK`. Se descartan intentos con sesión activa, respuestas sin texto, envíos incompletos,
+acciones intercaladas, reintentos y diálogos del envío que llegan después de su finalización.
+Compara contenido, cantidad y orden de los textos, omitiendo solo espacios exteriores;
+no compara títulos, opciones, tipos de diálogo ni tiempos.
+
+Las diferencias producen un hallazgo `PROBABLE`, sin copiar mensajes ni credenciales.
+La explicación identifica los dos casos; la evidencia lista primero las secuencias de diálogos
+del usuario inexistente y luego las de contraseña incorrecta. Sin configuración o evidencia
+suficiente no hay hallazgos: el `CUMPLE` del evaluador existente no acredita entonces ausencia
+de enumeración. Un mapa de YAML no se transforma en el adaptador automáticamente. La
+[solicitud de contrato](solicitud-contrato-43.md) propone formalizar esta configuración;
+la carga y conexión al núcleo siguen pendientes. No se infieren escenarios desde ids,
+descripciones, nombres de usuario ni frases propias de una aplicación.
+
 ## Evaluación por momento
 
 `OraculoSinSesion` (id `SIN-SESION`, momento `CASO`, CWE-306) detecta operaciones SQL o
@@ -170,7 +198,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos de seguridad del catálogo (v0.3): `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos de seguridad del catálogo (v0.3): `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
 ## Dependencias permitidas
 
