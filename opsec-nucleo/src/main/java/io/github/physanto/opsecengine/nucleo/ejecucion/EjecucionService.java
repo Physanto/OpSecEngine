@@ -105,6 +105,12 @@ import java.util.logging.Logger;
  * NO_CONCLUYENTE} con ese motivo, salvo que un oráculo encuentre un fallo. Lo mismo pasa si la
  * sesión no se puede abrir. Al final se evalúan los oráculos de suite y se arma el manifiesto.
  *
+ * <p>Si un caso declara {@code extensiones.payloads} como lista de textos, se ejecuta una copia
+ * independiente por valor, sustituyendo {@code {payload}} literalmente en los pasos LLENAR. Sus ids
+ * terminan en {@code -P1}, {@code -P2}, etc.; cada copia abre una sesión y conserva su propia
+ * traza, evaluación y capturas. La expansión se valida antes de abrir cualquier sesión. Esto no
+ * selecciona ataques por id del catálogo ni genera canarios.
+ *
  * <p>Ejemplo:
  *
  * <pre>{@code
@@ -261,9 +267,12 @@ public final class EjecucionService {
      * @param suite suite a ejecutar; no puede ser null
      * @return el resultado, con un resultado por caso, los hallazgos de suite y el manifiesto
      * @throws NullPointerException si {@code suite} es null
+     * @throws IllegalArgumentException si extensiones.payloads es inválida, falta su marcador o sus
+     *     ids expandidos colisionan; se valida antes de abrir sesiones
      */
     public ResultadoSuite ejecutar(Suite suite) {
         Objects.requireNonNull(suite, "La suite no puede ser null");
+        suite = ExpansorPayloads.expandir(suite);
         Instant inicio = Instant.now();
         notificar(suite, null, ProgresoEjecucion.Tipo.SUITE_INICIO, 0, false, null);
         List<ResultadoCaso> resultados = new ArrayList<>();
