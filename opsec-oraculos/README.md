@@ -333,6 +333,33 @@ los arma `GeneracionService` del núcleo, que crea el generador con `GeneradorVa
 Este módulo no descubre campos ni lee la biblioteca. La generación
 no ejecuta ni comprueba en la GUI los casos base aportados.
 
+## Proveedor de evaluación (#23)
+
+`ProveedorEvaluacionOraculos` implementa `ProveedorEvaluacion` de dominio y está registrado
+en `META-INF/services/io.github.physanto.opsecengine.dominio.extension.ProveedorEvaluacion`.
+El consumidor lo descubre con `ServiceLoader` sin importar clases de este módulo. Solo se
+registra la fábrica: `EvaluadorOraculos` implementa `Evaluador` y su sesión implementa
+`EvaluacionCaso`, conservando los métodos y el tipo de sesión anteriores.
+
+La fábrica recibe los oráculos registrados y una carpeta opcional de reglas. Con null no
+lee archivos. Con una carpeta vacía no agrega reglas; una carpeta indicada pero ausente
+o ilegible produce `IOException`. Las reglas se cargan en UTF-8 y orden de archivo mediante
+`CargadorReglas`; se agregan después de los oráculos Java y se rechazan ids duplicados en
+todo el conjunto. Cada llamada copia la colección y devuelve un evaluador nuevo.
+
+La evaluación usa `Oraculo.evaluarResultado`, incluidos sus hallazgos y motivos. Una falta
+provisional de evidencia de un oráculo EVENTO se reemplaza por su evaluación más reciente;
+un error de ejecución o un id solicitado ausente persisten. Los hallazgos se acumulan sin
+repetidos y un fallo confirmado o probable tiene prioridad sobre los motivos no concluyentes.
+El motivo de ejecución incompleta se conserva al terminar. El contexto y la secuencia de
+cada evento se validan antes de incorporarlo, y el cierre de cada sesión es único.
+
+`ProveedorEvaluacionOraculosTest` verifica el descubrimiento, las reglas de los tres momentos,
+la copia de los oráculos, las carpetas vacías o ausentes, los ids duplicados y las reglas
+inválidas. `EvaluadorOraculosTest` verifica además los veredictos completos de caso y suite,
+la recuperación de falta de evidencia, los errores persistentes y los veredictos nulos.
+La conexión de este proveedor a la ejecución del núcleo sigue siendo el paso posterior de #23.
+
 ## Reglas YAML
 
 `new CargadorReglas().cargarCarpeta(ruta)` carga los archivos `*.yaml` de una carpeta en orden de
