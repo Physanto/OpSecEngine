@@ -103,14 +103,18 @@ import java.util.logging.Logger;
  * }
  * }</pre>
  *
+ * <p>El constructor con {@link ObservadorProgreso} permite recibir el inicio y fin de suite, caso y
+ * paso, incluidos los pasos de login. Las notificaciones son síncronas, no contienen valores ni
+ * credenciales y los fallos del observador se registran sin detener la ejecución. El constructor
+ * original usa {@link ObservadorProgreso#VACIO}.
+ *
  * <p>Ejecuta un caso a la vez; no es seguro entre hilos.
  *
  * <p>Lo que falta y su versión:
  *
  * <ul>
  *   <li>v0.1: preparar y restaurar los datos con {@code ProveedorDatos} y consultar el estado
- *       final; inferir la sesión activa cuando el caso inicia sesión con sus propios pasos; eventos
- *       de progreso para la presentación.
+ *       final; inferir la sesión activa cuando el caso inicia sesión con sus propios pasos.
  *   <li>v0.2: expandir los ataques del caso, un intento por payload (hoy un caso con ataques queda
  *       {@code NO_CONCLUYENTE} sin ejecutarse).
  *   <li>v0.3: reintentos y marca de inestables; casos en paralelo según {@code paralelismo};
@@ -152,6 +156,7 @@ public final class EjecucionService {
     private final Proyecto proyecto;
     private final SesionService sesiones;
     private final EvaluacionService evaluacion;
+    private final ObservadorProgreso observador;
 
     /**
      * Crea el servicio.
@@ -164,6 +169,26 @@ public final class EjecucionService {
      */
     public EjecucionService(
             Proyecto proyecto, SesionService sesiones, EvaluacionService evaluacion) {
+        this(proyecto, sesiones, evaluacion, ObservadorProgreso.VACIO);
+    }
+
+    /**
+     * Crea el servicio con un observador de progreso síncrono.
+     *
+     * @param proyecto proyecto con la aplicación probada; no puede ser null
+     * @param sesiones servicio que abre una sesión por caso; no puede ser null ni tener sesión
+     *     abierta
+     * @param evaluacion servicio que aplica los oráculos; no puede ser null
+     * @param observador receptor de las notificaciones; no puede ser null; para omitirlas use
+     *     {@link ObservadorProgreso#VACIO}
+     * @throws NullPointerException si algún parámetro es null
+     */
+    public EjecucionService(
+            Proyecto proyecto,
+            SesionService sesiones,
+            EvaluacionService evaluacion,
+            ObservadorProgreso observador) {
+        this.observador = Objects.requireNonNull(observador, "El observador no puede ser null");
         this.proyecto = Objects.requireNonNull(proyecto, "El proyecto no puede ser null");
         this.sesiones = Objects.requireNonNull(sesiones, "El servicio de sesiones es null");
         this.evaluacion = Objects.requireNonNull(evaluacion, "El servicio de evaluación es null");
@@ -179,6 +204,7 @@ public final class EjecucionService {
     public ResultadoSuite ejecutar(Suite suite) {
         Objects.requireNonNull(suite, "La suite no puede ser null");
         Instant inicio = Instant.now();
+        notificar(suite, null, ProgresoEjecucion.Tipo.SUITE_INICIO, 0, false, null);
         List<ResultadoCaso> resultados = new ArrayList<>();
         List<Traza> trazas = new ArrayList<>();
         for (Caso caso : suite.casos()) {
@@ -189,13 +215,22 @@ public final class EjecucionService {
         List<Hallazgo> hallazgosSuite =
                 evaluacion.evaluarSuite(Contexto.deSuite(proyecto, suite, trazas));
         Instant fin = Instant.now();
-        return new ResultadoSuite(
-                suite.nombre(), manifiesto(suite, inicio), resultados, hallazgosSuite, inicio, fin);
+        ResultadoSuite resultado =
+                new ResultadoSuite(
+                        suite.nombre(),
+                        manifiesto(suite, inicio),
+                        resultados,
+                        hallazgosSuite,
+                        inicio,
+                        fin);
+        notificar(suite, null, ProgresoEjecucion.Tipo.SUITE_FIN, 0, false, null);
+        return resultado;
     }
 
     private ResultadoCaso ejecutarCaso(Suite suite, Caso caso) {
         long comienzo = System.nanoTime();
-        TrazaEnCurso traza = new TrazaEnCurso(caso);
+        notificar(suite, caso, ProgresoEjecucion.Tipo.CASO_INICIO, 0, false, null);
+        TrazaEnCurso traza = new TrazaEnCurso(suite, caso);
         String motivo;
         Optional<Rol> rol = caso.rol() == null ? Optional.empty() : proyecto.buscarRol(caso.rol());
         if (caso.rol() != null && rol.isEmpty()) {
@@ -214,13 +249,16 @@ public final class EjecucionService {
         Traza completa = traza.terminar();
         Veredicto veredicto =
                 evaluacion.evaluarCaso(completa, Contexto.deCaso(proyecto, suite, caso), motivo);
-        return new ResultadoCaso(
-                caso.id(),
-                veredicto,
-                completa,
-                Duration.ofNanos(System.nanoTime() - comienzo),
-                1,
-                false);
+        ResultadoCaso resultado =
+                new ResultadoCaso(
+                        caso.id(),
+                        veredicto,
+                        completa,
+                        Duration.ofNanos(System.nanoTime() - comienzo),
+                        1,
+                        false);
+        notificar(suite, caso, ProgresoEjecucion.Tipo.CASO_FIN, 0, false, null);
+        return resultado;
     }
 
     /**
@@ -334,6 +372,13 @@ public final class EjecucionService {
         poner(inicio, "valor", valorTraza);
         inicio.put("modo", dto.getModo());
         traza.motor(TipoEvento.PASO_INICIO, numero, inicio);
+        notificar(
+                traza.suite,
+                traza.caso,
+                ProgresoEjecucion.Tipo.PASO_INICIO,
+                paso.orden(),
+                numero == 0,
+                null);
 
         long comienzo = System.nanoTime();
         ResultadoPasoDto resultado;
@@ -365,6 +410,13 @@ public final class EjecucionService {
         poner(fin, "detalle", resultado.getDetalle());
         fin.put("duracionMs", resultado.getDuracionMs());
         traza.motor(TipoEvento.PASO_FIN, numero, fin);
+        notificar(
+                traza.suite,
+                traza.caso,
+                ProgresoEjecucion.Tipo.PASO_FIN,
+                paso.orden(),
+                numero == 0,
+                resultado.getCodigo());
 
         if (resultado.getCodigo() == CodigoResultado.OK) {
             return null;
@@ -489,6 +541,32 @@ public final class EjecucionService {
         }
     }
 
+    private void notificar(
+            Suite suite,
+            Caso caso,
+            ProgresoEjecucion.Tipo tipo,
+            int numeroPaso,
+            boolean login,
+            CodigoResultado codigo) {
+        ProgresoEjecucion progreso =
+                new ProgresoEjecucion(
+                        tipo,
+                        suite.nombre(),
+                        suite.casos().size(),
+                        caso == null ? null : caso.id(),
+                        numeroPaso,
+                        caso == null
+                                ? 0
+                                : (login ? proyecto.pasosLogin().size() : caso.pasos().size()),
+                        login,
+                        codigo);
+        try {
+            observador.actualizar(progreso);
+        } catch (RuntimeException e) {
+            REGISTRO.log(Level.WARNING, "Falló el observador de progreso", e);
+        }
+    }
+
     private static void poner(Map<String, Object> datos, String clave, Object valor) {
         if (valor != null) {
             datos.put(clave, valor);
@@ -498,11 +576,13 @@ public final class EjecucionService {
     /** Eventos de la traza de un caso, numerados en orden de llegada. */
     private static final class TrazaEnCurso {
 
+        private final Suite suite;
         private final Caso caso;
         private final List<Evento> eventos = new ArrayList<>();
         private boolean sesionActiva;
 
-        TrazaEnCurso(Caso caso) {
+        TrazaEnCurso(Suite suite, Caso caso) {
+            this.suite = suite;
             this.caso = caso;
         }
 
