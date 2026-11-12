@@ -1,6 +1,6 @@
 # opsec-cli
 
-Interfaz de línea de comandos del motor (comando `opsec`). Hoy tiene `version`, `validar` y una primera versión de `ejecutar`; `explorar`, `generar`, `informe` y `verificar` llegan desde la v0.1. Solo habla con los servicios del núcleo.
+Interfaz de línea de comandos del motor (comando `opsec`). Hoy tiene `version`, `validar`, `verificar` y una primera versión de `ejecutar`; `explorar`, `generar` e `informe` llegan en la v0.2. Solo habla con los servicios del núcleo.
 
 - **Dueño:** P3 (salidas).
 - **Paquete raíz:** `io.github.physanto.opsecengine.cli`
@@ -21,16 +21,34 @@ El jar trae dentro el jar del agente (recurso `opsec-agente.jar`, que se copia a
 |---|---|
 | `opsec version` (o `opsec --version`) | Muestra la versión del motor y la de Java. |
 | `opsec validar <proyecto.yaml>` | Valida el proyecto y las suites de su carpeta `suites/`, sin ejecutar nada. Si hay errores los muestra con la ruta del campo. |
-| `opsec ejecutar <proyecto.yaml> [--suite <suite.yaml>]... [--resultados <carpeta>] [--agente <jar>]` | Ejecuta las suites indicadas (o todas las de `suites/`) contra la app, muestra el veredicto y los hallazgos de cada caso, y escribe `resultado.json` y la salida de la app en `<resultados>/<suite>/`. Por defecto `<resultados>` es `resultados/<AAAA-MM-DD_HHmmss>` junto al proyecto. |
+| `opsec verificar <proyecto.yaml> [--agente <jar>]` | Comprueba, sin ejecutar casos, que todo está listo (ver abajo). Abre la aplicación unos segundos. |
+| `opsec ejecutar <proyecto.yaml> [--suite <suite.yaml>]... [--formato <formato>[,<formato>...]] [--resultados <carpeta>] [--agente <jar>]` | Ejecuta las suites indicadas (o todas las de `suites/`) contra la app, muestra el veredicto y los hallazgos de cada caso, y escribe los informes de los formatos pedidos y la salida de la app en `<resultados>/<suite>/`. Por defecto `<resultados>` es `resultados/<AAAA-MM-DD_HHmmss>` junto al proyecto. |
 
-Códigos de salida: 0 si todo salió bien (en `ejecutar`, si todos los casos cumplen), 1 si hay errores en los archivos o no se pudo ejecutar, 2 si los argumentos no son válidos, 3 si algún caso no cumple y 4 si ninguno falla pero alguno quedó no concluyente. Los códigos 3 y 4 permiten usar `opsec ejecutar` en una CI.
+### Verificación previa (`verificar`)
+
+Hace estas comprobaciones en orden y se detiene en la primera que falla. Cada una escribe una línea `[OK]`, `[AVISO]` o `[FALLO]`:
+
+1. El proyecto y las suites de `suites/` son válidos (sin suites es solo un aviso).
+2. Existe el JAR de la aplicación.
+3. Se encuentra el jar del agente (el que trae la CLI o el de `--agente`).
+4. Conexión: se arranca la aplicación con el agente, se espera su saludo (hasta 30 s) y se cierra. Si falla, muestra las últimas líneas de la salida de error de la aplicación y la carpeta temporal con sus registros completos.
+
+Códigos de salida: 0 si todo está listo; 1 si el proyecto, una suite o un jar no son válidos o no existen; 5 si la aplicación no arranca o el agente no saluda a tiempo; 2 si los argumentos no son válidos.
+
+Cuando exista `VerificacionService` en el núcleo, el comando también comprobará que los localizadores de las suites existen en la aplicación (hoy no lo hace).
+
+### Formatos de informe (`--formato`, `-f`)
+
+Lista separada por comas (`--formato html,json`) o repetida (`-f html -f json`). Sin la opción se genera `json`. Los nombres no distinguen mayúsculas y se ignoran los repetidos. Cada formato debe tener un reportero registrado (el núcleo los descubre con `ServiceLoader`): hoy `json` (`resultado.json`); `html` (`informe.html`) llegará con el reportero de `opsec-informes`. Se validan antes de lanzar la app: si alguno no existe, el comando termina con código 2 y muestra los formatos disponibles.
+
+Códigos de salida: 0 si todo salió bien (en `ejecutar`, si todos los casos cumplen), 1 si hay errores en los archivos o no se pudo ejecutar, 2 si los argumentos no son válidos (por ejemplo, un formato que no existe), 3 si algún caso no cumple y 4 si ninguno falla pero alguno quedó no concluyente. Los códigos 3 y 4 permiten usar `opsec ejecutar` en una CI.
 
 ## Pendiente para el dueño del módulo (P3, salidas)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
-1. Reportero HTML (línea de tiempo, capturas, veredicto por caso) y agregarlo a los formatos de `ejecutar` (hoy solo `json`), con una opción `--formato`.
-2. Comando `verificar` (autoverificación previa) y opciones de `ejecutar` para el modo visible u oculto y el paralelismo cuando el núcleo los soporte.
+1. Reportero HTML (línea de tiempo, capturas, veredicto por caso); la opción `--formato` ya existe y lo usará en cuanto esté registrado.
+2. Opciones de `ejecutar` para el modo visible u oculto y el paralelismo cuando el núcleo los soporte; y que `verificar` use `VerificacionService` cuando exista.
 3. Mostrar el progreso mientras se ejecuta (el núcleo todavía no emite eventos de progreso).
 4. Comandos `explorar`, `generar` e `informe` (v0.2).
 

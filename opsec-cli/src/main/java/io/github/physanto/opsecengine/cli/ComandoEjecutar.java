@@ -21,12 +21,15 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
@@ -37,13 +40,17 @@ import picocli.CommandLine.Spec;
  * <p>Carga el proyecto y las suites (las indicadas con {@code --suite} o, si no hay, todas las de
  * la carpeta {@code suites/} junto al proyecto). Cada suite se ejecuta con {@link
  * EjecucionService}, lanzando la aplicación con el agente que trae la CLI, y su resultado se
- * escribe con los reporteros registrados en {@code <resultados>/<suite>/}. Por defecto {@code
- * <resultados>} es {@code resultados/<AAAA-MM-DD_HHmmss>} junto al proyecto. En la consola se
- * muestra el veredicto de cada caso y sus hallazgos.
+ * escribe con los reporteros de los formatos pedidos con {@code --formato} (por defecto {@value
+ * #FORMATO_POR_DEFECTO}) en {@code <resultados>/<suite>/}. Por defecto {@code <resultados>} es
+ * {@code resultados/<AAAA-MM-DD_HHmmss>} junto al proyecto. En la consola se muestra el veredicto
+ * de cada caso y sus hallazgos.
+ *
+ * <p>Los formatos se validan contra los reporteros registrados antes de lanzar la aplicación.
  *
  * <p>Códigos de salida: 0 si todos los casos cumplen; {@value #CODIGO_ERROR} si el proyecto o una
- * suite no son válidos o no se pudo ejecutar; {@value #CODIGO_NO_CUMPLE} si algún caso no cumple;
- * {@value #CODIGO_NO_CONCLUYENTE} si ninguno falla pero alguno quedó no concluyente.
+ * suite no son válidos o no se pudo ejecutar; 2 si un argumento no es válido, por ejemplo un
+ * formato que no existe; {@value #CODIGO_NO_CUMPLE} si algún caso no cumple; {@value
+ * #CODIGO_NO_CONCLUYENTE} si ninguno falla pero alguno quedó no concluyente.
  */
 @Command(
         name = "ejecutar",
@@ -64,8 +71,8 @@ public final class ComandoEjecutar implements Callable<Integer> {
     /** Código de salida cuando ningún caso falla pero alguno quedó no concluyente. */
     public static final int CODIGO_NO_CONCLUYENTE = 4;
 
-    /** Formatos de informe que se generan. */
-    static final List<String> FORMATOS = List.of("json");
+    /** Formato de informe que se genera cuando no se indica {@code --formato}. */
+    static final String FORMATO_POR_DEFECTO = "json";
 
     private static final DateTimeFormatter FECHA =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss", Locale.ROOT);
@@ -90,6 +97,16 @@ public final class ComandoEjecutar implements Callable<Integer> {
             description =
                     "Carpeta de resultados. Por defecto, resultados/<fecha> junto al proyecto.")
     private Path resultados;
+
+    @Option(
+            names = {"-f", "--formato"},
+            paramLabel = "<formato>",
+            split = ",",
+            description =
+                    "Formatos del informe, separados por comas (por ejemplo html,json) o"
+                            + " repetidos. Por defecto: ${DEFAULT-VALUE}.",
+            defaultValue = FORMATO_POR_DEFECTO)
+    private List<String> formatos = new ArrayList<>();
 
     @Option(
             names = "--agente",
@@ -125,6 +142,14 @@ public final class ComandoEjecutar implements Callable<Integer> {
     }
 
     private int ejecutar(PrintWriter salida) throws IOException, ExcepcionConfiguracion {
+        RegistroExtensiones registro = RegistroExtensiones.descubrir();
+        List<String> formatosPedidos;
+        try {
+            formatosPedidos =
+                    resolverFormatos(formatos, new InformeService(registro).formatosDisponibles());
+        } catch (IllegalArgumentException e) {
+            throw new ParameterException(spec.commandLine(), e.getMessage(), e);
+        }
         ProyectoService servicio = new ProyectoService();
         Proyecto proyecto = servicio.cargarProyecto(archivo);
         Path carpetaProyecto = archivo.toAbsolutePath().getParent();
@@ -151,7 +176,6 @@ public final class ComandoEjecutar implements Callable<Integer> {
                         : carpetaProyecto
                                 .resolve("resultados")
                                 .resolve(LocalDateTime.now().format(FECHA));
-        RegistroExtensiones registro = RegistroExtensiones.descubrir();
         Resumen resumen = new Resumen();
         for (Suite suite : cargadas) {
             Path carpetaSuite = carpetaResultados.resolve(suite.nombre());
@@ -162,7 +186,7 @@ public final class ComandoEjecutar implements Callable<Integer> {
                         new EjecucionService(proyecto, sesiones, new EvaluacionService(registro))
                                 .ejecutar(suite);
             }
-            new InformeService(registro).generar(resultado, carpetaSuite, FORMATOS);
+            new InformeService(registro).generar(resultado, carpetaSuite, formatosPedidos);
             mostrar(salida, resultado, carpetaSuite, resumen);
         }
         salida.println();
@@ -178,6 +202,39 @@ public final class ComandoEjecutar implements Callable<Integer> {
             return CODIGO_NO_CUMPLE;
         }
         return resumen.noConcluyentes > 0 ? CODIGO_NO_CONCLUYENTE : 0;
+    }
+
+    /**
+     * Normaliza y valida los formatos pedidos con {@code --formato}.
+     *
+     * <p>Cada formato se pasa a minúsculas y se ignoran los espacios a sus lados; los repetidos se
+     * descartan conservando el orden en que se pidieron. Si no se pidió ninguno, se usa {@value
+     * #FORMATO_POR_DEFECTO}.
+     *
+     * @param pedidos formatos pedidos por el usuario; no puede ser null
+     * @param disponibles formatos que tienen un reportero registrado; no puede ser null
+     * @return formatos que se generan, en orden y sin repetir; nunca vacía
+     * @throws IllegalArgumentException si algún formato está vacío o no está disponible; el mensaje
+     *     lista los formatos disponibles
+     */
+    static List<String> resolverFormatos(List<String> pedidos, Set<String> disponibles) {
+        List<String> origen = pedidos.isEmpty() ? List.of(FORMATO_POR_DEFECTO) : pedidos;
+        Set<String> resueltos = new LinkedHashSet<>();
+        for (String pedido : origen) {
+            String formato = pedido.strip().toLowerCase(Locale.ROOT);
+            if (formato.isEmpty()) {
+                throw new IllegalArgumentException("El formato no puede estar vacío");
+            }
+            if (!disponibles.contains(formato)) {
+                throw new IllegalArgumentException(
+                        "Formato desconocido: "
+                                + pedido.strip()
+                                + "; los disponibles son "
+                                + String.join(", ", disponibles));
+            }
+            resueltos.add(formato);
+        }
+        return List.copyOf(resueltos);
     }
 
     private static void mostrar(
