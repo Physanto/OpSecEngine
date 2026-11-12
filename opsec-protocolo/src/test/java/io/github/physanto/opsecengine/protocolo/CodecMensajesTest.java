@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
+import io.github.physanto.opsecengine.protocolo.dto.NodoArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -151,6 +153,91 @@ class CodecMensajesTest {
         assertThat(evento.getDatos()).containsOnlyKeys("sql");
         assertThatThrownBy(() -> config.getCanarios().add("C3"))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void arbolConservaRutaAlcanzabilidadYAccionesEnLaIdaYVuelta() throws Exception {
+        NodoArbolDto nodo =
+                new NodoArbolDto(
+                        "javax.swing.JButton",
+                        "Aceptar",
+                        "boton",
+                        null,
+                        true,
+                        true,
+                        false,
+                        null,
+                        "Inicio/JButton[0]",
+                        true,
+                        List.of("PULSAR"));
+        ArbolDto arbol = new ArbolDto(List.of(nodo));
+        Mensaje mensaje =
+                codec.deserializar(codec.serializar(codec.crear(TipoMensaje.ARBOL, arbol)));
+        assertThat(codec.leerCuerpo(mensaje, ArbolDto.class)).isEqualTo(arbol);
+        assertThat(mensaje.getCuerpo().path("ventanas").get(0).path("ruta").asText())
+                .isEqualTo("Inicio/JButton[0]");
+    }
+
+    @Test
+    void arbolAntiguoUsaValoresPorDefectoEIgnoraCamposDesconocidosEnLosHijos() throws Exception {
+        String json =
+                "{\"version\":1,\"tipo\":\"ARBOL\",\"id\":\"a\",\"cuerpo\":{\"ventanas\":["
+                        + "{\"tipo\":\"javax.swing.JFrame\",\"hijos\":[{\"tipo\":\"javax.swing.JButton\","
+                        + "\"futuro\":123}]}]}}";
+        NodoArbolDto ventana =
+                codec.leerCuerpo(codec.deserializar(json), ArbolDto.class).getVentanas().get(0);
+        for (NodoArbolDto nodo : List.of(ventana, ventana.getHijos().get(0))) {
+            assertThat(nodo.getRuta()).isNull();
+            assertThat(nodo.isAlcanzable()).isFalse();
+            assertThat(nodo.getAcciones()).isEmpty();
+            assertThat(nodo)
+                    .isEqualTo(
+                            new NodoArbolDto(
+                                    nodo.getTipo(),
+                                    null,
+                                    null,
+                                    null,
+                                    false,
+                                    false,
+                                    false,
+                                    nodo.getHijos()));
+        }
+    }
+
+    @Test
+    void lasAccionesDelNodoSonUnaCopiaInmutable() {
+        List<String> acciones = new ArrayList<>(List.of("PULSAR"));
+        NodoArbolDto nodo =
+                new NodoArbolDto(
+                        "Boton",
+                        null,
+                        null,
+                        null,
+                        true,
+                        true,
+                        false,
+                        null,
+                        "Inicio/Boton[0]",
+                        true,
+                        acciones);
+        acciones.add("IR_A");
+        assertThat(nodo.getAcciones()).containsExactly("PULSAR");
+        assertThatThrownBy(() -> nodo.getAcciones().add("MARCAR"))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() ->
+                        new NodoArbolDto(
+                                "Boton",
+                                null,
+                                null,
+                                null,
+                                true,
+                                true,
+                                false,
+                                null,
+                                null,
+                                false,
+                                java.util.Arrays.asList("PULSAR", null)))
+                .isInstanceOf(NullPointerException.class);
     }
 
     @Test
