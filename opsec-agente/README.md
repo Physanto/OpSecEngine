@@ -27,7 +27,7 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `BuscadorComponentes` | `agente.swing` | Resuelve localizadores: `ETIQUETA` (`setLabelFor`), `TEXTO`, `NOMBRE_COMPONENTE`, `NOMBRE_ACCESIBLE`, `TIPO`, `TITULO_VENTANA`, `CLASE_VENTANA`; verifica que el componente sea alcanzable. |
 | `EjecutorEdt` | `agente.swing` | Ejecuta en el EDT con tiempo máximo; detecta cuando una acción abre un diálogo modal. |
 | `ObservadorExcepciones` | `agente.swing` | Manejador por defecto de excepciones no capturadas: emite `EXCEPCION` (`capturada=false`) por las del EDT y las de los demás hilos y las pasa al manejador anterior. |
-| `ObservadorVentanas` | `agente.swing` | Emite `VENTANA_ABIERTA`, `VENTANA_CERRADA` y `DIALOGO` (con el texto de los `JOptionPane`). |
+| `ObservadorVentanas` | `agente.swing` | Emite `VENTANA_ABIERTA`, `VENTANA_CERRADA` (con `liberada`) y `DIALOGO` (con el texto de los `JOptionPane`). |
 | `DescriptorComponentes` | `agente.swing` | Describe componentes como `NodoArbolDto`; nunca incluye el texto de un `JPasswordField`. |
 
 Comportamiento que conviene conocer:
@@ -41,6 +41,7 @@ Comportamiento que conviene conocer:
 - `CERRAR_VENTANA` envía `WINDOW_CLOSING` a la ventana del objetivo, como el botón de cierre, en los dos modos. La app decide qué hacer: ocultarla, destruirla, pedir confirmación o terminar (en ese caso el motor no recibe el resultado del paso). El paso termina con `OK` aunque la ventana siga abierta.
 - Si la acción abre un diálogo modal, el paso termina con `OK` apenas aparece el diálogo.
 - Si el código de la app lanza una excepción durante la acción, se emite `EXCEPCION` con `capturada=false` y el paso termina con `OK`: la acción se hizo y el fallo es de la app.
+- Cada ventana emite `VENTANA_ABIERTA` al mostrarse, también cuando vuelve a mostrarse después de ocultarla (con el mismo `ventanaId`). Ocultarla con `setVisible(false)` emite `VENTANA_CERRADA` con `liberada=false`; destruirla con `dispose` emite `VENTANA_CERRADA` con `liberada=true`, también si ya estaba oculta. El último `VENTANA_CERRADA` de cada `ventanaId` dice si la ventana quedó liberada; si se oculta y se destruye en la misma tarea del EDT, como un `JOptionPane`, sale uno solo con `liberada=true`.
 - Las excepciones que nadie captura, en el EDT (escuchadores, tareas de `invokeLater`) o en otro hilo, llegan como `EXCEPCION` con `capturada=false`, el nombre del hilo y hasta 30 líneas de pila. Después siguen al manejador que hubiera; si no había, la pila se escribe en `System.err` como sin el agente. No se ven las de hilos con manejador propio ni las que ocurran si la app reemplaza después el manejador por defecto.
 - `CAPTURAR` (mensaje) responde `CAPTURA` con la ventana pintada en PNG con `printAll`, sin `Robot`: funciona aunque la ventana esté tapada o fuera de la pantalla, pero no incluye la barra de título del sistema operativo. La ventana se elige por título o clase (completa o simple); sin nombre, la ventana activa o, si no hay, el último diálogo modal visible o la última ventana visible. Si ninguna coincide, responde `ERROR` con el código `ERROR_INTERNO`. La acción `CAPTURAR` dentro de un `EJECUTAR_PASO` responde `ERROR`: la imagen no cabe en el resultado del paso y el motor debe pedirla con el mensaje.
 - `CERRAR` termina la conversación pero no cierra la app; la detiene el motor.
@@ -49,10 +50,9 @@ Comportamiento que conviene conocer:
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
-1. `VENTANA_CERRADA` también al ocultar con `setVisible(false)`.
-2. Localizadores robustos: etiqueta sin `setLabelFor` (por cercanía), estrategia `RUTA`, comparación flexible (mayúsculas, dos puntos finales).
-3. `CERRAR` que termine la app de forma ordenada; modo oculto y supresión de foco; modo `ROBOT`.
-4. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
+1. Localizadores robustos: etiqueta sin `setLabelFor` (por cercanía), estrategia `RUTA`, comparación flexible (mayúsculas, dos puntos finales).
+2. `CERRAR` que termine la app de forma ordenada; modo oculto y supresión de foco; modo `ROBOT`.
+3. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
@@ -69,7 +69,7 @@ Nunca puede depender del núcleo ni del dominio.
 
 Las pruebas unitarias usan `MotorFalso` de `opsec-soporte-pruebas` para probar el servidor sin el núcleo (`ServidorProtocoloTest`), y prueban la consola, el adaptador, los eventos sintéticos, la selección de opciones, la navegación entre pestañas, las capturas y el observador de excepciones sin ventanas (`ObservadorConsolaTest`, `AdaptadorSwingTest`, `AccionesEventosTest`, `SeleccionTest`, `NavegacionTest`, `CapturasTest`, `ObservadorExcepcionesTest`). Se verifica la entrega de eventos de ratón y teclado, el reemplazo y borrado del texto, las contraseñas, el texto multilínea y el respeto de las teclas consumidas por la aplicación.
 
-La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol; además selecciona en un combo, marca una casilla, va a una pestaña, cierra un diálogo y pide capturas de la ventana y del diálogo modal; otra prueba lanza excepciones sin capturar en el EDT y en otro hilo y comprueba sus eventos. Repite las pruebas con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
+La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol; además selecciona en un combo, marca una casilla, va a una pestaña, cierra un diálogo y pide capturas de la ventana y del diálogo modal; otra prueba lanza excepciones sin capturar en el EDT y en otro hilo y comprueba sus eventos. También se comprueba que un diálogo reutilizado emita `liberada=false` al ocultarse y `true` al destruirse. Repite las pruebas con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
 
 Desde la raíz del repositorio:
 
