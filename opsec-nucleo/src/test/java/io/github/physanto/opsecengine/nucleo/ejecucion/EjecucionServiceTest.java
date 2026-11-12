@@ -378,6 +378,158 @@ class EjecucionServiceTest {
         assertThat(resultado.fin()).isAfterOrEqualTo(resultado.inicio());
     }
 
+    @Test
+    void notificaElAvanceEnOrdenInclusoSiUnPasoFalla() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Caso ok = caso("OK", pulsar(1, "Avanzar"));
+        Caso falla = caso("FALLA", pulsar(1, "Romper"), pulsar(2, "Avanzar"));
+
+        ResultadoSuite resultado = ejecutarConObservador(PROYECTO, avisos::add, ok, falla);
+
+        assertThat(avisos)
+                .extracting(ProgresoEjecucion::tipo)
+                .containsExactly(
+                        ProgresoEjecucion.Tipo.SUITE_INICIO,
+                        ProgresoEjecucion.Tipo.CASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_FIN,
+                        ProgresoEjecucion.Tipo.CASO_FIN,
+                        ProgresoEjecucion.Tipo.CASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_FIN,
+                        ProgresoEjecucion.Tipo.CASO_FIN,
+                        ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(avisos)
+                .allSatisfy(aviso -> {
+                    assertThat(aviso.nombreSuite()).isEqualTo("suite-prueba");
+                    assertThat(aviso.totalCasos()).isEqualTo(2);
+                    assertThat(aviso.login()).isFalse();
+                });
+        assertThat(avisos.get(0).casoId()).isNull();
+        assertThat(avisos.get(1).casoId()).isEqualTo("OK");
+        assertThat(avisos.get(3).numeroPaso()).isEqualTo(1);
+        assertThat(avisos.get(3).codigo()).isEqualTo(CodigoResultado.OK);
+        assertThat(avisos.get(7).codigo()).isEqualTo(CodigoResultado.ERROR);
+        assertThat(avisos.get(7).totalPasos()).isEqualTo(2);
+        assertThat(resultado.casos().get(1).veredicto().estado())
+                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+    }
+
+    @Test
+    void notificaCadaPasoDeLoginSinExponerCredenciales() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Caso conRol =
+                new Caso("A1", null, "admin", List.of(pulsar(1, "Avanzar")), null, null, null);
+
+        ejecutarConObservador(PROYECTO_CON_LOGIN, avisos::add, conRol);
+
+        assertThat(avisos.stream().filter(ProgresoEjecucion::login))
+                .extracting(ProgresoEjecucion::numeroPaso)
+                .containsExactly(1, 1, 2, 2, 3, 3);
+        assertThat(avisos.stream().filter(ProgresoEjecucion::login))
+                .allSatisfy(aviso -> assertThat(aviso.totalPasos()).isEqualTo(3));
+        assertThat(avisos.get(8).login()).isFalse();
+        assertThat(avisos.get(8).numeroPaso()).isEqualTo(1);
+        assertThat(avisos.get(8).totalPasos()).isEqualTo(1);
+        assertThat(avisos.toString()).doesNotContain(CONTRASENA, "Admin", "clave:");
+    }
+
+    @Test
+    void siFallaElLoginNotificaSuFinSinAnunciarLosPasosDelCaso() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Proyecto proyecto =
+                new Proyecto(
+                        "clientes",
+                        PROYECTO.jar(),
+                        null,
+                        null,
+                        null,
+                        PROYECTO_CON_LOGIN.roles(),
+                        List.of(pulsar(1, "Romper")),
+                        null,
+                        null,
+                        null);
+        Caso conRol =
+                new Caso("A1", null, "admin", List.of(pulsar(1, "Avanzar")), null, null, null);
+
+        ResultadoSuite resultado = ejecutarConObservador(proyecto, avisos::add, conRol);
+
+        assertThat(avisos).hasSize(6);
+        assertThat(avisos.get(2).login()).isTrue();
+        assertThat(avisos.get(3).codigo()).isEqualTo(CodigoResultado.ERROR);
+        assertThat(avisos.get(4).tipo()).isEqualTo(ProgresoEjecucion.Tipo.CASO_FIN);
+        assertThat(avisos.get(5).tipo()).isEqualTo(ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(resultado.casos().get(0).veredicto().estado())
+                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+    }
+
+    @Test
+    void notificaLosCasosNoEjecutablesSinInventarPasos() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Caso sinRol =
+                new Caso(
+                        "SIN-ROL",
+                        null,
+                        "desconocido",
+                        List.of(pulsar(1, "Avanzar")),
+                        null,
+                        null,
+                        null);
+
+        ejecutarConObservador(PROYECTO, avisos::add, sinRol);
+
+        assertThat(avisos)
+                .extracting(ProgresoEjecucion::tipo)
+                .containsExactly(
+                        ProgresoEjecucion.Tipo.SUITE_INICIO, ProgresoEjecucion.Tipo.CASO_INICIO,
+                        ProgresoEjecucion.Tipo.CASO_FIN, ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(agentes).isEmpty();
+    }
+
+    @Test
+    void notificaUnaSuiteVaciaSinAbrirSesiones() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+
+        ejecutarConObservador(PROYECTO, avisos::add);
+
+        assertThat(avisos)
+                .extracting(ProgresoEjecucion::tipo)
+                .containsExactly(
+                        ProgresoEjecucion.Tipo.SUITE_INICIO, ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(avisos).allSatisfy(aviso -> assertThat(aviso.totalCasos()).isZero());
+        assertThat(agentes).isEmpty();
+    }
+
+    @Test
+    void unObservadorQueFallaNoInterrumpeLaSuiteYRecibeLosAvisosEnElMismoHilo() {
+        Thread hilo = Thread.currentThread();
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        ObservadorProgreso observador =
+                aviso -> {
+                    assertThat(Thread.currentThread()).isSameAs(hilo);
+                    avisos.add(aviso);
+                    throw new IllegalStateException("fallo de la presentación");
+                };
+
+        ResultadoSuite resultado =
+                ejecutarConObservador(PROYECTO, observador, caso("OK", pulsar(1, "Avanzar")));
+
+        assertThat(resultado.casos().get(0).veredicto().estado()).isEqualTo(EstadoVeredicto.CUMPLE);
+        assertThat(avisos).hasSize(6);
+        assertThat(avisos.get(5).tipo()).isEqualTo(ProgresoEjecucion.Tipo.SUITE_FIN);
+    }
+
+    private ResultadoSuite ejecutarConObservador(
+            Proyecto proyecto, ObservadorProgreso observador, Caso... casos) {
+        EvaluacionService evaluacion =
+                new EvaluacionService(
+                        new RegistroExtensiones(List.of(), List.of(), List.of(), List.of()));
+        try (SesionService sesiones = new SesionService(conAgenteFalso, ESPERA, ESPERA)) {
+            Suite suite = new Suite("suite-prueba", "1", null, null, List.of(casos), null);
+            return new EjecucionService(proyecto, sesiones, evaluacion, observador).ejecutar(suite);
+        }
+    }
+
     private ResultadoSuite ejecutar(List<Oraculo> oraculos, Caso... casos) {
         return ejecutar(PROYECTO, conAgenteFalso, oraculos, casos);
     }
