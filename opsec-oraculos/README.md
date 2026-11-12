@@ -11,6 +11,35 @@ Oráculos incluidos en el motor. Cada uno implementa `Oraculo` y decide hallazgo
 
 Su prueba, `OraculoExcepcionNoCapturadaTest`, carga con `CargadorTrazas` de `opsec-soporte-pruebas` una traza que lo activa (`src/test/resources/.../excepcion-no-capturada.jsonl`) y `caso-limpio.jsonl`, que no. Cada oráculo nuevo sigue el mismo patrón: al menos una traza que lo activa y una que no.
 
+## Plantillas de suites (#46)
+
+El JAR incluye tres recursos YAML en
+`io/github/physanto/opsecengine/oraculos/plantillas/`:
+
+| Recurso | Enfoque | Punto de partida |
+|---|---|---|
+| `funcional.yaml` | `FUNCIONAL` | Operación con datos válidos y espera de su resultado visible. |
+| `validacion.yaml` | `VALIDACION` | Campo obligatorio vacío y valor que incumple una restricción conocida. |
+| `seguridad.yaml` | `SEGURIDAD` | Login inválido y observación de exposiciones de información. |
+
+El consumidor puede leerlos mediante `Class.getResourceAsStream` usando la ruta anterior con
+`/` inicial. Copia el YAML elegido a las suites del proyecto y adapta la navegación, los
+localizadores, datos de prueba y señales de resultado o rechazo a la aplicación. Prepara el
+estado inicial y restablece los datos entre casos. Los nombres de ventana, botón y campo son
+ejemplos; las plantillas no están listas para ejecutarse contra cualquier aplicación.
+
+Validan contra el `suite.schema.json` oficial y solo referencian ids del catálogo de oráculos.
+No requieren roles ni bibliotecas de payloads y no incluyen credenciales reales ni variables
+pendientes de expansión. Usan `SEMANTICO`, sin reintentos y con una sesión a la vez; ajusta
+la configuración según el proyecto. Las esperas comprueban señales visibles de ejemplo y
+las capturas permiten revisarlas, pero no demuestran por sí solas el efecto sobre los datos.
+
+La plantilla de validación no configura el adaptador temporal de la #38. La de seguridad
+necesita que el emisor aporte los eventos que consumen sus oráculos. Ninguna configura
+automáticamente los adaptadores de canarios, enumeración o autenticación de las #42–#44.
+Esta entrega aporta recursos para el consumidor de escritorio; no añade un selector gráfico,
+un generador de casos ni una conexión nueva al núcleo o a la CLI.
+
 ## Oráculos incluidos
 
 | Id | Clase | Momento | CWE | Qué detecta |
