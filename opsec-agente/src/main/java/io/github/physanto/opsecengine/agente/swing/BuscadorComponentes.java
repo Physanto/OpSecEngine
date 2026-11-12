@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import javax.swing.JLabel;
+import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import javax.swing.text.JTextComponent;
 
@@ -33,7 +34,11 @@ import javax.swing.text.JTextComponent;
  *   <li>{@code TITULO_VENTANA} y {@code CLASE_VENTANA}: una ventana visible.
  * </ul>
  *
- * <p>{@code RUTA} y las estrategias desconocidas no encuentran nada. Se debe llamar desde el EDT.
+ * <p>{@code RUTA} y las estrategias desconocidas no encuentran nada.
+ *
+ * <p>Si se pide atravesar pestañas (lo usa {@code IR_A}), un componente que solo está oculto porque
+ * su pestaña no es la elegida cuenta como alcanzable, y {@code TEXTO} también encuentra el
+ * contenido de una pestaña por su título. Se debe llamar desde el EDT.
  */
 final class BuscadorComponentes {
 
@@ -68,13 +73,25 @@ final class BuscadorComponentes {
      * @return el resultado de la búsqueda; nunca null
      */
     static Busqueda buscar(LocalizadorDto localizador) {
+        return buscar(localizador, false);
+    }
+
+    /**
+     * Busca el componente del localizador en las ventanas visibles.
+     *
+     * @param localizador localizador del componente
+     * @param atravesarPestanas si un componente de una pestaña no elegida cuenta como alcanzable y
+     *     {@code TEXTO} encuentra pestañas por su título
+     * @return el resultado de la búsqueda; nunca null
+     */
+    static Busqueda buscar(LocalizadorDto localizador, boolean atravesarPestanas) {
         List<Window> ventanas = ventanasVisibles();
         Set<Window> modales = EjecutorEdt.modalesVisibles();
         Busqueda primeraNoAlcanzable = null;
         List<CriterioDto> criterios = localizador.getCriterios();
         for (int i = 0; i < criterios.size(); i++) {
-            for (Component candidato : candidatos(criterios.get(i), ventanas)) {
-                String motivo = motivoNoAlcanzable(candidato, modales);
+            for (Component candidato : candidatos(criterios.get(i), ventanas, atravesarPestanas)) {
+                String motivo = motivoNoAlcanzable(candidato, modales, atravesarPestanas);
                 if (motivo == null) {
                     return new Busqueda(
                             candidato,
@@ -129,7 +146,8 @@ final class BuscadorComponentes {
         return visibles;
     }
 
-    private static List<Component> candidatos(CriterioDto criterio, List<Window> ventanas) {
+    private static List<Component> candidatos(
+            CriterioDto criterio, List<Window> ventanas, boolean atravesarPestanas) {
         String valor = criterio.getValor().trim();
         List<Component> encontrados = new ArrayList<>();
         switch (criterio.getEstrategia()) {
@@ -149,21 +167,39 @@ final class BuscadorComponentes {
                 return encontrados;
             default:
                 for (Window ventana : ventanas) {
-                    recorrer(ventana, criterio.getEstrategia(), valor, encontrados);
+                    recorrer(
+                            ventana,
+                            criterio.getEstrategia(),
+                            valor,
+                            atravesarPestanas,
+                            encontrados);
                 }
                 return encontrados;
         }
     }
 
     private static void recorrer(
-            Component componente, String estrategia, String valor, List<Component> encontrados) {
+            Component componente,
+            String estrategia,
+            String valor,
+            boolean atravesarPestanas,
+            List<Component> encontrados) {
         Component coincidencia = coincide(componente, estrategia, valor);
         if (coincidencia != null) {
             encontrados.add(coincidencia);
         }
+        if (atravesarPestanas && "TEXTO".equals(estrategia) && componente instanceof JTabbedPane) {
+            JTabbedPane pestanas = (JTabbedPane) componente;
+            for (int i = 0; i < pestanas.getTabCount(); i++) {
+                Component contenido = pestanas.getComponentAt(i);
+                if (contenido != null && valor.equals(recortar(pestanas.getTitleAt(i)))) {
+                    encontrados.add(contenido);
+                }
+            }
+        }
         if (componente instanceof Container) {
             for (Component hijo : ((Container) componente).getComponents()) {
-                recorrer(hijo, estrategia, valor, encontrados);
+                recorrer(hijo, estrategia, valor, atravesarPestanas, encontrados);
             }
         }
     }
@@ -199,8 +235,9 @@ final class BuscadorComponentes {
     }
 
     /** Motivo por el que el usuario no podría usar el componente, o null si puede. */
-    private static String motivoNoAlcanzable(Component componente, Set<Window> modales) {
-        if (!componente.isShowing()) {
+    private static String motivoNoAlcanzable(
+            Component componente, Set<Window> modales, boolean atravesarPestanas) {
+        if (!componente.isShowing() && !(atravesarPestanas && ocultoSoloPorPestanas(componente))) {
             return "El componente no está visible";
         }
         if (!componente.isEnabled()) {
@@ -217,6 +254,28 @@ final class BuscadorComponentes {
             }
         }
         return null;
+    }
+
+    /**
+     * Indica si el componente se vería con solo elegir las pestañas que lo contienen: todos sus
+     * contenedores son visibles, salvo el contenido de pestañas habilitadas no elegidas, y su
+     * ventana se muestra.
+     */
+    private static boolean ocultoSoloPorPestanas(Component componente) {
+        Component actual = componente;
+        while (actual != null && !(actual instanceof Window)) {
+            Container padre = actual.getParent();
+            if (padre instanceof JTabbedPane) {
+                int indice = ((JTabbedPane) padre).indexOfComponent(actual);
+                if (indice < 0 || !((JTabbedPane) padre).isEnabledAt(indice)) {
+                    return false;
+                }
+            } else if (!actual.isVisible()) {
+                return false;
+            }
+            actual = padre;
+        }
+        return actual != null && actual.isShowing();
     }
 
     /** Indica si {@code modal} es dueña, directa o indirecta, de {@code ventana}. */

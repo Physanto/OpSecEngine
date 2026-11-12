@@ -17,12 +17,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.AbstractButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JToggleButton;
 import javax.swing.text.JTextComponent;
 
 /**
@@ -33,6 +38,19 @@ import javax.swing.text.JTextComponent;
  * <ul>
  *   <li>{@code PULSAR}: {@code doClick()} o eventos de ratón sobre un botón.
  *   <li>{@code LLENAR}: {@code setText(valor)} o eventos de teclado sobre un campo editable.
+ *   <li>{@code SELECCIONAR}: elige la opción cuyo texto es el valor en un combo, una lista, una
+ *       tabla o un árbol; espera a que la opción aparezca y, si no aparece, termina con {@code
+ *       NO_ENCONTRADO}.
+ *   <li>{@code MARCAR}: deja una casilla, un botón de opción o un botón de alternancia en el estado
+ *       del valor ({@code "true"} o {@code "false"}; sin valor, {@code "true"}). Si ya está en ese
+ *       estado no lo toca; si no, lo pulsa. Termina con {@code ERROR} si después de pulsarlo sigue
+ *       en el otro estado, por ejemplo al desmarcar un botón de opción de un grupo.
+ *   <li>{@code IR_A}: elige las pestañas que contienen al objetivo, restaura y trae al frente su
+ *       ventana y le da el foco. Con {@code TEXTO} encuentra también una pestaña por su título, y
+ *       un objetivo oculto solo por estar en otra pestaña cuenta como alcanzable.
+ *   <li>{@code CERRAR_VENTANA}: envía {@code WINDOW_CLOSING} a la ventana del objetivo, igual en
+ *       los dos modos. La aplicación decide qué hacer (ocultarla, destruirla, pedir confirmación o
+ *       terminar); el paso termina con {@code OK} aunque la ventana siga abierta.
  *   <li>{@code ESPERAR}: sin objetivo, espera los milisegundos del valor; con objetivo, espera a
  *       que el componente o la ventana aparezca.
  * </ul>
@@ -43,8 +61,8 @@ import javax.swing.text.JTextComponent;
  * evento {@code EXCEPCION} con {@code capturada=false}, como si la hubiera recibido el manejador
  * del EDT, y el paso termina con {@code OK}: la acción se hizo y el fallo es de la aplicación.
  *
- * <p>Los otros modos y acciones responden {@code ERROR} con un detalle que dice que no están
- * implementados. Las capturas lanzan {@link UnsupportedOperationException}.
+ * <p>El modo {@code ROBOT} y la acción {@code CAPTURAR} responden {@code ERROR} con un detalle que
+ * dice que no están implementados. Las capturas lanzan {@link UnsupportedOperationException}.
  *
  * <p>Es seguro entre hilos; todo acceso a componentes ocurre en el EDT.
  */
@@ -157,6 +175,9 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
 
     private Resultado ejecutarPaso(PasoDto paso, long inicio) throws InterruptedException {
         String accion = paso.getAccion();
+        if (accion == null) {
+            return new Resultado(CodigoResultado.ERROR, "El paso no tiene acción");
+        }
         if (!MODO_SEMANTICO.equals(paso.getModo()) && !MODO_EVENTOS.equals(paso.getModo())) {
             return new Resultado(
                     CodigoResultado.ERROR,
@@ -169,8 +190,18 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
         }
         long limite = inicio + TimeUnit.MILLISECONDS.toNanos(paso.getEsperaMaximaMs());
         switch (accion) {
+            case "MARCAR":
+                if (estadoDeseado(paso.getValor()) == null) {
+                    return new Resultado(
+                            CodigoResultado.ERROR,
+                            "El valor de MARCAR debe ser true o false: " + paso.getValor());
+                }
+            // fall through
             case "PULSAR":
             case "LLENAR":
+            case "SELECCIONAR":
+            case "IR_A":
+            case "CERRAR_VENTANA":
                 if (paso.getLocalizador() == null) {
                     return new Resultado(
                             CodigoResultado.ERROR, "La acción " + accion + " necesita un objetivo");
@@ -186,7 +217,7 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     }
 
     private Resultado actuar(PasoDto paso, long limite) throws InterruptedException {
-        Busqueda busqueda = buscarHasta(paso.getLocalizador(), limite);
+        Busqueda busqueda = buscarHasta(() -> localizarObjetivo(paso), limite);
         if (busqueda == null) {
             return new Resultado(
                     CodigoResultado.TIEMPO_AGOTADO, "La interfaz no respondió a la búsqueda");
@@ -200,43 +231,153 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
         return rechazo.get() == null ? resultado : rechazo.get();
     }
 
+    /**
+     * Busca el objetivo del paso en el EDT. {@code IR_A} atraviesa pestañas; {@code SELECCIONAR}
+     * además exige que el componente tenga la opción pedida.
+     */
+    private static Busqueda localizarObjetivo(PasoDto paso) {
+        if ("IR_A".equals(paso.getAccion())) {
+            return BuscadorComponentes.buscar(paso.getLocalizador(), true);
+        }
+        Busqueda busqueda = BuscadorComponentes.buscar(paso.getLocalizador());
+        Component componente = busqueda.componente();
+        if ("SELECCIONAR".equals(paso.getAccion())
+                && busqueda.resultado().isEncontrado()
+                && Seleccion.admite(componente)
+                && Seleccion.buscar(componente, paso.getValor()) == null) {
+            return new Busqueda(
+                    componente,
+                    ResultadoBusqueda.noEncontrado(
+                            "La opción \""
+                                    + paso.getValor()
+                                    + "\" no está en el "
+                                    + componente.getClass().getName()
+                                    + " que cumple "
+                                    + BuscadorComponentes.describir(paso.getLocalizador())));
+        }
+        return busqueda;
+    }
+
     /** Revalida el objetivo y actúa en el EDT, sin leer propiedades Swing desde el servidor. */
     private Resultado actuarEnEdt(PasoDto paso) {
-        Busqueda busqueda = BuscadorComponentes.buscar(paso.getLocalizador());
+        Busqueda busqueda = localizarObjetivo(paso);
         if (!busqueda.resultado().isEncontrado()) {
             return new Resultado(
                     busqueda.resultado().getCodigo(), busqueda.resultado().getDetalle());
         }
         Component componente = busqueda.componente();
         boolean eventos = MODO_EVENTOS.equals(paso.getModo());
-        if ("PULSAR".equals(paso.getAccion())) {
-            if (!(componente instanceof AbstractButton)) {
-                return new Resultado(
-                        CodigoResultado.ERROR,
-                        "No se puede pulsar un " + componente.getClass().getName());
-            }
-            if (eventos) {
-                AccionesEventos.pulsar((AbstractButton) componente);
-            } else {
-                ((AbstractButton) componente).doClick();
-            }
+        switch (paso.getAccion()) {
+            case "PULSAR":
+                return pulsar(componente, eventos);
+            case "LLENAR":
+                return llenar(componente, paso.getValor(), eventos);
+            case "SELECCIONAR":
+                return seleccionar(componente, paso.getValor(), eventos);
+            case "MARCAR":
+                return marcar(componente, estadoDeseado(paso.getValor()), eventos);
+            case "IR_A":
+                return Navegacion.irA(componente, eventos)
+                        ? null
+                        : new Resultado(
+                                CodigoResultado.NO_ALCANZABLE,
+                                "El objetivo no quedó visible después de ir a él");
+            default:
+                Navegacion.cerrarVentana(componente);
+                return null;
+        }
+    }
+
+    private static Resultado pulsar(Component componente, boolean eventos) {
+        if (!(componente instanceof AbstractButton)) {
+            return noAdmite("pulsar", componente);
+        }
+        if (eventos) {
+            AccionesEventos.pulsar((AbstractButton) componente);
         } else {
-            if (!(componente instanceof JTextComponent)) {
-                return new Resultado(
-                        CodigoResultado.ERROR,
-                        "No se puede llenar un " + componente.getClass().getName());
-            }
-            JTextComponent campo = (JTextComponent) componente;
-            if (!campo.isEditable()) {
-                return new Resultado(
-                        CodigoResultado.NO_ALCANZABLE, "El campo de texto no es editable");
-            }
-            String valor = paso.getValor() == null ? "" : paso.getValor();
-            if (eventos) {
-                AccionesEventos.llenar(campo, valor);
-            } else {
-                campo.setText(valor);
-            }
+            ((AbstractButton) componente).doClick();
+        }
+        return null;
+    }
+
+    private static Resultado llenar(Component componente, String valor, boolean eventos) {
+        if (!(componente instanceof JTextComponent)) {
+            return noAdmite("llenar", componente);
+        }
+        JTextComponent campo = (JTextComponent) componente;
+        if (!campo.isEditable()) {
+            return new Resultado(CodigoResultado.NO_ALCANZABLE, "El campo de texto no es editable");
+        }
+        String texto = valor == null ? "" : valor;
+        if (eventos) {
+            AccionesEventos.llenar(campo, texto);
+        } else {
+            campo.setText(texto);
+        }
+        return null;
+    }
+
+    private static Resultado seleccionar(Component componente, String valor, boolean eventos) {
+        if (!Seleccion.admite(componente)) {
+            return noAdmite("seleccionar en", componente);
+        }
+        Seleccion.Opcion opcion = Seleccion.buscar(componente, valor);
+        if (opcion == null) {
+            return new Resultado(
+                    CodigoResultado.NO_ENCONTRADO, "La opción \"" + valor + "\" ya no está");
+        }
+        if (!Seleccion.seleccionar(opcion, eventos)) {
+            return new Resultado(
+                    CodigoResultado.ERROR,
+                    "La opción \""
+                            + valor
+                            + "\" no quedó seleccionada; la aplicación pudo rechazar el cambio");
+        }
+        return null;
+    }
+
+    private static Resultado marcar(Component componente, boolean deseado, boolean eventos) {
+        if (!(componente instanceof JToggleButton
+                || componente instanceof JCheckBoxMenuItem
+                || componente instanceof JRadioButtonMenuItem)) {
+            return noAdmite("marcar", componente);
+        }
+        AbstractButton boton = (AbstractButton) componente;
+        if (boton.isSelected() == deseado) {
+            return null;
+        }
+        if (eventos) {
+            AccionesEventos.pulsar(boton);
+        } else {
+            boton.doClick();
+        }
+        if (boton.isSelected() != deseado) {
+            return new Resultado(
+                    CodigoResultado.ERROR,
+                    "El botón sigue "
+                            + (deseado ? "desmarcado" : "marcado")
+                            + " después de pulsarlo");
+        }
+        return null;
+    }
+
+    private static Resultado noAdmite(String verbo, Component componente) {
+        return new Resultado(
+                CodigoResultado.ERROR,
+                "No se puede " + verbo + " un " + componente.getClass().getName());
+    }
+
+    /** Estado pedido por el valor de {@code MARCAR}; null si el valor no es válido. */
+    private static Boolean estadoDeseado(String valor) {
+        if (valor == null || valor.trim().isEmpty()) {
+            return Boolean.TRUE;
+        }
+        String normalizado = valor.trim().toLowerCase(Locale.ROOT);
+        if ("true".equals(normalizado)) {
+            return Boolean.TRUE;
+        }
+        if ("false".equals(normalizado)) {
+            return Boolean.FALSE;
         }
         return null;
     }
@@ -281,7 +422,8 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
             Thread.sleep(Math.max(0, Math.min(milisegundos, restanteMs(limite))));
             return new Resultado(CodigoResultado.OK, null);
         }
-        Busqueda busqueda = buscarHasta(paso.getLocalizador(), limite);
+        LocalizadorDto localizador = paso.getLocalizador();
+        Busqueda busqueda = buscarHasta(() -> BuscadorComponentes.buscar(localizador), limite);
         if (busqueda != null && busqueda.resultado().isEncontrado()) {
             return new Resultado(CodigoResultado.OK, null);
         }
@@ -292,18 +434,17 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     }
 
     /**
-     * Busca el componente hasta encontrarlo alcanzable o hasta el límite; devuelve la última
-     * búsqueda, o null si el EDT nunca respondió.
+     * Repite la búsqueda en el EDT hasta encontrar el objetivo alcanzable o hasta el límite;
+     * devuelve la última búsqueda, o null si el EDT nunca respondió.
      */
-    private static Busqueda buscarHasta(LocalizadorDto localizador, long limite)
+    private static Busqueda buscarHasta(Callable<Busqueda> busqueda, long limite)
             throws InterruptedException {
         Busqueda ultima = null;
         while (true) {
             try {
                 ultima =
                         EjecutorEdt.leer(
-                                () -> BuscadorComponentes.buscar(localizador),
-                                Math.max(INTERVALO_BUSQUEDA_MS, restanteMs(limite)));
+                                busqueda, Math.max(INTERVALO_BUSQUEDA_MS, restanteMs(limite)));
             } catch (TimeoutException e) {
                 return ultima;
             } catch (ExecutionException e) {
