@@ -1,5 +1,10 @@
 package io.github.physanto.opsecengine.oraculos;
 
+import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaValidacion;
+import io.github.physanto.opsecengine.dominio.extension.Contexto;
+import io.github.physanto.opsecengine.dominio.extension.Momento;
+import io.github.physanto.opsecengine.dominio.extension.Oraculo;
 import io.github.physanto.opsecengine.dominio.resultado.Confianza;
 import io.github.physanto.opsecengine.dominio.resultado.EstadoVeredicto;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
@@ -11,49 +16,97 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
- * Evaluación local de una entrada declarada inválida, pendiente de aprobación de contrato (#38).
+ * Oráculo {@code ENTRADA-INVALIDA-ACEPTADA} (CWE-20): la aplicación acepta un valor que la política
+ * de validación del caso declara inválido.
  *
- * <p>No implementa Oraculo ni se registra con ServiceLoader: el contrato actual solo devuelve
- * hallazgos y perdería el NO_CONCLUYENTE por falta de evidencia. La integración debe conservar el
- * Veredicto completo. El id y el CWE usados son propuestas, no altas en los catálogos oficiales. No
- * tiene estado mutable y es seguro entre hilos.
+ * <p>Solo aplica a casos con {@link Caso#validacion()} (contratos v1.2). Exige una escritura {@code
+ * LLENAR} única con el valor declarado y un {@code PASO_FIN OK} antes de un envío {@code PULSAR}
+ * único. Solo considera señales posteriores al envío, del mismo caso y paso, antes de que empiece
+ * otra acción. El {@code OK} del envío no prueba aceptación. La aceptación prevalece aunque también
+ * haya un rechazo y se informa como {@code PROBABLE}, porque la causalidad depende de la política.
+ * Da {@code CUMPLE} solo si hay rechazo explícito y el envío terminó {@code OK}; si falta evidencia
+ * responde {@code NO_CONCLUYENTE}.
+ *
+ * <p>No tiene estado y es seguro entre hilos.
  */
-public final class EvaluadorValidacionTemporal {
-    /** Identificador propuesto, todavía no reservado en el catálogo. */
-    public static final String ID_PROPUESTO = "ENTRADA-INVALIDA-ACEPTADA";
+public final class OraculoEntradaInvalidaAceptada implements Oraculo {
 
-    /** CWE propuesto para validación incorrecta de entradas. */
-    public static final String CWE_PROPUESTO = "CWE-20";
+    /** Identificador del catálogo. */
+    public static final String ID = "ENTRADA-INVALIDA-ACEPTADA";
 
-    /** Crea el evaluador local. */
-    public EvaluadorValidacionTemporal() {}
+    /** Debilidad asociada: validación incorrecta de entradas. */
+    public static final String CWE = "CWE-20";
+
+    /** Crea el oráculo para su descubrimiento mediante ServiceLoader. */
+    public OraculoEntradaInvalidaAceptada() {}
 
     /**
-     * Evalúa un caso usando exclusivamente una política explícita.
+     * Devuelve el identificador del catálogo.
      *
-     * <p>Exige una escritura LLENAR única con el valor declarado y un PASO_FIN OK antes de un envío
-     * PULSAR único. Solo considera señales posteriores al envío, atribuidas al mismo caso y paso,
-     * antes de que comience otra acción. El OK del envío no prueba aceptación. La aceptación
-     * prevalece aunque también se muestre un rechazo; se informa como PROBABLE porque la causalidad
-     * depende de la política aportada. Solo da CUMPLE si hay rechazo explícito y el envío terminó
-     * OK.
+     * @return {@value #ID}
+     */
+    @Override
+    public String id() {
+        return ID;
+    }
+
+    /**
+     * Devuelve el momento de evaluación.
+     *
+     * @return {@link Momento#CASO}
+     */
+    @Override
+    public Momento momento() {
+        return Momento.CASO;
+    }
+
+    /**
+     * Aplica a los casos que declaran una política de validación.
+     *
+     * @param caso caso que se evalúa; puede ser null
+     * @param ctx contexto de la evaluación; no se usa
+     * @return {@code true} si el caso tiene {@link Caso#validacion()}
+     */
+    @Override
+    public boolean aplica(Caso caso, Contexto ctx) {
+        return caso != null && caso.validacion() != null;
+    }
+
+    /**
+     * Devuelve los hallazgos de {@link #evaluarResultado(Traza, Contexto)}.
+     *
+     * @param traza traza del caso; puede ser null
+     * @param ctx contexto con el caso y su política
+     * @return un hallazgo {@code PROBABLE} si se observó aceptación; vacía en otro caso
+     */
+    @Override
+    public List<Hallazgo> evaluar(Traza traza, Contexto ctx) {
+        return evaluarResultado(traza, ctx).hallazgos();
+    }
+
+    /**
+     * Evalúa el caso con su política de validación.
      *
      * @param traza traza del caso, posiblemente incompleta o null
-     * @param politica política para ese caso; puede ser null si todavía no está disponible
-     * @return NO_CUMPLE por aceptación, CUMPLE por rechazo observado o NO_CONCLUYENTE si falta
-     *     evidencia
+     * @param ctx contexto con el caso y su política
+     * @return {@code NO_CUMPLE} por aceptación, {@code CUMPLE} por rechazo observado o {@code
+     *     NO_CONCLUYENTE} si falta evidencia
      */
-    public Veredicto evaluar(Traza traza, PoliticaValidacionTemporal politica) {
-        if (traza == null || politica == null) {
-            return Veredicto.noConcluyente("Falta la traza o la política explícita de validación");
+    @Override
+    public Veredicto evaluarResultado(Traza traza, Contexto ctx) {
+        if (ctx == null || ctx.caso() == null || ctx.caso().validacion() == null) {
+            return Veredicto.noConcluyente("El caso no declara una política de validación");
         }
-        if (!traza.casoId().equals(politica.casoId())) {
-            return Veredicto.noConcluyente("La política corresponde a otro caso");
+        PoliticaValidacion politica = ctx.caso().validacion();
+        String casoId = ctx.caso().id();
+        if (traza == null) {
+            return Veredicto.noConcluyente("Falta la traza del caso");
+        }
+        if (!traza.casoId().equals(casoId)) {
+            return Veredicto.noConcluyente("La traza corresponde a otro caso");
         }
         List<Evento> eventos =
-                traza.eventos().stream()
-                        .filter(e -> politica.casoId().equals(e.contexto().casoId()))
-                        .toList();
+                traza.eventos().stream().filter(e -> casoId.equals(e.contexto().casoId())).toList();
         List<Evento> entradas = inicios(eventos, politica.pasoEntrada());
         List<Evento> envios = inicios(eventos, politica.pasoEnvio());
         if (entradas.size() != 1 || envios.size() != 1) {
@@ -114,8 +167,8 @@ public final class EvaluadorValidacionTemporal {
             aceptados.forEach(e -> evidencia.add(e.secuencia()));
             Hallazgo hallazgo =
                     new Hallazgo(
-                            ID_PROPUESTO,
-                            CWE_PROPUESTO,
+                            ID,
+                            CWE,
                             Confianza.PROBABLE,
                             "Aceptación de una entrada declarada inválida",
                             "Tras escribir y enviar la entrada que la política declara inválida, se observó"

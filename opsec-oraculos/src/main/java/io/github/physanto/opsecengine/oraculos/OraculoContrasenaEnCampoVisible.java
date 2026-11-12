@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.oraculos;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaAutenticacion;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.extension.Momento;
 import io.github.physanto.opsecengine.dominio.extension.Oraculo;

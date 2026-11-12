@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.Senal;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
@@ -18,7 +19,6 @@ import io.github.physanto.opsecengine.dominio.traza.Traza;
 import io.github.physanto.opsecengine.oraculos.EvaluadorCalidadGui.Control;
 import io.github.physanto.opsecengine.oraculos.EvaluadorCalidadGui.RecorridoTeclado;
 import io.github.physanto.opsecengine.oraculos.EvaluadorCalidadGui.Ventana;
-import io.github.physanto.opsecengine.oraculos.PoliticaValidacionTemporal.Senal;
 import io.github.physanto.opsecengine.soporte.CargadorTrazas;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;

@@ -8,24 +8,14 @@ import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /** Rastreo local compartido por los oráculos de canarios en SQL y Firestore, sin estado. */
 final class RastreadorCanarioBackend {
     private RastreadorCanarioBackend() {}
 
+    /** Devuelve el canario declarado en el caso (contratos v1.2), o null si no hay. */
     static String canario(Contexto contexto) {
-        if (contexto == null
-                || contexto.caso() == null
-                || !(contexto.caso().extensiones().get("validacion") instanceof Map<?, ?> datos)
-                || !(datos.get("canario") instanceof String marca)
-                || marca.length() < 4
-                || marca.isBlank()
-                || marca.contains("{")
-                || marca.contains("}")) {
-            return null;
-        }
-        return marca;
+        return contexto == null || contexto.caso() == null ? null : contexto.caso().canario();
     }
 
     static List<Hallazgo> evaluar(Traza traza, Contexto contexto, String id, boolean sql) {

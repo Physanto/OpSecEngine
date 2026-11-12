@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.oraculos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
@@ -115,9 +116,10 @@ class OraculosCanarioBackendTest {
         for (Oraculo oraculo : List.of(sql, firestore)) {
             Traza traza =
                     new Traza("C", List.of(entrada(0, "C", MARCA), destino(oraculo, 1, MARCA)));
-            for (Object marca :
-                    List.of(42, List.of(MARCA), "ab", "    ", "{canario}", "{payload}")) {
-                assertThat(oraculo.evaluar(traza, contexto("C", marca))).isEmpty();
+            for (String marca : List.of("ab", "    ", "{canario}", "{payload}")) {
+                assertThatThrownBy(() -> contexto("C", marca))
+                        .as("el dominio rechaza el canario %s", marca)
+                        .isInstanceOf(IllegalArgumentException.class);
             }
             assertThat(oraculo.evaluar(traza, contexto("OTRO", MARCA))).isEmpty();
             assertThat(
@@ -233,7 +235,7 @@ class OraculosCanarioBackendTest {
         }
     }
 
-    private static Contexto contexto(String id, Object marca) {
+    private static Contexto contexto(String id, String marca) {
         Proyecto proyecto =
                 new Proyecto(
                         "canarios",
@@ -246,15 +248,7 @@ class OraculosCanarioBackendTest {
                         null,
                         null,
                         null);
-        Caso caso =
-                new Caso(
-                        id,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        marca == null ? Map.of() : Map.of("validacion", Map.of("canario", marca)));
+        Caso caso = new Caso(id, null, null, null, null, null, marca, null, null, Map.of());
         return Contexto.deCaso(
                 proyecto, new Suite("canarios", null, null, null, List.of(caso), null), caso);
     }

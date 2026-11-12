@@ -3,6 +3,9 @@ package io.github.physanto.opsecengine.oraculos;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.IntentoLogin;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaAutenticacion;
+import io.github.physanto.opsecengine.dominio.caso.Senal;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
@@ -14,14 +17,11 @@ import io.github.physanto.opsecengine.dominio.traza.ContextoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
-import io.github.physanto.opsecengine.oraculos.PoliticaAutenticacion.Intento;
-import io.github.physanto.opsecengine.oraculos.PoliticaValidacionTemporal.Senal;
 import io.github.physanto.opsecengine.soporte.CargadorTrazas;
 import io.github.physanto.opsecengine.soporte.TrazaEjemplo;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -83,9 +83,9 @@ class OraculosExposicionTest {
     void laPoliticaDeAutenticacionIdentificaUnCampoDeNombreOpaco() {
         PoliticaAutenticacion politica =
                 new PoliticaAutenticacion(
-                        List.of(new Intento(2, 1, 3, "usuario", "secreto", false)),
+                        List.of(new IntentoLogin(2, 1, 3, "usuario", "secreto", false)),
                         2,
-                        Duration.ofSeconds(5),
+                        5_000L,
                         List.of(new Senal(TipoEvento.DIALOGO, Map.of("texto", "rechazo"))),
                         List.of(new Senal(TipoEvento.DIALOGO, Map.of("texto", "bloqueo"))));
         Traza traza = campo("opaco", "JTextField", "secreto", "OK");
@@ -348,15 +348,7 @@ class OraculosExposicionTest {
                         null,
                         null,
                         null);
-        Caso caso =
-                new Caso(
-                        id,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        politica == null ? Map.of() : Map.of("autenticacion", politica));
+        Caso caso = new Caso(id, null, null, null, null, null, null, null, politica, Map.of());
         return Contexto.deCaso(
                 proyecto, new Suite("exposicion", null, null, null, List.of(caso), null), caso);
     }

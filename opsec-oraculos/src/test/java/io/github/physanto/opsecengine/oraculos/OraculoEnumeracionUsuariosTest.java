@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.ComparacionLogin;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
@@ -22,22 +23,22 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class OraculoEnumeracionUsuariosTest {
     private final OraculoEnumeracionUsuarios oraculo = new OraculoEnumeracionUsuarios();
-    private final ComparacionEnumeracionUsuarios comparacion =
-            new ComparacionEnumeracionUsuarios("ausente", 2, "clave", 3);
+    private final ComparacionLogin comparacion = new ComparacionLogin("ausente", 2, "clave", 3);
 
     @Test
     void laTrazaOficialDetectaF5AlFinalDeLaSuiteSinExponerCredencialesNiMensajes()
             throws Exception {
         List<Traza> trazas = new CargadorTrazas().cargarEjemplo(TrazaEjemplo.C01_C02_MENSAJES);
-        Contexto contexto =
-                contexto(new ComparacionEnumeracionUsuarios("C01", 5, "C02", 5), trazas);
+        Contexto contexto = contexto(new ComparacionLogin("C01", 5, "C02", 5), trazas);
         var resultado = new EvaluadorOraculos(List.of(oraculo)).evaluarSuite(contexto);
         assertThat(resultado.estado()).isEqualTo(EstadoVeredicto.NO_CUMPLE);
         assertThat(resultado.hallazgos())
@@ -81,7 +82,6 @@ class OraculoEnumeracionUsuariosTest {
     void exigeComparacionExplicitaAmbosCasosYUnaTrazaPorCaso() {
         List<Traza> trazas = List.of(respuesta("ausente", 2, "A"), respuesta("clave", 3, "B"));
         assertThat(oraculo.evaluar(null, contexto(null, trazas))).isEmpty();
-        assertThat(oraculo.evaluar(null, contexto(Map.of("caso", "ausente"), trazas))).isEmpty();
         assertThat(oraculo.evaluar(null, null)).isEmpty();
         assertThat(oraculo.evaluar(null, contexto(comparacion, List.of(trazas.getFirst()))))
                 .isEmpty();
@@ -213,16 +213,16 @@ class OraculoEnumeracionUsuariosTest {
     }
 
     @Test
-    void elAdaptadorRechazaReferenciasInvalidas() {
-        assertThatThrownBy(() -> new ComparacionEnumeracionUsuarios(null, 1, "b", 1))
+    void laComparacionRechazaReferenciasInvalidas() {
+        assertThatThrownBy(() -> new ComparacionLogin(null, 1, "b", 1))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new ComparacionEnumeracionUsuarios("a", 1, "a", 1))
+        assertThatThrownBy(() -> new ComparacionLogin("a", 1, "a", 1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new ComparacionEnumeracionUsuarios(" ", 1, "b", 1))
+        assertThatThrownBy(() -> new ComparacionLogin(" ", 1, "b", 1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new ComparacionEnumeracionUsuarios("a", 0, "b", 1))
+        assertThatThrownBy(() -> new ComparacionLogin("a", 0, "b", 1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new ComparacionEnumeracionUsuarios("a", 1, "b", -1))
+        assertThatThrownBy(() -> new ComparacionLogin("a", 1, "b", -1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -231,7 +231,7 @@ class OraculoEnumeracionUsuariosTest {
         return oraculo.evaluar(null, contexto(comparacion, List.of(trazas)));
     }
 
-    private static Contexto contexto(Object comparacion, List<Traza> trazas) {
+    private static Contexto contexto(ComparacionLogin comparacion, List<Traza> trazas) {
         Proyecto proyecto =
                 new Proyecto(
                         "login",
@@ -244,23 +244,17 @@ class OraculoEnumeracionUsuariosTest {
                         null,
                         null,
                         null);
+        Set<String> ids = new LinkedHashSet<>();
+        trazas.forEach(traza -> ids.add(traza.casoId()));
+        if (comparacion != null) {
+            ids.add(comparacion.casoUsuarioInexistente());
+            ids.add(comparacion.casoContrasenaIncorrecta());
+        }
         List<Caso> casos =
-                trazas.stream()
-                        .map(Traza::casoId)
-                        .distinct()
-                        .map(id -> new Caso(id, null, null, null, null, null, null))
-                        .toList();
+                ids.stream().map(id -> new Caso(id, null, null, null, null, null, null)).toList();
         return Contexto.deSuite(
                 proyecto,
-                new Suite(
-                        "login",
-                        null,
-                        null,
-                        null,
-                        casos,
-                        comparacion == null
-                                ? Map.of()
-                                : Map.of("enumeracionUsuarios", comparacion)),
+                new Suite("login", null, null, null, casos, comparacion, Map.of()),
                 trazas);
     }
 

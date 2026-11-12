@@ -1,10 +1,11 @@
 package io.github.physanto.opsecengine.oraculos;
 
+import io.github.physanto.opsecengine.dominio.caso.IntentoLogin;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaAutenticacion;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
-import io.github.physanto.opsecengine.oraculos.PoliticaAutenticacion.Intento;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,12 +16,7 @@ final class RastreadorIntentosLogin {
     private RastreadorIntentosLogin() {}
 
     static PoliticaAutenticacion politica(Contexto contexto) {
-        return contexto != null
-                        && contexto.caso() != null
-                        && contexto.caso().extensiones().get("autenticacion")
-                                instanceof PoliticaAutenticacion politica
-                ? politica
-                : null;
+        return contexto == null || contexto.caso() == null ? null : contexto.caso().autenticacion();
     }
 
     static List<Observacion> observar(Traza traza, Contexto contexto) {
@@ -33,14 +29,14 @@ final class RastreadorIntentosLogin {
                         .filter(e -> traza.casoId().equals(e.contexto().casoId()))
                         .toList();
         List<Observacion> resultado = new ArrayList<>();
-        for (Intento intento : politica.intentos()) {
+        for (IntentoLogin intento : politica.intentos()) {
             resultado.add(observar(eventos, intento, politica));
         }
         return List.copyOf(resultado);
     }
 
     private static Observacion observar(
-            List<Evento> eventos, Intento intento, PoliticaAutenticacion politica) {
+            List<Evento> eventos, IntentoLogin intento, PoliticaAutenticacion politica) {
         Evento envio = inicio(eventos, intento.pasoEnvio());
         if (envio == null
                 || envio.contexto().sesionActiva()
@@ -193,7 +189,7 @@ final class RastreadorIntentosLogin {
         return entrada;
     }
 
-    private static Observacion incompleta(Intento intento) {
+    private static Observacion incompleta(IntentoLogin intento) {
         return new Observacion(intento, Estado.INCOMPLETO, null, null, null, List.of());
     }
 
@@ -205,7 +201,7 @@ final class RastreadorIntentosLogin {
     }
 
     record Observacion(
-            Intento intento,
+            IntentoLogin intento,
             Estado estado,
             Evento envio,
             Evento fin,

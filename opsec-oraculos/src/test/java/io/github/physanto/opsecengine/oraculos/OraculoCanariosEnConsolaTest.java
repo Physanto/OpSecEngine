@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.oraculos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
@@ -89,9 +90,8 @@ class OraculoCanariosEnConsolaTest {
 
     @Test
     void noAdivinaCanariosConMetadatosAusentesMalTipadosOCasoDistinto() throws Exception {
-        for (Object marca : List.of(42, List.of(MARCA), "ab")) {
-            assertThat(oraculo.evaluar(positiva(), contexto("CANARIO39", marca))).isEmpty();
-        }
+        assertThatThrownBy(() -> contexto("CANARIO39", "ab"))
+                .isInstanceOf(IllegalArgumentException.class);
         assertThat(oraculo.evaluar(positiva(), contexto("CANARIO39", null))).isEmpty();
         assertThat(oraculo.evaluar(positiva(), contexto("OTRO", MARCA))).isEmpty();
         assertThat(oraculo.evaluar(positiva(), null)).isEmpty();
@@ -183,7 +183,9 @@ class OraculoCanariosEnConsolaTest {
                                 "valor",
                                 "prefijo-{canario}-sufijo"));
         traza = datos(traza, 3, Map.of("flujo", "SALIDA", "texto", "marca: {canario}"));
-        assertThat(oraculo.evaluar(traza, contexto("CANARIO39", "{canario}"))).isEmpty();
+        assertThat(oraculo.evaluar(traza, contexto("CANARIO39", null))).isEmpty();
+        assertThatThrownBy(() -> contexto("CANARIO39", "{canario}"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -234,8 +236,7 @@ class OraculoCanariosEnConsolaTest {
                                 Objetivo.todaLaApp(),
                                 proyecto)
                         .getFirst();
-        Map<?, ?> origen = (Map<?, ?>) caso.extensiones().get("validacion");
-        String marca = (String) origen.get("canario");
+        String marca = caso.canario();
         Contexto ctx =
                 Contexto.deCaso(
                         proyecto,
@@ -278,16 +279,8 @@ class OraculoCanariosEnConsolaTest {
                 .satisfies(h -> assertThat(h.evidencia()).containsExactly(0L, 3L));
     }
 
-    private static Contexto contexto(String casoId, Object marca) {
-        Caso caso =
-                new Caso(
-                        casoId,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        marca == null ? Map.of() : Map.of("validacion", Map.of("canario", marca)));
+    private static Contexto contexto(String casoId, String marca) {
+        Caso caso = new Caso(casoId, null, null, null, null, null, marca, null, null, Map.of());
         return Contexto.deCaso(
                 proyecto(), new Suite("canarios", null, null, null, List.of(caso), null), caso);
     }
