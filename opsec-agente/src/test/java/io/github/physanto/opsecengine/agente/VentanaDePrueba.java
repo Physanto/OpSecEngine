@@ -6,6 +6,8 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -39,6 +41,9 @@ import javax.swing.WindowConstants;
  * <p>El botón "Reutilizar" muestra siempre el mismo diálogo no modal "Reutilizable", que al
  * cerrarse solo se oculta, y "Liberar" lo destruye con {@code dispose}.
  *
+ * <p>Al pedirle que se cierre, la ventana escribe {@value #LINEA_CIERRE} en la consola y termina la
+ * aplicación.
+ *
  * <p>Ni la ventana ni el diálogo pueden recibir el foco. Con pantalla real, el gestor de ventanas
  * le daría el foco al diálogo, y una tecla Espacio o Enter de quien esté usando el equipo pulsaría
  * "Cerrar" y cambiaría el resultado de la prueba. El agente no necesita el foco en los modos
@@ -48,6 +53,9 @@ public final class VentanaDePrueba {
 
     /** Título de la ventana. */
     public static final String TITULO = "Ventana de prueba";
+
+    /** Línea que la ventana escribe en la consola cuando le piden cerrarse. */
+    public static final String LINEA_CIERRE = "Cierre pedido";
 
     private VentanaDePrueba() {}
 
@@ -168,6 +176,13 @@ public final class VentanaDePrueba {
         marco.add(liberar);
         marco.pack();
         marco.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        marco.addWindowListener(
+                new WindowAdapter() {
+                    @Override
+                    public void windowClosing(WindowEvent evento) {
+                        System.out.println(LINEA_CIERRE);
+                    }
+                });
         marco.setFocusableWindowState(false);
         marco.setVisible(true);
     }

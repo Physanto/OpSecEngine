@@ -50,6 +50,9 @@ class AgenteIT {
 
     private static final Duration ESPERA = Duration.ofSeconds(30);
 
+    /** Tiempo máximo para que la app termine después de {@code CERRAR}, con margen para CI. */
+    private static final Duration TERMINACION = Duration.ofSeconds(10);
+
     private Path carpeta;
 
     @BeforeEach
@@ -72,6 +75,16 @@ class AgenteIT {
                         .isInstanceOf(ExcepcionErrorRemoto.class);
                 esperarEvento(motor, "CONSOLA", AplicacionDePrueba.LINEA_INICIO);
                 assertThat(motor.cerrar()).isTrue();
+                assertThat(eventos(motor, "APP_TERMINADA"))
+                        .singleElement()
+                        .satisfies(e ->
+                                assertThat(e.getDatos())
+                                        .containsEntry("esperada", true)
+                                        .containsEntry("causa", "CERRAR"));
+                assertThat(proceso.waitFor(TERMINACION.toMillis(), TimeUnit.MILLISECONDS))
+                        .as("sin ventanas, el agente termina la app aunque siga esperando")
+                        .isTrue();
+                assertThat(proceso.exitValue()).isZero();
             } finally {
                 detener(proceso);
             }
@@ -165,10 +178,17 @@ class AgenteIT {
                         .contains(VentanaDePrueba.TITULO);
                 assertThat(eventos(motor, "VENTANA_ABIERTA")).isNotEmpty();
                 assertThat(motor.cerrar()).isTrue();
+                assertThat(proceso.waitFor(TERMINACION.toMillis(), TimeUnit.MILLISECONDS))
+                        .as("la app termina después de CERRAR")
+                        .isTrue();
+                assertThat(proceso.exitValue()).isZero();
             } finally {
                 detener(proceso);
             }
         }
+        assertThat(Files.readString(salida, StandardCharsets.UTF_8))
+                .as("CERRAR le pide a la ventana que se cierre")
+                .contains(VentanaDePrueba.LINEA_CIERRE);
     }
 
     @Test
