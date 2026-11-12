@@ -1,7 +1,10 @@
 package io.github.physanto.opsecengine.dominio.extension;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.resultado.Confianza;
+import io.github.physanto.opsecengine.dominio.resultado.EstadoVeredicto;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
+import io.github.physanto.opsecengine.dominio.resultado.Veredicto;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
 import java.util.List;
 
@@ -67,4 +70,28 @@ public interface Oraculo {
      *     nunca null, si no hay hallazgos
      */
     List<Hallazgo> evaluar(Traza traza, Contexto ctx);
+
+    /**
+     * Evalúa la traza y devuelve un veredicto completo, que puede ser {@code NO_CONCLUYENTE}.
+     *
+     * <p>Una lista de hallazgos vacía no distingue entre «se comprobó y está bien» y «no hubo
+     * evidencia suficiente para decidir». Los oráculos que necesitan esa distinción sobrescriben
+     * este método y devuelven {@code NO_CONCLUYENTE} con un motivo cuando falta evidencia. El
+     * evaluador del motor llama a este método, no a {@link #evaluar(Traza, Contexto)}. Desde
+     * contratos v1.2.
+     *
+     * <p>La implementación por defecto llama a {@link #evaluar(Traza, Contexto)}: devuelve {@code
+     * NO_CUMPLE} si algún hallazgo tiene confianza distinta de {@link Confianza#INFO} y, si no,
+     * {@code CUMPLE} con los hallazgos {@code INFO} que hubiera.
+     *
+     * @param traza traza del caso; puede ser null en el momento {@link Momento#SUITE}
+     * @param ctx contexto de la evaluación; nunca es null
+     * @return veredicto del oráculo; nunca null
+     */
+    default Veredicto evaluarResultado(Traza traza, Contexto ctx) {
+        List<Hallazgo> hallazgos = evaluar(traza, ctx);
+        boolean falla = hallazgos.stream().anyMatch(h -> h.confianza() != Confianza.INFO);
+        return new Veredicto(
+                falla ? EstadoVeredicto.NO_CUMPLE : EstadoVeredicto.CUMPLE, hallazgos, null);
+    }
 }

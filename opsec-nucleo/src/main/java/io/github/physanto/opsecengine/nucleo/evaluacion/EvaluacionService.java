@@ -26,13 +26,17 @@ import java.util.logging.Logger;
  * <ol>
  *   <li>{@code NO_CUMPLE} si algún hallazgo tiene confianza {@code CONFIRMADO} o {@code PROBABLE},
  *       aunque la ejecución haya quedado incompleta (el motivo se conserva);
- *   <li>si no, {@code NO_CONCLUYENTE} si la ejecución quedó incompleta, si un oráculo falló o si el
- *       caso pide un oráculo que no está registrado;
+ *   <li>si no, {@code NO_CONCLUYENTE} si la ejecución quedó incompleta, si un oráculo falló, si un
+ *       oráculo respondió {@code NO_CONCLUYENTE} por falta de evidencia o si el caso pide un
+ *       oráculo que no está registrado;
  *   <li>si no, {@code CUMPLE}. Los hallazgos {@code INFO} se conservan en cualquier veredicto.
  * </ol>
  *
  * <p><b>Por suite</b> ({@link #evaluarSuite(Contexto)}): se evalúan los oráculos de momento {@link
  * Momento#SUITE} con las trazas de todos los casos.
+ *
+ * <p>Cada oráculo se evalúa con {@link Oraculo#evaluarResultado(Traza, Contexto)}, que conserva la
+ * diferencia entre «sin hallazgos» y «sin evidencia suficiente».
  *
  * <p>Si un oráculo lanza una excepción se registra como fallo del oráculo y no detiene la
  * evaluación. Es seguro entre hilos si los oráculos lo son, como pide su contrato.
@@ -87,7 +91,11 @@ public final class EvaluacionService {
             }
             try {
                 if (caso.oraculos().contains(oraculo.id()) || oraculo.aplica(caso, contexto)) {
-                    hallazgos.addAll(oraculo.evaluar(traza, contexto));
+                    Veredicto parcial = oraculo.evaluarResultado(traza, contexto);
+                    hallazgos.addAll(parcial.hallazgos());
+                    if (parcial.estado() == EstadoVeredicto.NO_CONCLUYENTE) {
+                        motivos.add(oraculo.id() + ": " + parcial.motivo());
+                    }
                 }
             } catch (RuntimeException e) {
                 REGISTRO.log(Level.WARNING, "Falló el oráculo " + oraculo.id(), e);
@@ -114,7 +122,7 @@ public final class EvaluacionService {
             }
             try {
                 if (oraculo.aplica(null, contexto)) {
-                    hallazgos.addAll(oraculo.evaluar(null, contexto));
+                    hallazgos.addAll(oraculo.evaluarResultado(null, contexto).hallazgos());
                 }
             } catch (RuntimeException e) {
                 REGISTRO.log(Level.WARNING, "Falló el oráculo de suite " + oraculo.id(), e);
