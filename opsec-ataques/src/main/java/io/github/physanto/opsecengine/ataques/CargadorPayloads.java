@@ -51,7 +51,20 @@ import java.util.Set;
 public final class CargadorPayloads {
 
     /** Archivos de payloads incluidos en el módulo. */
-    public static final List<String> INCLUIDOS = List.of("vacios.yaml");
+    public static final List<String> INCLUIDOS =
+            List.of(
+                    "vacios.yaml",
+                    "longitud.yaml",
+                    "unicode.yaml",
+                    "numericos.yaml",
+                    "inyeccion-sql.yaml",
+                    "firestore.yaml",
+                    "html-swing.yaml",
+                    "cadenas-formato.yaml",
+                    "rutas-archivo.yaml",
+                    "formulas-csv.yaml",
+                    "comandos.yaml",
+                    "credenciales-debiles.yaml");
 
     private static final String BASE_ID =
             "https://raw.githubusercontent.com/Physanto/OpSecEngine/main/contratos/esquemas/";

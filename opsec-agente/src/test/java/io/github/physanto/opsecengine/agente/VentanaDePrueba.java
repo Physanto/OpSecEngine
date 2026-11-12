@@ -1,6 +1,10 @@
 package io.github.physanto.opsecengine.agente;
 
 import java.awt.GridLayout;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -19,8 +23,8 @@ import javax.swing.SwingUtilities;
  *
  * <p>Ni la ventana ni el diálogo pueden recibir el foco. Con pantalla real, el gestor de ventanas
  * le daría el foco al diálogo, y una tecla Espacio o Enter de quien esté usando el equipo pulsaría
- * "Cerrar" y cambiaría el resultado de la prueba. El agente no necesita el foco: en el modo
- * semántico usa {@code doClick} y {@code setText}.
+ * "Cerrar" y cambiaría el resultado de la prueba. El agente no necesita el foco en los modos
+ * semántico y de eventos sintéticos.
  */
 public final class VentanaDePrueba {
 
@@ -45,8 +49,22 @@ public final class VentanaDePrueba {
         JFrame marco = new JFrame(TITULO);
         JLabel etiqueta = new JLabel("Nombre");
         JTextField campo = new JTextField(12);
+        campo.addKeyListener(
+                new KeyAdapter() {
+                    @Override
+                    public void keyTyped(KeyEvent evento) {
+                        System.out.println("Tecla en Nombre");
+                    }
+                });
         etiqueta.setLabelFor(campo);
         JButton saludar = new JButton("Saludar");
+        saludar.addMouseListener(
+                new MouseAdapter() {
+                    @Override
+                    public void mousePressed(MouseEvent evento) {
+                        System.out.println("Ratón en Saludar");
+                    }
+                });
         saludar.addActionListener(e -> {
             String saludo = "Hola, " + campo.getText();
             System.out.println(saludo);

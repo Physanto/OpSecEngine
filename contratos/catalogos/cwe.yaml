@@ -6,6 +6,17 @@
 version: 1
 
 cwe:
+  - id: CWE-20
+    nombre: Validación incorrecta de entradas
+    explicacion: >-
+      La app acepta datos que no cumplen las reglas del campo, como un número negativo en
+      una edad o un texto en un documento. Esos datos pueden dañar la información guardada
+      o abrir la puerta a otros ataques.
+    recomendacion: >-
+      Validar cada campo en la app antes de usarlo (tipo, longitud, formato y rango) y
+      mostrar un mensaje claro cuando el valor no es válido. No confiar solo en la interfaz:
+      validar también donde se guardan los datos.
+
   - id: CWE-89
     nombre: Inyección SQL
     explicacion: >-

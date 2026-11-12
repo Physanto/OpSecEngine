@@ -1,0 +1,3 @@
+{"secuencia":0,"instante":"2026-11-11T12:00:00Z","tipo":"PASO_INICIO","contexto":{"casoId":"CANARIO42","numeroPaso":1,"sesionActiva":false},"datos":{"accion":"LLENAR","objetivo":"nombre=Ruta","valor":"prefijo-K7Q2","modo":"SEMANTICO"}}
+{"secuencia":1,"instante":"2026-11-11T12:00:01Z","tipo":"PASO_FIN","contexto":{"casoId":"CANARIO42","numeroPaso":1,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":2,"instante":"2026-11-11T12:00:02Z","tipo":"FIRESTORE","contexto":{"casoId":"CANARIO42","numeroPaso":2,"sesionActiva":false},"datos":{"operacion":"set","ruta":"personas/permitida","campos":{"dato":"prefijo-K7Q2"}}}

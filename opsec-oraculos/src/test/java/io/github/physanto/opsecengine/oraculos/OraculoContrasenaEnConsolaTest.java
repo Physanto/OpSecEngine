@@ -68,7 +68,7 @@ class OraculoContrasenaEnConsolaTest {
                 .singleElement()
                 .satisfies(hallazgo ->
                         assertThat(hallazgo.explicacion())
-                                .contains("etiqueta=Contraseña")
+                                .contains("campo de contraseña")
                                 .contains("paso 4")
                                 .doesNotContain("Admin#2026"));
     }
