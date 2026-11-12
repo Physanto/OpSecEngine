@@ -22,7 +22,11 @@ Contenido:
 - Capturas: los eventos `CAPTURA` se incrustan en el HTML si el archivo (PNG, hasta 8 MB) existe dentro de la carpeta de resultados; si no, se muestra un aviso. Nunca se leen archivos fuera de esa carpeta.
 - Un informe sin fallos dice «No se encontraron fallos en lo probado», nunca que la aplicación sea segura.
 
-Pendiente de este reportero: filtros y comparación entre ejecuciones, explicaciones de CWE a partir de `cwe.yaml` y gráficos de rendimiento (ver los issues del módulo).
+**Filtros.** El informe trae filtros por veredicto, oráculo y CWE, hechos solo con CSS: cada opción es un botón de opción y una regla `body:has(#opción:checked)` oculta los casos que no la cumplen. Así el informe sigue sin JavaScript. Los filtros se combinan (se muestra un caso si cumple todos los activos) y también alcanzan a los hallazgos de suite, salvo el de veredicto. Las opciones de oráculo y CWE se identifican por su posición en una lista ordenada, no por su texto, para que nada de la traza llegue a un selector CSS. Requieren un navegador con soporte de `:has()` (los actuales desde 2023); en uno antiguo los controles no hacen nada y se ve el informe completo.
+
+**Comparación entre ejecuciones.** `ComparadorResultados.comparar(anterior, actual)` empareja los casos por id y los clasifica: *empeoró* o *mejoró* según la gravedad del veredicto (`CUMPLE` < `NO_CONCLUYENTE` < `NO_CUMPLE`), *nuevo*, *eliminado* o *igual*, con los hallazgos resueltos y nuevos de cada caso (un hallazgo se identifica por su oráculo y su título). `ComparacionHtml.escribir(anterior, actual, carpeta)` escribe `comparacion.html` con los casos ordenados por importancia (primero los que empeoraron), los hallazgos de suite y los dos manifiestos, y avisa si cambió la aplicación, la suite o el motor. No es un `Reportero`, porque ese contrato recibe un solo resultado: la presentación (por ejemplo el futuro comando `opsec informe`) debe llamarla con dos resultados ya leídos.
+
+Pendiente de este módulo: explicaciones de CWE a partir de `cwe.yaml` (#57, necesita acceso al catálogo, que está en `contratos/`) y gráficos de rendimiento (#59, necesita los eventos de tiempo del agente).
 
 ## Reportero JUnit XML
 

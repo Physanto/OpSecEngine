@@ -101,7 +101,9 @@ public final class ReporteroHtml implements Reportero {
         h.append("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; ");
         h.append("img-src data:; style-src 'unsafe-inline'\">\n");
         h.append("<title>").append(Html.escapar(titulo)).append("</title>\n");
-        h.append("<style>\n").append(ESTILO).append("</style>\n</head>\n<body>\n");
+        Filtros filtros = new Filtros(resultado);
+        h.append("<style>\n").append(ESTILO).append(filtros.css());
+        h.append("</style>\n</head>\n<body>\n");
         h.append("<header>\n<h1>").append(Html.escapar(titulo)).append("</h1>\n");
         h.append("<p class=\"sub\">OpSecEngine · ");
         h.append(Html.escapar(resultado.inicio().toString())).append(" → ");
@@ -110,12 +112,15 @@ public final class ReporteroHtml implements Reportero {
         h.append(")</p>\n</header>\n<main>\n");
         resumen(h, resultado);
         manifiesto(h, resultado.manifiesto());
+        if (!resultado.casos().isEmpty()) {
+            filtros.controles(h);
+        }
         h.append("<section>\n<h2>Casos</h2>\n");
         if (resultado.casos().isEmpty()) {
             h.append("<p class=\"vacio\">La suite no tiene casos.</p>\n");
         }
         for (int i = 0; i < resultado.casos().size(); i++) {
-            caso(h, i, resultado.casos().get(i), destino);
+            caso(h, i, resultado.casos().get(i), destino, filtros);
         }
         h.append("</section>\n");
         if (!resultado.hallazgosSuite().isEmpty()) {
@@ -123,7 +128,7 @@ public final class ReporteroHtml implements Reportero {
             h.append(
                     "<p class=\"sub\">Comparan varios casos entre sí.</p>\n<ul class=\"hallazgos\">\n");
             for (Hallazgo hallazgo : resultado.hallazgosSuite()) {
-                hallazgo(h, hallazgo, -1);
+                hallazgo(h, hallazgo, -1, filtros.clases(hallazgo));
             }
             h.append("</ul>\n</section>\n");
         }
@@ -183,10 +188,12 @@ public final class ReporteroHtml implements Reportero {
         h.append(Html.escapar(valor)).append("</dd>\n");
     }
 
-    private static void caso(StringBuilder h, int indice, ResultadoCaso caso, Path destino) {
+    private static void caso(
+            StringBuilder h, int indice, ResultadoCaso caso, Path destino, Filtros filtros) {
         EstadoVeredicto estado = caso.veredicto().estado();
         String clase = claseEstado(estado);
-        h.append("<details class=\"caso ").append(clase).append("\" id=\"c").append(indice);
+        h.append("<details class=\"caso ").append(clase).append(filtros.clases(caso));
+        h.append("\" id=\"c").append(indice);
         h.append('"').append(estado == EstadoVeredicto.CUMPLE ? "" : " open").append(">\n");
         h.append("<summary><span class=\"insignia ").append(clase).append("\">");
         h.append(etiquetaEstado(estado)).append("</span> <strong>");
@@ -213,7 +220,7 @@ public final class ReporteroHtml implements Reportero {
         } else {
             h.append("<h3>Hallazgos</h3>\n<ul class=\"hallazgos\">\n");
             for (Hallazgo hallazgo : caso.veredicto().hallazgos()) {
-                hallazgo(h, hallazgo, indice);
+                hallazgo(h, hallazgo, indice, "");
                 evidencia.addAll(hallazgo.evidencia());
             }
             h.append("</ul>\n");
@@ -222,8 +229,9 @@ public final class ReporteroHtml implements Reportero {
         h.append("</div>\n</details>\n");
     }
 
-    private static void hallazgo(StringBuilder h, Hallazgo hallazgo, int indiceCaso) {
-        h.append("<li class=\"hallazgo\">\n<div class=\"titulo\">");
+    private static void hallazgo(
+            StringBuilder h, Hallazgo hallazgo, int indiceCaso, String clases) {
+        h.append("<li class=\"hallazgo").append(clases).append("\">\n<div class=\"titulo\">");
         h.append(Html.escapar(hallazgo.titulo())).append("</div>\n<div class=\"etiquetas\">");
         h.append("<span class=\"etiqueta\">").append(Html.escapar(hallazgo.oraculoId()));
         h.append("</span>");
@@ -434,7 +442,7 @@ public final class ReporteroHtml implements Reportero {
     }
 
     /** Hoja de estilo del informe; claro y oscuro según el navegador. */
-    private static final String ESTILO =
+    static final String ESTILO =
             """
             :root{--fondo:#f6f7f9;--panel:#fff;--texto:#1c2128;--suave:#5b6572;--borde:#d8dde4;\
             --ok:#1a7f37;--ok-fondo:#dafbe1;--mal:#cf222e;--mal-fondo:#ffebe9;\
@@ -494,5 +502,11 @@ public final class ReporteroHtml implements Reportero {
             figure{margin:0}img{max-width:100%;border:1px solid var(--borde);border-radius:4px}
             figcaption{color:var(--suave);font-size:.8rem}
             a{color:var(--info)}
+            .grupos{display:flex;gap:12px;flex-wrap:wrap}
+            fieldset{flex:1 1 220px;background:var(--panel);border:1px solid var(--borde);\
+            border-radius:8px;margin:0;padding:6px 12px 10px}
+            legend{font-weight:700;padding:0 6px}
+            fieldset label{display:block;cursor:pointer;padding:1px 0}
+            fieldset input{margin-right:6px}
             """;
 }
