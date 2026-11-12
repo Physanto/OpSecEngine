@@ -6,39 +6,172 @@
   "cuerpo": {
     "ventanas": [
       {
-        "tipo": "javax.swing.JFrame",
-        "texto": "Iniciar sesión",
-        "nombre": "frmLogin",
+        "tipo": "io.github.physanto.opsecengine.practica.gui.InicioSesion",
+        "ruta": "Iniciar sesión",
         "visible": true,
         "habilitado": true,
         "editable": false,
+        "alcanzable": true,
+        "acciones": [],
         "hijos": [
           {
-            "tipo": "javax.swing.JLabel",
-            "texto": "Usuario",
+            "tipo": "javax.swing.JRootPane",
+            "ruta": "Iniciar sesión/JRootPane[0]",
             "visible": true,
             "habilitado": true,
             "editable": false,
-            "hijos": []
-          },
-          {
-            "tipo": "javax.swing.JTextField",
-            "nombre": "txtUsuario",
-            "nombreAccesible": "Usuario",
-            "visible": true,
-            "habilitado": true,
-            "editable": true,
-            "hijos": []
-          },
-          {
-            "tipo": "javax.swing.JButton",
-            "texto": "Iniciar Sesion",
-            "visible": true,
-            "habilitado": true,
-            "editable": false,
-            "hijos": []
+            "alcanzable": true,
+            "acciones": [],
+            "hijos": [
+              {
+                "tipo": "javax.swing.JPanel",
+                "ruta": "Iniciar sesión/JRootPane[0]/JPanel[0]",
+                "visible": false,
+                "habilitado": true,
+                "editable": false,
+                "alcanzable": false,
+                "acciones": [],
+                "hijos": []
+              },
+              {
+                "tipo": "javax.swing.JLayeredPane",
+                "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]",
+                "visible": true,
+                "habilitado": true,
+                "editable": false,
+                "alcanzable": true,
+                "acciones": [],
+                "hijos": [
+                  {
+                    "tipo": "javax.swing.JPanel",
+                    "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]",
+                    "visible": true,
+                    "habilitado": true,
+                    "editable": false,
+                    "alcanzable": true,
+                    "acciones": [],
+                    "hijos": [
+                      {
+                        "tipo": "javax.swing.JPanel",
+                        "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[0]",
+                        "visible": true,
+                        "habilitado": true,
+                        "editable": false,
+                        "alcanzable": true,
+                        "acciones": [],
+                        "hijos": [
+                          {
+                            "tipo": "javax.swing.JLabel",
+                            "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[0]/JLabel[0]",
+                            "visible": true,
+                            "habilitado": true,
+                            "editable": false,
+                            "alcanzable": true,
+                            "acciones": [],
+                            "hijos": [],
+                            "texto": "Usuario"
+                          },
+                          {
+                            "tipo": "javax.swing.JTextField",
+                            "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[0]/JTextField[0]",
+                            "visible": true,
+                            "habilitado": true,
+                            "editable": true,
+                            "alcanzable": true,
+                            "acciones": [
+                              "LLENAR"
+                            ],
+                            "hijos": [],
+                            "texto": "",
+                            "nombre": "campoUsuario",
+                            "nombreAccesible": "Usuario"
+                          },
+                          {
+                            "tipo": "javax.swing.JLabel",
+                            "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[0]/JLabel[1]",
+                            "visible": true,
+                            "habilitado": true,
+                            "editable": false,
+                            "alcanzable": true,
+                            "acciones": [],
+                            "hijos": [],
+                            "texto": "Contraseña"
+                          },
+                          {
+                            "tipo": "javax.swing.JPasswordField",
+                            "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[0]/JPasswordField[0]",
+                            "visible": true,
+                            "habilitado": true,
+                            "editable": true,
+                            "alcanzable": true,
+                            "acciones": [
+                              "LLENAR"
+                            ],
+                            "hijos": [],
+                            "nombreAccesible": "Contraseña"
+                          }
+                        ]
+                      },
+                      {
+                        "tipo": "javax.swing.JPanel",
+                        "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[1]",
+                        "visible": true,
+                        "habilitado": true,
+                        "editable": false,
+                        "alcanzable": true,
+                        "acciones": [],
+                        "hijos": [
+                          {
+                            "tipo": "javax.swing.JButton",
+                            "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[1]/JButton[0]",
+                            "visible": true,
+                            "habilitado": true,
+                            "editable": false,
+                            "alcanzable": true,
+                            "acciones": [
+                              "PULSAR"
+                            ],
+                            "hijos": [],
+                            "texto": "Probar excepción",
+                            "nombre": "botonProbarExcepcion"
+                          },
+                          {
+                            "tipo": "javax.swing.JButton",
+                            "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[1]/JButton[1]",
+                            "visible": true,
+                            "habilitado": true,
+                            "editable": false,
+                            "alcanzable": true,
+                            "acciones": [
+                              "PULSAR"
+                            ],
+                            "hijos": [],
+                            "texto": "Volver"
+                          },
+                          {
+                            "tipo": "javax.swing.JButton",
+                            "ruta": "Iniciar sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JPanel[1]/JButton[2]",
+                            "visible": true,
+                            "habilitado": true,
+                            "editable": false,
+                            "alcanzable": true,
+                            "acciones": [
+                              "PULSAR"
+                            ],
+                            "hijos": [],
+                            "texto": "Iniciar Sesion",
+                            "nombre": "botonIniciarSesion"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
           }
-        ]
+        ],
+        "texto": "Iniciar sesión"
       }
     ]
   }
