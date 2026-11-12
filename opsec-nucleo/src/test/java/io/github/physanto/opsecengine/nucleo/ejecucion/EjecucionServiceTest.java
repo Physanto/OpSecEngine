@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.ConfigEjecucion;
 import io.github.physanto.opsecengine.dominio.caso.Localizador;
+import io.github.physanto.opsecengine.dominio.caso.ModoAccion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
@@ -109,6 +111,54 @@ class EjecucionServiceTest {
     @AfterEach
     void cerrarAgentes() {
         agentes.forEach(AgenteFalso::close);
+    }
+
+    @Test
+    void transmiteElModoOcultoDeLaSuiteAlArranqueDeCadaCaso() {
+        List<Boolean> modos = new ArrayList<>();
+        ArranqueApp arranque =
+                new ArranqueApp() {
+                    @Override
+                    public Closeable arrancar(Proyecto proyecto, int puerto, String token)
+                            throws IOException {
+                        throw new AssertionError("Se debe transmitir el modo oculto");
+                    }
+
+                    @Override
+                    public Closeable arrancar(
+                            Proyecto proyecto, int puerto, String token, boolean oculto)
+                            throws IOException {
+                        modos.add(oculto);
+                        return conAgenteFalso.arrancar(proyecto, puerto, token);
+                    }
+                };
+        EvaluacionService evaluacion =
+                new EvaluacionService(
+                        new RegistroExtensiones(List.of(), List.of(), List.of(), List.of()));
+        try (SesionService sesiones = new SesionService(arranque, ESPERA, ESPERA)) {
+            for (boolean oculto : List.of(true, false)) {
+                ConfigEjecucion config =
+                        new ConfigEjecucion(ModoAccion.SEMANTICO, oculto, ESPERA, 0, 0L, 1);
+                Suite suite =
+                        new Suite(
+                                "oculta",
+                                "1",
+                                null,
+                                config,
+                                List.of(
+                                        caso("A", pulsar(1, "Avanzar")),
+                                        caso("B", pulsar(1, "Avanzar"))),
+                                null);
+                assertThat(
+                                new EjecucionService(PROYECTO, sesiones, evaluacion)
+                                        .ejecutar(suite)
+                                        .casos())
+                        .allSatisfy(caso ->
+                                assertThat(caso.veredicto().estado())
+                                        .isEqualTo(EstadoVeredicto.CUMPLE));
+            }
+        }
+        assertThat(modos).containsExactly(true, true, false, false);
     }
 
     @Test
