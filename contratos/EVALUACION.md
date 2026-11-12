@@ -10,9 +10,11 @@ anteriores. El protocolo, los esquemas YAML y los catálogos siguen con sus form
 en ellos sin importar sus clases ni añadir una dependencia a ese módulo. Hoy solo se
 descubren oráculos individuales, generadores, reporteros y proveedores de datos.
 
-Esta entrega define el punto de extensión y el trabajo necesario de P2. Todavía no registra
-un proveedor ni cambia la ejecución del núcleo. La #23 sigue pendiente hasta que exista el
-proveedor y el núcleo lo conecte a los eventos de la ejecución.
+El proveedor `ProveedorEvaluacionOraculos` está implementado y registrado en `opsec-oraculos`.
+El núcleo lo descubre mediante `RegistroExtensiones` y `EvaluacionService`, y
+`EjecucionService` conecta los eventos de cada caso a su sesión de evaluación. La #23
+queda implementada. Las secciones siguientes conservan la especificación y sus criterios
+para las implementaciones actuales y futuras.
 
 ## Interfaces
 
@@ -31,9 +33,9 @@ El Javadoc de las interfaces fija las validaciones, excepciones y reglas de conc
 El proveedor y el evaluador son seguros entre hilos si los oráculos lo son. Cada sesión de
 caso pertenece a un solo hilo y solo admite un cierre.
 
-## Implementación solicitada a P2
+## Implementación del proveedor
 
-Trabajo en `modulo/oraculos`, después de traer este contrato desde `main`:
+La implementación pertenece a `modulo/oraculos` y cumple los siguientes requisitos:
 
 1. Crear un proveedor público sin argumentos que implemente `ProveedorEvaluacion`.
    Puede adaptar `EvaluadorOraculos` y `CargadorReglas`, conservando sus APIs actuales.
@@ -82,9 +84,9 @@ No añadir dependencias al núcleo, al protocolo ni al agente. El proveedor pert
 - Compatibilidad de los consumidores actuales de las clases concretas del módulo.
 - `./mvnw -B verify` completo, incluidas las reglas de dependencia.
 
-## Integración posterior del núcleo
+## Integración del núcleo
 
-Con el proveedor implementado e integrado, el líder continúa #23 en `modulo/nucleo`:
+La implementación en `modulo/nucleo` cumple los siguientes requisitos:
 
 1. Descubrir `ProveedorEvaluacion` mediante `ServiceLoader`, usando el mismo cargador que
    las otras extensiones. Exigir exactamente un proveedor; cero o varios son errores de
@@ -103,5 +105,8 @@ Con el proveedor implementado e integrado, el líder continúa #23 en `modulo/nu
 5. Probar el flujo con `AgenteFalso` y con el proveedor real en una prueba de integración
    del proyecto. Evitar añadir dependencias de compilación entre núcleo y oráculos.
 
-Se coordina la integración del proveedor antes de cambiar el descubrimiento obligatorio
-para que los consumidores existentes sigan funcionando durante la transición.
+El proveedor se integró antes de exigir su descubrimiento en el núcleo. Los consumidores
+existentes conservan sus APIs. Para cargar reglas desde una presentación se indica la
+carpeta en `new EvaluacionService(registro, carpetaReglas)`; la CLI mantiene su llamada
+anterior sin carpeta. El resultado de suite conserva sus hallazgos; los motivos completos
+se consultan mediante `evaluarResultadoSuite`.
