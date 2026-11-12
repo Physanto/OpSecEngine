@@ -97,10 +97,20 @@ class AgenteIT {
     @ParameterizedTest
     @ValueSource(strings = {"SEMANTICO", "EVENTOS"})
     void elAgenteManejaUnaVentanaSwing(String modo) throws Exception {
+        manejarVentanaSwing(modo, false);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SEMANTICO", "EVENTOS"})
+    void elAgenteManejaUnaVentanaOculta(String modo) throws Exception {
+        manejarVentanaSwing(modo, true);
+    }
+
+    private void manejarVentanaSwing(String modo, boolean oculto) throws Exception {
         assumeThat(GraphicsEnvironment.isHeadless()).as("necesita pantalla").isFalse();
-        Path salida = carpeta.resolve("ventana.log");
+        Path salida = carpeta.resolve(oculto ? "ventana-oculta.log" : "ventana.log");
         try (MotorFalso motor = new MotorFalso()) {
-            Process proceso = lanzar(motor, VentanaDePrueba.class.getName(), salida);
+            Process proceso = lanzar(motor, VentanaDePrueba.class.getName(), salida, oculto);
             try {
                 motor.esperarHola(ESPERA);
 
@@ -112,6 +122,9 @@ class AgenteIT {
                                         criterio("TITULO_VENTANA", VentanaDePrueba.TITULO),
                                         null))
                         .isEqualTo(CodigoResultado.OK);
+                if (oculto) {
+                    esperarEvento(motor, "CONSOLA", "Ventana oculta: true");
+                }
                 // La etiqueta Nombre no usa setLabelFor: se resuelve por cercanía.
                 assertThat(paso(motor, modo, "LLENAR", criterio("ETIQUETA", "Nombre"), "Ana"))
                         .isEqualTo(CodigoResultado.OK);
@@ -138,6 +151,9 @@ class AgenteIT {
                                         .containsEntry("tipoMensaje", "INFORMACION")
                                         .containsEntry("opciones", List.of("Cerrar")));
 
+                if (oculto) {
+                    esperarEvento(motor, "CONSOLA", "Dialogo oculto: true");
+                }
                 CapturaDto dialogo = motor.pedirCaptura(null);
                 assertThat(dialogo.getVentana())
                         .as("sin nombre, el diálogo modal")
@@ -435,6 +451,12 @@ class AgenteIT {
 
     private static Process lanzar(MotorFalso motor, String clase, Path salida, String... extra)
             throws IOException, URISyntaxException {
+        return lanzar(motor, clase, salida, false, extra);
+    }
+
+    private static Process lanzar(
+            MotorFalso motor, String clase, Path salida, boolean oculto, String... extra)
+            throws IOException, URISyntaxException {
         Path jarAgente = Path.of(System.getProperty("opsec.agente.jar"));
         assertThat(jarAgente).isRegularFile();
         Path java = Path.of(System.getProperty("java.home"), "bin", "java");
@@ -445,7 +467,11 @@ class AgenteIT {
                                 // En Windows la consola usa otra codificación; la prueba lee UTF-8
                                 "-Dstdout.encoding=UTF-8",
                                 "-Dstderr.encoding=UTF-8",
-                                "-javaagent:" + jarAgente + "=" + motor.argumentosAgente(),
+                                "-javaagent:"
+                                        + jarAgente
+                                        + "="
+                                        + motor.argumentosAgente()
+                                        + (oculto ? ",oculto=true" : ""),
                                 "-cp",
                                 String.join(
                                         File.pathSeparator,
