@@ -3,6 +3,8 @@ package io.github.physanto.opsecengine.nucleo.sesion;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Optional;
 
 /**
  * Arranca la aplicación probada de modo que su agente se conecte al motor.
@@ -35,4 +37,14 @@ public interface ArranqueApp {
      * @throws IOException si no se puede arrancar la aplicación
      */
     Closeable arrancar(Proyecto proyecto, int puerto, String token) throws IOException;
+
+    /**
+     * Devuelve la carpeta de resultados de la ejecución, donde el motor guarda también las
+     * capturas.
+     *
+     * @return la carpeta, o vacío si este arranque no tiene una (el valor por defecto)
+     */
+    default Optional<Path> carpetaResultados() {
+        return Optional.empty();
+    }
 }

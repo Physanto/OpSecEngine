@@ -1,6 +1,8 @@
 package io.github.physanto.opsecengine.agente.swing;
 
+import java.awt.Component;
 import java.awt.KeyboardFocusManager;
+import java.awt.Rectangle;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -20,11 +22,40 @@ final class AccionesEventos {
 
     /** Envía un clic izquierdo completo al centro del botón. */
     static void pulsar(AbstractButton boton) {
-        raton(boton, MouseEvent.MOUSE_ENTERED, 0, MouseEvent.NOBUTTON, 0);
-        raton(boton, MouseEvent.MOUSE_PRESSED, InputEvent.BUTTON1_DOWN_MASK, MouseEvent.BUTTON1, 1);
-        raton(boton, MouseEvent.MOUSE_RELEASED, 0, MouseEvent.BUTTON1, 1);
-        raton(boton, MouseEvent.MOUSE_CLICKED, 0, MouseEvent.BUTTON1, 1);
-        raton(boton, MouseEvent.MOUSE_EXITED, 0, MouseEvent.NOBUTTON, 0);
+        clic(boton, new Rectangle(0, 0, boton.getWidth(), boton.getHeight()));
+    }
+
+    /**
+     * Envía un clic izquierdo completo al centro de una zona del componente, por ejemplo una celda
+     * de una tabla o una pestaña.
+     */
+    static void clic(Component componente, Rectangle zona) {
+        int x = zona.x + zona.width / 2;
+        int y = zona.y + zona.height / 2;
+        raton(componente, MouseEvent.MOUSE_ENTERED, 0, MouseEvent.NOBUTTON, 0, x, y);
+        raton(
+                componente,
+                MouseEvent.MOUSE_PRESSED,
+                InputEvent.BUTTON1_DOWN_MASK,
+                MouseEvent.BUTTON1,
+                1,
+                x,
+                y);
+        raton(componente, MouseEvent.MOUSE_RELEASED, 0, MouseEvent.BUTTON1, 1, x, y);
+        raton(componente, MouseEvent.MOUSE_CLICKED, 0, MouseEvent.BUTTON1, 1, x, y);
+        raton(componente, MouseEvent.MOUSE_EXITED, 0, MouseEvent.NOBUTTON, 0, x, y);
+    }
+
+    /** Envía solo la liberación del botón izquierdo en el centro de una zona del componente. */
+    static void soltar(Component componente, Rectangle zona) {
+        raton(
+                componente,
+                MouseEvent.MOUSE_RELEASED,
+                0,
+                MouseEvent.BUTTON1,
+                1,
+                zona.x + zona.width / 2,
+                zona.y + zona.height / 2);
     }
 
     /** Selecciona el contenido anterior, lo borra con Retroceso y escribe el nuevo texto. */
@@ -42,15 +73,15 @@ final class AccionesEventos {
     }
 
     private static void raton(
-            AbstractButton boton, int tipo, int modificadores, int tecla, int clics) {
-        boton.dispatchEvent(
+            Component componente, int tipo, int modificadores, int tecla, int clics, int x, int y) {
+        componente.dispatchEvent(
                 new MouseEvent(
-                        boton,
+                        componente,
                         tipo,
                         System.currentTimeMillis(),
                         modificadores,
-                        boton.getWidth() / 2,
-                        boton.getHeight() / 2,
+                        x,
+                        y,
                         0,
                         0,
                         clics,

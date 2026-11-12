@@ -1,6 +1,8 @@
 package io.github.physanto.opsecengine.agente;
 
 import io.github.physanto.opsecengine.agente.swing.AdaptadorSwing;
+import io.github.physanto.opsecengine.agente.swing.CierreAplicacion;
+import io.github.physanto.opsecengine.agente.swing.ObservadorExcepciones;
 import io.github.physanto.opsecengine.agente.swing.ObservadorVentanas;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import java.awt.AWTError;
@@ -18,9 +20,12 @@ import java.lang.instrument.Instrumentation;
  * <ol>
  *   <li>Lee los argumentos.
  *   <li>Instala el {@link ObservadorConsola}, para que la aplicación tome las salidas observadas.
+ *   <li>Instala el {@link ObservadorExcepciones} como manejador por defecto de excepciones no
+ *       capturadas.
  *   <li>Registra el {@link ObservadorVentanas}.
- *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} en un hilo daemon, que
- *       se conecta con el motor sin retrasar a la aplicación.
+ *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} y el {@link
+ *       CierreAplicacion} en un hilo daemon, que se conecta con el motor sin retrasar a la
+ *       aplicación.
  * </ol>
  *
  * <p>Los eventos anteriores a la conexión se guardan y se envían después del saludo. La clase no
@@ -63,6 +68,11 @@ public final class AgenteMain {
             RegistroAgente.error("No se pudo observar la consola: " + e);
         }
         try {
+            ObservadorExcepciones.instalar(emisor, RegistroAgente::error);
+        } catch (RuntimeException e) {
+            RegistroAgente.error("No se pudieron observar las excepciones: " + e);
+        }
+        try {
             ObservadorVentanas.instalar(emisor, RegistroAgente::error);
         } catch (RuntimeException | AWTError | LinkageError e) {
             RegistroAgente.error("No se pudieron observar las ventanas: " + e);
@@ -71,7 +81,12 @@ public final class AgenteMain {
             Thread hilo =
                     new Thread(
                             new ServidorProtocolo(
-                                    leidos, version(), new AdaptadorSwing(emisor), emisor, codec),
+                                    leidos,
+                                    version(),
+                                    new AdaptadorSwing(emisor),
+                                    emisor,
+                                    codec,
+                                    new CierreAplicacion(RegistroAgente::error)),
                             NOMBRE_HILO);
             hilo.setDaemon(true);
             hilo.start();

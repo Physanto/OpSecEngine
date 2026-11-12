@@ -37,6 +37,11 @@ class LanzadorProcesoTest {
     }
 
     @Test
+    void informaSuCarpetaDeResultados() {
+        assertThat(lanzador.carpetaResultados()).contains(Path.of("resultados"));
+    }
+
+    @Test
     void usaElManifiestoCuandoNoHayClasePrincipal() {
         List<String> comando = lanzador.comando(proyecto(null, List.of()), 80, "t");
 

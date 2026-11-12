@@ -33,3 +33,19 @@ En Windows:
 ```bat
 mvnw.cmd -B -pl opsec-dominio -am verify
 ```
+
+## Contrato de evaluación (v1.3)
+
+El paquete `dominio.extension` incorpora `ProveedorEvaluacion`, `Evaluador` y
+`EvaluacionCaso`. El primero es la fábrica que se registra con `ServiceLoader`; el
+segundo evalúa suites y crea sesiones independientes de caso; el tercero recibe los
+eventos y termina la evaluación del caso. Las sesiones no son seguras entre hilos.
+
+El proveedor recibe los oráculos registrados y una carpeta opcional de reglas YAML.
+Los contratos preservan los veredictos completos de `Oraculo.evaluarResultado`, incluidos
+los motivos no concluyentes, y distinguen falta provisional de evidencia de errores
+persistentes. No contienen implementaciones de carga ni de evaluación.
+
+Este cambio es aditivo. La implementación del proveedor corresponde a P2 y la conexión
+del núcleo se realizará después; la #23 sigue pendiente. La especificación y las pruebas
+de aceptación están en [el contrato de evaluación](../contratos/EVALUACION.md).

@@ -8,6 +8,7 @@ import io.github.physanto.opsecengine.dominio.caso.Localizador;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
+import io.github.physanto.opsecengine.dominio.configuracion.Rol;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.extension.Momento;
 import io.github.physanto.opsecengine.dominio.extension.Oraculo;
@@ -24,6 +25,7 @@ import io.github.physanto.opsecengine.nucleo.evaluacion.EvaluacionService;
 import io.github.physanto.opsecengine.nucleo.extensiones.RegistroExtensiones;
 import io.github.physanto.opsecengine.nucleo.sesion.ArranqueApp;
 import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
+import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
@@ -31,14 +33,19 @@ import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.soporte.AgenteFalso;
+import java.io.Closeable;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Ejemplo de referencia: prueba un servicio del núcleo contra {@link AgenteFalso}, sin lanzar
@@ -59,6 +66,22 @@ class EjecucionServiceTest {
                     null,
                     null,
                     null);
+    private static final String CONTRASENA = "Secreta-2026";
+    private static final Proyecto PROYECTO_CON_LOGIN =
+            new Proyecto(
+                    "clientes",
+                    Path.of("no-existe", "app.jar"),
+                    "app.Portada",
+                    null,
+                    null,
+                    List.of(new Rol("admin", "Admin", CONTRASENA)),
+                    List.of(
+                            llenar(1, "Usuario", "{usuario}"),
+                            llenar(2, "Contraseña", "clave:{contrasena}"),
+                            pulsar(3, "Ingresar")),
+                    null,
+                    null,
+                    null);
     private static final EventoDto MENU_ABIERTO =
             new EventoDto(
                     41,
@@ -73,6 +96,8 @@ class EjecucionServiceTest {
                 agente.cuandoPaso(texto("Avanzar"))
                         .emitir(MENU_ABIERTO)
                         .responder(new ResultadoPasoDto(CodigoResultado.OK, null, 12));
+                agente.cuandoPaso(texto("Usuario").or(texto("Contraseña")).or(texto("Ingresar")))
+                        .responder(new ResultadoPasoDto(CodigoResultado.OK, null, 5));
                 agente.cuandoPaso(texto("Romper"))
                         .responder(
                                 new ResultadoPasoDto(CodigoResultado.ERROR, "fallo del driver", 3));
@@ -165,14 +190,181 @@ class EjecucionServiceTest {
     }
 
     @Test
-    void unCasoConRolNoSeEjecutaTodavia() throws Exception {
+    void unCasoConRolIniciaSesionAntesDeSusPasos() throws Exception {
         Caso conRol =
                 new Caso("A1", null, "admin", List.of(pulsar(1, "Avanzar")), null, null, null);
 
-        ResultadoSuite resultado = ejecutar(List.of(), conRol);
+        ResultadoSuite resultado = ejecutar(PROYECTO_CON_LOGIN, List.of(), conRol);
 
-        assertThat(resultado.casos().get(0).veredicto().motivo()).contains("rol admin");
+        ResultadoCaso caso = resultado.casos().get(0);
+        assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.CUMPLE);
+        assertThat(agentes).singleElement();
+        CodecMensajes codec = new CodecMensajes();
+        List<String> valores = new ArrayList<>();
+        for (Mensaje mensaje : agentes.get(0).mensajesRecibidos()) {
+            if (mensaje.getTipo() == TipoMensaje.EJECUTAR_PASO) {
+                valores.add(codec.leerCuerpo(mensaje, PasoDto.class).getValor());
+            }
+        }
+        assertThat(valores)
+                .as("el agente recibe las credenciales reales")
+                .containsExactly("Admin", "clave:" + CONTRASENA, null, null);
+
+        List<Evento> eventos = caso.traza().eventos();
+        assertThat(eventos)
+                .extracting(Evento::tipo)
+                .containsExactly(
+                        TipoEvento.PASO_INICIO,
+                        TipoEvento.PASO_FIN,
+                        TipoEvento.PASO_INICIO,
+                        TipoEvento.PASO_FIN,
+                        TipoEvento.PASO_INICIO,
+                        TipoEvento.PASO_FIN,
+                        TipoEvento.SESION,
+                        TipoEvento.PASO_INICIO,
+                        TipoEvento.VENTANA_ABIERTA,
+                        TipoEvento.PASO_FIN);
+        assertThat(eventos.subList(0, 6))
+                .allSatisfy(evento -> {
+                    assertThat(evento.contexto().numeroPaso()).isZero();
+                    assertThat(evento.contexto().rol()).isNull();
+                    assertThat(evento.contexto().sesionActiva()).isFalse();
+                });
+        assertThat(eventos.get(0).datos()).containsEntry("valor", "Admin");
+        assertThat(eventos.get(2).datos())
+                .containsEntry("valor", "clave:" + EjecucionService.VALOR_OCULTO);
+        assertThat(eventos)
+                .as("la contraseña no queda en la traza")
+                .noneSatisfy(evento -> assertThat(evento.datos().toString()).contains(CONTRASENA));
+
+        Evento sesion = eventos.get(6);
+        assertThat(sesion.datos())
+                .containsEntry("activa", true)
+                .containsEntry("rol", "admin")
+                .containsEntry("usuario", "Admin");
+        assertThat(eventos.subList(6, eventos.size()))
+                .allSatisfy(evento -> {
+                    assertThat(evento.contexto().rol()).isEqualTo("admin");
+                    assertThat(evento.contexto().sesionActiva()).isTrue();
+                });
+        assertThat(eventos.get(7).contexto().numeroPaso()).isEqualTo(1);
+    }
+
+    @Test
+    void siElLoginFallaLosPasosDelCasoNoSeEjecutan() throws Exception {
+        Proyecto loginRoto =
+                new Proyecto(
+                        "clientes",
+                        Path.of("no-existe", "app.jar"),
+                        "app.Portada",
+                        null,
+                        null,
+                        PROYECTO_CON_LOGIN.roles(),
+                        List.of(llenar(1, "Usuario", "{usuario}"), pulsar(2, "Entrar")),
+                        null,
+                        null,
+                        null);
+        Caso conRol =
+                new Caso("A1", null, "admin", List.of(pulsar(1, "Avanzar")), null, null, null);
+
+        ResultadoSuite resultado = ejecutar(loginRoto, List.of(), conRol);
+
+        ResultadoCaso caso = resultado.casos().get(0);
+        assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(caso.veredicto().motivo())
+                .startsWith(
+                        "No se pudo iniciar sesión con el rol admin: El paso 2 del login (PULSAR"
+                                + " texto=Entrar) terminó con NO_ENCONTRADO");
+        assertThat(caso.traza().deTipo(TipoEvento.SESION)).isEmpty();
+        assertThat(caso.traza().deTipo(TipoEvento.PASO_INICIO))
+                .as("solo los dos pasos de login")
+                .hasSize(2)
+                .allSatisfy(evento -> assertThat(evento.contexto().numeroPaso()).isZero());
+    }
+
+    @Test
+    void unCasoConRolSinPasosDeLoginNoSeEjecuta() throws Exception {
+        Proyecto sinLogin =
+                new Proyecto(
+                        "clientes",
+                        Path.of("no-existe", "app.jar"),
+                        "app.Portada",
+                        null,
+                        null,
+                        PROYECTO_CON_LOGIN.roles(),
+                        null,
+                        null,
+                        null,
+                        null);
+        Caso conRol =
+                new Caso("A1", null, "admin", List.of(pulsar(1, "Avanzar")), null, null, null);
+
+        ResultadoSuite resultado = ejecutar(sinLogin, List.of(), conRol);
+
+        assertThat(resultado.casos().get(0).veredicto().estado())
+                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(resultado.casos().get(0).veredicto().motivo())
+                .contains("rol admin", "no declara pasos de login");
         assertThat(agentes).isEmpty();
+    }
+
+    @Test
+    void capturarPideLaImagenLaGuardaYRegistraElEvento(@TempDir Path resultados) throws Exception {
+        Paso captura = new Paso(2, Accion.CAPTURAR, Localizador.porTexto("Menú"), null, null, null);
+        ArranqueApp conCarpeta =
+                new ArranqueApp() {
+                    @Override
+                    public Closeable arrancar(Proyecto proyecto, int puerto, String token)
+                            throws IOException {
+                        return conAgenteFalso.arrancar(proyecto, puerto, token);
+                    }
+
+                    @Override
+                    public Optional<Path> carpetaResultados() {
+                        return Optional.of(resultados);
+                    }
+                };
+
+        ResultadoSuite resultado =
+                ejecutar(conCarpeta, List.of(), caso("C/01", pulsar(1, "Avanzar"), captura));
+
+        ResultadoCaso caso = resultado.casos().get(0);
+        assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.CUMPLE);
+        assertThat(caso.traza().eventos())
+                .extracting(Evento::tipo)
+                .containsSubsequence(
+                        TipoEvento.PASO_INICIO, TipoEvento.CAPTURA, TipoEvento.PASO_FIN);
+        Evento evento = caso.traza().primero(TipoEvento.CAPTURA).orElseThrow();
+        assertThat(evento.datos())
+                .containsEntry("archivo", "capturas/C_01-2.png")
+                .containsEntry("formato", "PNG");
+        assertThat(evento.contexto().numeroPaso()).isEqualTo(2);
+        assertThat(resultados.resolve("capturas").resolve("C_01-2.png"))
+                .hasBinaryContent(AgenteFalso.imagenPng());
+        assertThat(agentes.get(0).mensajesRecibidos())
+                .extracting(Mensaje::getTipo)
+                .contains(TipoMensaje.CAPTURAR)
+                .containsOnlyOnce(TipoMensaje.EJECUTAR_PASO);
+        assertThat(
+                        agentes.get(0)
+                                .esperarMensaje(TipoMensaje.CAPTURAR, ESPERA)
+                                .orElseThrow()
+                                .getCuerpo()
+                                .get("ventana")
+                                .asText())
+                .isEqualTo("Menú");
+    }
+
+    @Test
+    void capturarSinCarpetaDeResultadosTerminaConError() throws Exception {
+        Paso captura = new Paso(1, Accion.CAPTURAR, null, null, null, null);
+
+        ResultadoSuite resultado = ejecutar(List.of(), caso("SIN", captura));
+
+        ResultadoCaso caso = resultado.casos().get(0);
+        assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(caso.veredicto().motivo()).contains("CAPTURAR", "carpeta de resultados");
+        assertThat(caso.traza().deTipo(TipoEvento.CAPTURA)).isEmpty();
     }
 
     @Test
@@ -186,13 +378,178 @@ class EjecucionServiceTest {
         assertThat(resultado.fin()).isAfterOrEqualTo(resultado.inicio());
     }
 
+    @Test
+    void notificaElAvanceEnOrdenInclusoSiUnPasoFalla() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Caso ok = caso("OK", pulsar(1, "Avanzar"));
+        Caso falla = caso("FALLA", pulsar(1, "Romper"), pulsar(2, "Avanzar"));
+
+        ResultadoSuite resultado = ejecutarConObservador(PROYECTO, avisos::add, ok, falla);
+
+        assertThat(avisos)
+                .extracting(ProgresoEjecucion::tipo)
+                .containsExactly(
+                        ProgresoEjecucion.Tipo.SUITE_INICIO,
+                        ProgresoEjecucion.Tipo.CASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_FIN,
+                        ProgresoEjecucion.Tipo.CASO_FIN,
+                        ProgresoEjecucion.Tipo.CASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_INICIO,
+                        ProgresoEjecucion.Tipo.PASO_FIN,
+                        ProgresoEjecucion.Tipo.CASO_FIN,
+                        ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(avisos)
+                .allSatisfy(aviso -> {
+                    assertThat(aviso.nombreSuite()).isEqualTo("suite-prueba");
+                    assertThat(aviso.totalCasos()).isEqualTo(2);
+                    assertThat(aviso.login()).isFalse();
+                });
+        assertThat(avisos.get(0).casoId()).isNull();
+        assertThat(avisos.get(1).casoId()).isEqualTo("OK");
+        assertThat(avisos.get(3).numeroPaso()).isEqualTo(1);
+        assertThat(avisos.get(3).codigo()).isEqualTo(CodigoResultado.OK);
+        assertThat(avisos.get(7).codigo()).isEqualTo(CodigoResultado.ERROR);
+        assertThat(avisos.get(7).totalPasos()).isEqualTo(2);
+        assertThat(resultado.casos().get(1).veredicto().estado())
+                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+    }
+
+    @Test
+    void notificaCadaPasoDeLoginSinExponerCredenciales() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Caso conRol =
+                new Caso("A1", null, "admin", List.of(pulsar(1, "Avanzar")), null, null, null);
+
+        ejecutarConObservador(PROYECTO_CON_LOGIN, avisos::add, conRol);
+
+        assertThat(avisos.stream().filter(ProgresoEjecucion::login))
+                .extracting(ProgresoEjecucion::numeroPaso)
+                .containsExactly(1, 1, 2, 2, 3, 3);
+        assertThat(avisos.stream().filter(ProgresoEjecucion::login))
+                .allSatisfy(aviso -> assertThat(aviso.totalPasos()).isEqualTo(3));
+        assertThat(avisos.get(8).login()).isFalse();
+        assertThat(avisos.get(8).numeroPaso()).isEqualTo(1);
+        assertThat(avisos.get(8).totalPasos()).isEqualTo(1);
+        assertThat(avisos.toString()).doesNotContain(CONTRASENA, "Admin", "clave:");
+    }
+
+    @Test
+    void siFallaElLoginNotificaSuFinSinAnunciarLosPasosDelCaso() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Proyecto proyecto =
+                new Proyecto(
+                        "clientes",
+                        PROYECTO.jar(),
+                        null,
+                        null,
+                        null,
+                        PROYECTO_CON_LOGIN.roles(),
+                        List.of(pulsar(1, "Romper")),
+                        null,
+                        null,
+                        null);
+        Caso conRol =
+                new Caso("A1", null, "admin", List.of(pulsar(1, "Avanzar")), null, null, null);
+
+        ResultadoSuite resultado = ejecutarConObservador(proyecto, avisos::add, conRol);
+
+        assertThat(avisos).hasSize(6);
+        assertThat(avisos.get(2).login()).isTrue();
+        assertThat(avisos.get(3).codigo()).isEqualTo(CodigoResultado.ERROR);
+        assertThat(avisos.get(4).tipo()).isEqualTo(ProgresoEjecucion.Tipo.CASO_FIN);
+        assertThat(avisos.get(5).tipo()).isEqualTo(ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(resultado.casos().get(0).veredicto().estado())
+                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+    }
+
+    @Test
+    void notificaLosCasosNoEjecutablesSinInventarPasos() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        Caso sinRol =
+                new Caso(
+                        "SIN-ROL",
+                        null,
+                        "desconocido",
+                        List.of(pulsar(1, "Avanzar")),
+                        null,
+                        null,
+                        null);
+
+        ejecutarConObservador(PROYECTO, avisos::add, sinRol);
+
+        assertThat(avisos)
+                .extracting(ProgresoEjecucion::tipo)
+                .containsExactly(
+                        ProgresoEjecucion.Tipo.SUITE_INICIO, ProgresoEjecucion.Tipo.CASO_INICIO,
+                        ProgresoEjecucion.Tipo.CASO_FIN, ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(agentes).isEmpty();
+    }
+
+    @Test
+    void notificaUnaSuiteVaciaSinAbrirSesiones() {
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+
+        ejecutarConObservador(PROYECTO, avisos::add);
+
+        assertThat(avisos)
+                .extracting(ProgresoEjecucion::tipo)
+                .containsExactly(
+                        ProgresoEjecucion.Tipo.SUITE_INICIO, ProgresoEjecucion.Tipo.SUITE_FIN);
+        assertThat(avisos).allSatisfy(aviso -> assertThat(aviso.totalCasos()).isZero());
+        assertThat(agentes).isEmpty();
+    }
+
+    @Test
+    void unObservadorQueFallaNoInterrumpeLaSuiteYRecibeLosAvisosEnElMismoHilo() {
+        Thread hilo = Thread.currentThread();
+        List<ProgresoEjecucion> avisos = new ArrayList<>();
+        ObservadorProgreso observador =
+                aviso -> {
+                    assertThat(Thread.currentThread()).isSameAs(hilo);
+                    avisos.add(aviso);
+                    throw new IllegalStateException("fallo de la presentación");
+                };
+
+        ResultadoSuite resultado =
+                ejecutarConObservador(PROYECTO, observador, caso("OK", pulsar(1, "Avanzar")));
+
+        assertThat(resultado.casos().get(0).veredicto().estado()).isEqualTo(EstadoVeredicto.CUMPLE);
+        assertThat(avisos).hasSize(6);
+        assertThat(avisos.get(5).tipo()).isEqualTo(ProgresoEjecucion.Tipo.SUITE_FIN);
+    }
+
+    private ResultadoSuite ejecutarConObservador(
+            Proyecto proyecto, ObservadorProgreso observador, Caso... casos) {
+        EvaluacionService evaluacion =
+                new EvaluacionService(
+                        new RegistroExtensiones(List.of(), List.of(), List.of(), List.of()));
+        try (SesionService sesiones = new SesionService(conAgenteFalso, ESPERA, ESPERA)) {
+            Suite suite = new Suite("suite-prueba", "1", null, null, List.of(casos), null);
+            return new EjecucionService(proyecto, sesiones, evaluacion, observador).ejecutar(suite);
+        }
+    }
+
     private ResultadoSuite ejecutar(List<Oraculo> oraculos, Caso... casos) {
+        return ejecutar(PROYECTO, conAgenteFalso, oraculos, casos);
+    }
+
+    private ResultadoSuite ejecutar(Proyecto proyecto, List<Oraculo> oraculos, Caso... casos) {
+        return ejecutar(proyecto, conAgenteFalso, oraculos, casos);
+    }
+
+    private ResultadoSuite ejecutar(ArranqueApp arranque, List<Oraculo> oraculos, Caso... casos) {
+        return ejecutar(PROYECTO, arranque, oraculos, casos);
+    }
+
+    private ResultadoSuite ejecutar(
+            Proyecto proyecto, ArranqueApp arranque, List<Oraculo> oraculos, Caso... casos) {
         EvaluacionService evaluacion =
                 new EvaluacionService(
                         new RegistroExtensiones(oraculos, List.of(), List.of(), List.of()));
-        try (SesionService sesiones = new SesionService(conAgenteFalso, ESPERA, ESPERA)) {
+        try (SesionService sesiones = new SesionService(arranque, ESPERA, ESPERA)) {
             Suite suite = new Suite("suite-prueba", "1", null, null, List.of(casos), null);
-            return new EjecucionService(PROYECTO, sesiones, evaluacion).ejecutar(suite);
+            return new EjecucionService(proyecto, sesiones, evaluacion).ejecutar(suite);
         }
     }
 
@@ -202,6 +559,10 @@ class EjecucionServiceTest {
 
     private static Paso pulsar(int orden, String texto) {
         return new Paso(orden, Accion.PULSAR, Localizador.porTexto(texto), null, null, null);
+    }
+
+    private static Paso llenar(int orden, String texto, String valor) {
+        return new Paso(orden, Accion.LLENAR, Localizador.porTexto(texto), valor, null, null);
     }
 
     private static Predicate<PasoDto> texto(String texto) {
