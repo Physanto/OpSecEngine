@@ -441,6 +441,9 @@ class AgenteIT {
                 new ArrayList<>(
                         List.of(
                                 java.toString(),
+                                // En Windows la consola usa otra codificación; la prueba lee UTF-8
+                                "-Dstdout.encoding=UTF-8",
+                                "-Dstderr.encoding=UTF-8",
                                 "-javaagent:" + jarAgente + "=" + motor.argumentosAgente(),
                                 "-cp",
                                 String.join(
