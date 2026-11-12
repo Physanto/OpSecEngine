@@ -1,0 +1,31 @@
+# Plantilla de validación: sustituye el campo, el valor inválido y la señal de rechazo.
+# Prepara el formulario y restablece sus datos antes de ejecutar cada caso, que no declara rol.
+# La aparición del rechazo no demuestra que el backend haya conservado sus datos.
+# No configura automáticamente PoliticaValidacionTemporal ni genera payloads.
+suite: plantilla-validacion
+version: "1"
+enfoques: [VALIDACION]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+  reintentos: 0
+  paralelismo: 1
+casos:
+  - id: VAL-001
+    descripcion: Envía vacío un campo que la aplicación declara obligatorio.
+    pasos:
+      - esperar: {tituloVentana: Formulario de ejemplo}
+      - llenar: {Dato: ""}
+      - pulsar: {nombreComponente: btnConfirmar, texto: Confirmar}
+      - esperar: {texto: Campo obligatorio}
+      - capturar:
+    oraculos: [TRAZA-EN-DIALOGO, EXCEPCION-NO-CAPTURADA, APP-TERMINADA]
+  - id: VAL-002
+    descripcion: Envía un valor que incumple una restricción conocida del campo.
+    pasos:
+      - esperar: {tituloVentana: Formulario de ejemplo}
+      - llenar: {Dato: "valor inválido de prueba"}
+      - pulsar: {nombreComponente: btnConfirmar, texto: Confirmar}
+      - esperar: {texto: Dato no válido}
+      - capturar:
+    oraculos: [TRAZA-EN-DIALOGO, EXCEPCION-NO-CAPTURADA, APP-TERMINADA]

@@ -1,0 +1,2 @@
+{"secuencia":0,"instante":"2026-10-30T10:00:00Z","tipo":"DIALOGO","contexto":{"casoId":"DIALOGO","numeroPaso":1,"sesionActiva":false},"datos":{"texto":"No se pudo completar la operación. Inténtelo nuevamente.","titulo":"Error","tipoMensaje":"ERROR"}}
+{"secuencia":1,"instante":"2026-10-30T10:00:01Z","tipo":"CONSOLA","contexto":{"casoId":"DIALOGO","numeroPaso":1,"sesionActiva":false},"datos":{"texto":"java.lang.NullPointerException: dato sensible de prueba\n\tat app.Clientes.buscar(Clientes.java:42)","flujo":"ERROR"}}
