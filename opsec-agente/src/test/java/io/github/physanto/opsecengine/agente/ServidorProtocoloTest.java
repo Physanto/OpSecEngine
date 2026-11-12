@@ -20,6 +20,7 @@ import io.github.physanto.opsecengine.soporte.MotorFalso;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.Test;
 
 /** Pruebas del servidor del protocolo en el mismo proceso, contra {@link MotorFalso}. */
@@ -32,8 +33,14 @@ class ServidorProtocoloTest {
     void saludaEnviaLosEventosGuardadosYTerminaConCerrar() throws Exception {
         EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
         emisor.emitir("CONSOLA", Map.of("flujo", "SALIDA", "texto", "antes de conectar"));
+        CountDownLatch cierre = new CountDownLatch(1);
         try (MotorFalso motor = new MotorFalso()) {
-            Thread hilo = iniciar(motor.argumentosAgente(), new AdaptadorFijo(emisor), emisor);
+            Thread hilo =
+                    iniciar(
+                            motor.argumentosAgente(),
+                            new AdaptadorFijo(emisor),
+                            emisor,
+                            cierre::countDown);
 
             HolaDto hola = motor.esperarHola(ESPERA);
             assertThat(hola.getToken()).isEqualTo(motor.token());
@@ -69,24 +76,55 @@ class ServidorProtocoloTest {
             assertThat(motor.cerrar()).isTrue();
             hilo.join(ESPERA.toMillis());
             assertThat(hilo.isAlive()).isFalse();
+            assertThat(cierre.getCount()).as("CERRAR cierra la aplicación").isZero();
+            assertThat(motor.eventos())
+                    .last()
+                    .satisfies(evento -> {
+                        assertThat(evento.getTipo()).isEqualTo("APP_TERMINADA");
+                        assertThat(evento.getDatos())
+                                .containsEntry("esperada", true)
+                                .containsEntry("causa", "CERRAR");
+                    });
         }
         emisor.emitir("CONSOLA", Map.of("flujo", "SALIDA", "texto", "después de cerrar"));
+    }
+
+    @Test
+    void noCierraLaAplicacionSiElMotorCortaLaConexion() throws Exception {
+        EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
+        CountDownLatch cierre = new CountDownLatch(1);
+        Thread hilo;
+        try (MotorFalso motor = new MotorFalso()) {
+            hilo =
+                    iniciar(
+                            motor.argumentosAgente(),
+                            new AdaptadorFijo(emisor),
+                            emisor,
+                            cierre::countDown);
+            motor.esperarHola(ESPERA);
+        }
+        hilo.join(ESPERA.toMillis());
+        assertThat(hilo.isAlive()).isFalse();
+        assertThat(cierre.getCount()).isEqualTo(1);
     }
 
     @Test
     void terminaSiElMotorRechazaElToken() throws Exception {
         EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
         try (MotorFalso motor = new MotorFalso("token-del-motor")) {
+            CountDownLatch cierre = new CountDownLatch(1);
             Thread hilo =
                     iniciar(
                             "puerto=" + motor.puerto() + ",token=otro",
                             new AdaptadorFijo(emisor),
-                            emisor);
+                            emisor,
+                            cierre::countDown);
 
             assertThatThrownBy(() -> motor.esperarHola(ESPERA))
                     .hasMessageContaining(ErrorDto.TOKEN_INVALIDO);
             hilo.join(ESPERA.toMillis());
             assertThat(hilo.isAlive()).isFalse();
+            assertThat(cierre.getCount()).as("no cierra la aplicación").isEqualTo(1);
         }
     }
 
@@ -97,7 +135,10 @@ class ServidorProtocoloTest {
     }
 
     private static Thread iniciar(
-            String argumentos, AdaptadorToolkit adaptador, EmisorProtocolo emisor) {
+            String argumentos,
+            AdaptadorToolkit adaptador,
+            EmisorProtocolo emisor,
+            Runnable cierre) {
         Thread hilo =
                 new Thread(
                         new ServidorProtocolo(
@@ -105,7 +146,8 @@ class ServidorProtocoloTest {
                                 AgenteMain.version(),
                                 adaptador,
                                 emisor,
-                                CODEC),
+                                CODEC,
+                                cierre),
                         "servidor-prueba");
         hilo.setDaemon(true);
         hilo.start();
