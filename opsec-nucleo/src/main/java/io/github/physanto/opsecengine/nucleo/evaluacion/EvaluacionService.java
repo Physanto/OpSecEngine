@@ -1,146 +1,142 @@
 package io.github.physanto.opsecengine.nucleo.evaluacion;
 
-import io.github.physanto.opsecengine.dominio.caso.Caso;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
-import io.github.physanto.opsecengine.dominio.extension.Momento;
-import io.github.physanto.opsecengine.dominio.extension.Oraculo;
-import io.github.physanto.opsecengine.dominio.resultado.Confianza;
-import io.github.physanto.opsecengine.dominio.resultado.EstadoVeredicto;
+import io.github.physanto.opsecengine.dominio.extension.EvaluacionCaso;
+import io.github.physanto.opsecengine.dominio.extension.Evaluador;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
 import io.github.physanto.opsecengine.dominio.resultado.Veredicto;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
 import io.github.physanto.opsecengine.nucleo.extensiones.RegistroExtensiones;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
- * Aplica los oráculos a las trazas y calcula los veredictos.
+ * Fachada del proveedor de evaluación descubierto mediante ServiceLoader.
  *
- * <p><b>Por caso</b> ({@link #evaluarCaso(Traza, Contexto, String)}): se evalúan los oráculos de
- * momento {@link Momento#EVENTO} y {@link Momento#CASO} que aplican al caso, más los que el caso
- * pide por id aunque no apliquen. El veredicto sigue la regla "confiable antes que completo":
+ * <p>Delega la evaluación por evento, caso y suite en el contrato {@link Evaluador}, sin importar
+ * clases de implementación. {@link #iniciarCaso} permite evaluar mientras se ejecutan los pasos;
+ * {@link #evaluarCaso} conserva la API para trazas ya recogidas y las reproduce en orden. La
+ * selección de oráculos, los hallazgos y los motivos corresponden al proveedor.
  *
- * <ol>
- *   <li>{@code NO_CUMPLE} si algún hallazgo tiene confianza {@code CONFIRMADO} o {@code PROBABLE},
- *       aunque la ejecución haya quedado incompleta (el motivo se conserva);
- *   <li>si no, {@code NO_CONCLUYENTE} si la ejecución quedó incompleta, si un oráculo falló, si un
- *       oráculo respondió {@code NO_CONCLUYENTE} por falta de evidencia o si el caso pide un
- *       oráculo que no está registrado;
- *   <li>si no, {@code CUMPLE}. Los hallazgos {@code INFO} se conservan en cualquier veredicto.
- * </ol>
+ * <p>La carpeta opcional de reglas se recibe explícitamente, sin deducirla del JAR o del directorio
+ * de trabajo. Los errores de configuración se informan antes de ejecutar casos. Es seguro entre
+ * hilos si el evaluador lo es; cada sesión de caso pertenece a un solo hilo.
  *
- * <p><b>Por suite</b> ({@link #evaluarSuite(Contexto)}): se evalúan los oráculos de momento {@link
- * Momento#SUITE} con las trazas de todos los casos.
- *
- * <p>Cada oráculo se evalúa con {@link Oraculo#evaluarResultado(Traza, Contexto)}, que conserva la
- * diferencia entre «sin hallazgos» y «sin evidencia suficiente».
- *
- * <p>Si un oráculo lanza una excepción se registra como fallo del oráculo y no detiene la
- * evaluación. Es seguro entre hilos si los oráculos lo son, como pide su contrato.
- *
- * <p>Pendiente para la v0.1 (sprints 1 y 2): los oráculos de momento {@code EVENTO} reciben hoy la
- * traza completa al terminar el caso; el evaluador por evento de P2 los aplicará a medida que
- * llegan los eventos, y las reglas YAML de {@code oraculos/} se sumarán a los oráculos registrados.
+ * <p>{@link #evaluarResultadoSuite} conserva el veredicto completo. {@link #evaluarSuite} mantiene
+ * la API anterior que devuelve solo hallazgos; no transmite los motivos de suite. El modelo actual
+ * de resultado de suite tampoco dispone de un campo para esos motivos.
  */
 public final class EvaluacionService {
-
-    private static final Logger REGISTRO = Logger.getLogger(EvaluacionService.class.getName());
-
-    private final RegistroExtensiones registro;
+    private final Evaluador evaluador;
 
     /**
-     * Crea el servicio con los oráculos de un registro.
+     * Descubre el proveedor de evaluación sin cargar reglas de archivos.
      *
      * @param registro registro de extensiones; no puede ser null
-     * @throws NullPointerException si {@code registro} es null
+     * @throws NullPointerException si el registro es null
+     * @throws IllegalStateException si no hay exactamente un proveedor válido
+     * @throws UncheckedIOException si el proveedor falla con un error de lectura
      */
     public EvaluacionService(RegistroExtensiones registro) {
-        this.registro = Objects.requireNonNull(registro, "El registro no puede ser null");
+        Objects.requireNonNull(registro, "El registro no puede ser null");
+        try {
+            this.evaluador = registro.crearEvaluador(null);
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo crear el evaluador", e);
+        }
     }
 
     /**
-     * Evalúa la traza de un caso y calcula su veredicto.
+     * Descubre el proveedor y carga las reglas de una carpeta explícita.
      *
-     * @param traza traza del caso, completa o no; no puede ser null
-     * @param contexto contexto del caso, con {@link Contexto#caso()} no null; no puede ser null
-     * @param motivoIncompleto por qué la ejecución no terminó, por ejemplo un paso con {@code
-     *     NO_ENCONTRADO}; null si se ejecutaron todos los pasos
-     * @return el veredicto con todos los hallazgos
-     * @throws NullPointerException si {@code traza}, {@code contexto} o su caso son null
+     * @param registro registro de extensiones; no puede ser null
+     * @param carpetaReglas carpeta de reglas YAML; null para no cargar archivos
+     * @throws NullPointerException si el registro es null
+     * @throws IllegalStateException si no hay exactamente un proveedor válido
+     * @throws IllegalArgumentException si hay reglas inválidas o ids duplicados
+     * @throws IOException si la carpeta indicada o sus archivos no pueden leerse
+     */
+    public EvaluacionService(RegistroExtensiones registro, Path carpetaReglas) throws IOException {
+        this.evaluador =
+                Objects.requireNonNull(registro, "El registro no puede ser null")
+                        .crearEvaluador(carpetaReglas);
+    }
+
+    /**
+     * Crea la fachada con un evaluador proporcionado, por ejemplo un doble de prueba.
+     *
+     * @param evaluador implementación del contrato de dominio; no puede ser null
+     * @throws NullPointerException si el evaluador es null
+     */
+    public EvaluacionService(Evaluador evaluador) {
+        this.evaluador = Objects.requireNonNull(evaluador, "El evaluador no puede ser null");
+    }
+
+    /**
+     * Inicia una sesión independiente de evaluación para un caso.
+     *
+     * @param contexto contexto con caso; no puede ser null ni tener caso null
+     * @return sesión sin eventos; nunca null
+     * @throws NullPointerException si el contexto o su caso son null
+     */
+    public EvaluacionCaso iniciarCaso(Contexto contexto) {
+        Objects.requireNonNull(contexto, "El contexto no puede ser null");
+        Objects.requireNonNull(contexto.caso(), "El contexto no tiene caso");
+        return Objects.requireNonNull(evaluador.iniciarCaso(contexto), "La sesión es null");
+    }
+
+    /**
+     * Evalúa una traza recogida reproduciendo sus eventos y cerrando la sesión del caso.
+     *
+     * @param traza traza del caso, completa o no; no puede ser null ni ser de otro caso
+     * @param contexto contexto del caso; no puede ser null ni tener caso null
+     * @param motivoIncompleto por qué no terminó la ejecución; null si terminó
+     * @return veredicto completo del proveedor
+     * @throws NullPointerException si la traza, el contexto o su caso son null
+     * @throws IllegalArgumentException si el id de la traza no coincide o el motivo está en blanco
      */
     public Veredicto evaluarCaso(Traza traza, Contexto contexto, String motivoIncompleto) {
         Objects.requireNonNull(traza, "La traza no puede ser null");
         Objects.requireNonNull(contexto, "El contexto no puede ser null");
-        Caso caso = Objects.requireNonNull(contexto.caso(), "El contexto no tiene caso");
-        List<Hallazgo> hallazgos = new ArrayList<>();
-        List<String> motivos = new ArrayList<>();
-        if (motivoIncompleto != null) {
-            motivos.add(motivoIncompleto);
+        Objects.requireNonNull(contexto.caso(), "El contexto no tiene caso");
+        if (!traza.casoId().equals(contexto.caso().id())) {
+            throw new IllegalArgumentException("La traza pertenece a otro caso");
         }
-        for (String id : caso.oraculos()) {
-            if (registro.oraculo(id).isEmpty()) {
-                motivos.add("El caso pide el oráculo " + id + ", que no está registrado");
-            }
-        }
-        for (Oraculo oraculo : registro.oraculos()) {
-            if (oraculo.momento() == Momento.SUITE) {
-                continue;
-            }
-            try {
-                if (caso.oraculos().contains(oraculo.id()) || oraculo.aplica(caso, contexto)) {
-                    Veredicto parcial = oraculo.evaluarResultado(traza, contexto);
-                    hallazgos.addAll(parcial.hallazgos());
-                    if (parcial.estado() == EstadoVeredicto.NO_CONCLUYENTE) {
-                        motivos.add(oraculo.id() + ": " + parcial.motivo());
-                    }
-                }
-            } catch (RuntimeException e) {
-                REGISTRO.log(Level.WARNING, "Falló el oráculo " + oraculo.id(), e);
-                motivos.add("Falló el oráculo " + oraculo.id() + ": " + e);
-            }
-        }
-        return veredicto(hallazgos, motivos);
+        EvaluacionCaso sesion = iniciarCaso(contexto);
+        traza.eventos().forEach(sesion::registrarEvento);
+        return sesion.terminar(motivoIncompleto);
     }
 
     /**
-     * Evalúa los oráculos de suite con las trazas de todos los casos.
+     * Evalúa los oráculos de suite y conserva su veredicto completo.
      *
-     * @param contexto contexto de la suite, con {@link Contexto#caso()} null y las trazas en {@link
-     *     Contexto#trazasSuite()}; no puede ser null
-     * @return hallazgos de suite; lista vacía si no hay oráculos de suite o no encontraron nada
-     * @throws NullPointerException si {@code contexto} es null
+     * @param contexto contexto sin caso y con las trazas de la suite; no puede ser null
+     * @return veredicto completo, incluidos motivos no concluyentes
+     * @throws NullPointerException si el contexto es null
+     * @throws IllegalArgumentException si el contexto tiene un caso
      */
-    public List<Hallazgo> evaluarSuite(Contexto contexto) {
+    public Veredicto evaluarResultadoSuite(Contexto contexto) {
         Objects.requireNonNull(contexto, "El contexto no puede ser null");
-        List<Hallazgo> hallazgos = new ArrayList<>();
-        for (Oraculo oraculo : registro.oraculos()) {
-            if (oraculo.momento() != Momento.SUITE) {
-                continue;
-            }
-            try {
-                if (oraculo.aplica(null, contexto)) {
-                    hallazgos.addAll(oraculo.evaluarResultado(null, contexto).hallazgos());
-                }
-            } catch (RuntimeException e) {
-                REGISTRO.log(Level.WARNING, "Falló el oráculo de suite " + oraculo.id(), e);
-            }
+        if (contexto.caso() != null) {
+            throw new IllegalArgumentException(
+                    "La evaluación de suite requiere un contexto sin caso");
         }
-        return List.copyOf(hallazgos);
+        return evaluador.evaluarSuite(contexto);
     }
 
-    private static Veredicto veredicto(List<Hallazgo> hallazgos, List<String> motivos) {
-        boolean falla =
-                hallazgos.stream().anyMatch(hallazgo -> hallazgo.confianza() != Confianza.INFO);
-        String motivo = motivos.isEmpty() ? null : String.join("; ", motivos);
-        if (falla) {
-            return new Veredicto(EstadoVeredicto.NO_CUMPLE, hallazgos, motivo);
-        }
-        if (motivo != null) {
-            return new Veredicto(EstadoVeredicto.NO_CONCLUYENTE, hallazgos, motivo);
-        }
-        return new Veredicto(EstadoVeredicto.CUMPLE, hallazgos, null);
+    /**
+     * Devuelve los hallazgos de suite mediante la API anterior.
+     *
+     * @param contexto contexto sin caso y con las trazas de la suite; no puede ser null
+     * @return hallazgos de suite, sin transmitir sus motivos; para el veredicto completo use {@link
+     *     #evaluarResultadoSuite}
+     * @throws NullPointerException si el contexto es null
+     * @throws IllegalArgumentException si el contexto tiene un caso
+     */
+    public List<Hallazgo> evaluarSuite(Contexto contexto) {
+        return evaluarResultadoSuite(contexto).hallazgos();
     }
 }

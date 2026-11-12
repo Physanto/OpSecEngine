@@ -519,6 +519,49 @@ class EjecucionServiceTest {
         assertThat(avisos.get(5).tipo()).isEqualTo(ProgresoEjecucion.Tipo.SUITE_FIN);
     }
 
+    @Test
+    void evaluaCadaPrefijoDuranteLaEjecucionAntesDeEnviarElPasoSiguiente() {
+        List<Integer> tamanos = new ArrayList<>();
+        List<Long> comandos = new ArrayList<>();
+        Oraculo observador =
+                new Oraculo() {
+                    @Override
+                    public String id() {
+                        return "PREFIJOS";
+                    }
+
+                    @Override
+                    public Momento momento() {
+                        return Momento.EVENTO;
+                    }
+
+                    @Override
+                    public boolean aplica(Caso caso, Contexto contexto) {
+                        return true;
+                    }
+
+                    @Override
+                    public List<Hallazgo> evaluar(Traza traza, Contexto contexto) {
+                        tamanos.add(traza.eventos().size());
+                        comandos.add(
+                                agentes.get(0).mensajesRecibidos().stream()
+                                        .filter(mensaje ->
+                                                mensaje.getTipo() == TipoMensaje.EJECUTAR_PASO)
+                                        .count());
+                        return List.of();
+                    }
+                };
+
+        ResultadoSuite resultado =
+                ejecutar(
+                        List.of(observador),
+                        caso("OK", pulsar(1, "Avanzar"), pulsar(2, "Avanzar")));
+
+        assertThat(resultado.casos().get(0).veredicto().estado()).isEqualTo(EstadoVeredicto.CUMPLE);
+        assertThat(tamanos).containsExactly(1, 2, 3, 4, 5, 6);
+        assertThat(comandos).containsExactly(0L, 1L, 1L, 1L, 2L, 2L);
+    }
+
     private ResultadoSuite ejecutarConObservador(
             Proyecto proyecto, ObservadorProgreso observador, Caso... casos) {
         EvaluacionService evaluacion =
