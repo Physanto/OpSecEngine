@@ -22,7 +22,7 @@ El jar trae dentro el jar del agente (recurso `opsec-agente.jar`, que se copia a
 | `opsec version` (o `opsec --version`) | Muestra la versión del motor y la de Java. |
 | `opsec validar <proyecto.yaml>` | Valida el proyecto y las suites de su carpeta `suites/`, sin ejecutar nada. Si hay errores los muestra con la ruta del campo. |
 | `opsec verificar <proyecto.yaml> [--agente <jar>]` | Comprueba, sin ejecutar casos, que todo está listo (ver abajo). Abre la aplicación unos segundos. |
-| `opsec ejecutar <proyecto.yaml> [--suite <suite.yaml>]... [--formato <formato>[,<formato>...]] [--resultados <carpeta>] [--agente <jar>]` | Ejecuta las suites indicadas (o todas las de `suites/`) contra la app, muestra el veredicto y los hallazgos de cada caso, y escribe los informes de los formatos pedidos y la salida de la app en `<resultados>/<suite>/`. Por defecto `<resultados>` es `resultados/<AAAA-MM-DD_HHmmss>` junto al proyecto. |
+| `opsec ejecutar <proyecto.yaml> [--suite <suite.yaml>]... [--formato <formato>[,<formato>...]] [--resultados <carpeta>] [--agente <jar>] [--sin-progreso]` | Ejecuta las suites indicadas (o todas las de `suites/`) contra la app, muestra el veredicto y los hallazgos de cada caso, y escribe los informes de los formatos pedidos y la salida de la app en `<resultados>/<suite>/`. Por defecto `<resultados>` es `resultados/<AAAA-MM-DD_HHmmss>` junto al proyecto. |
 
 ### Verificación previa (`verificar`)
 
@@ -37,6 +37,23 @@ Códigos de salida: 0 si todo está listo; 1 si el proyecto, una suite o un jar 
 
 Cuando exista `VerificacionService` en el núcleo, el comando también comprobará que los localizadores de las suites existen en la aplicación (hoy no lo hace).
 
+### Progreso en consola
+
+Mientras `ejecutar` corre, muestra el avance en la **salida de error**, para que la salida estándar solo tenga los veredictos y el resumen (y una CI o un script la puedan leer sin ruido). Usa los eventos de progreso del núcleo (`ObservadorProgreso`) y escribe una línea por transición, sin colores ni reescritura de líneas:
+
+```text
+Ejecutando la suite login (2 casos)
+  [1/2] Caso LOGIN-ADMIN (4 pasos)
+        Inicio de sesión, paso 1/3: OK
+        Paso 1/4: OK
+        Paso 2/4: NO_ENCONTRADO
+  [2/2] Caso LOGIN-CLIENTE (4 pasos)
+        ...
+Suite login terminada
+```
+
+Solo se muestra el fin de cada paso, con su código de resultado; un reintento de `ESPERAR` aparece como otra línea del mismo paso. No incluye valores ni credenciales (el núcleo no los envía). `--sin-progreso` lo desactiva.
+
 ### Formatos de informe (`--formato`, `-f`)
 
 Lista separada por comas (`--formato html,json`) o repetida (`-f html -f json`). Sin la opción se genera `json`. Los nombres no distinguen mayúsculas y se ignoran los repetidos. Cada formato debe tener un reportero registrado (el núcleo los descubre con `ServiceLoader`): hoy `json` (`resultado.json`); `html` (`informe.html`) llegará con el reportero de `opsec-informes`. Se validan antes de lanzar la app: si alguno no existe, el comando termina con código 2 y muestra los formatos disponibles.
@@ -47,10 +64,8 @@ Códigos de salida: 0 si todo salió bien (en `ejecutar`, si todos los casos cum
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
-1. Reportero HTML (línea de tiempo, capturas, veredicto por caso); la opción `--formato` ya existe y lo usará en cuanto esté registrado.
-2. Opciones de `ejecutar` para el modo visible u oculto y el paralelismo cuando el núcleo los soporte; y que `verificar` use `VerificacionService` cuando exista.
-3. Mostrar el progreso mientras se ejecuta (el núcleo todavía no emite eventos de progreso).
-4. Comandos `explorar`, `generar` e `informe` (v0.2).
+1. Opciones de `ejecutar` para el modo visible u oculto y el paralelismo cuando el núcleo los soporte; y que `verificar` use `VerificacionService` cuando exista.
+2. Comandos `explorar`, `generar` e `informe` (v0.2, necesitan `ExploracionService` y `GeneracionService`).
 
 ## Dependencias permitidas
 
