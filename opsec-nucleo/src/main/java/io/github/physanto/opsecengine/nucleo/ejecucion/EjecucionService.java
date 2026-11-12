@@ -8,6 +8,7 @@ import io.github.physanto.opsecengine.dominio.caso.EstrategiaLocalizacion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
+import io.github.physanto.opsecengine.dominio.configuracion.Rol;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
 import io.github.physanto.opsecengine.dominio.resultado.Manifiesto;
@@ -65,13 +66,24 @@ import java.util.logging.Logger;
  *   <li>un evento {@code PASO_FIN} con el código del resultado, su detalle y la duración.
  * </ul>
  *
+ * <p>Si el caso tiene rol, antes de sus pasos se ejecutan los pasos de login del proyecto ({@link
+ * Proyecto#pasosLogin()}) con las variables {@code {usuario}} y {@code {contrasena}} reemplazadas
+ * por las credenciales del rol. Sus eventos llevan el número de paso 0, sin rol y con {@code
+ * sesionActiva=false}; en sus {@code PASO_INICIO} la contraseña se escribe como {@value
+ * #VALOR_OCULTO}, para que no llegue a los informes. Si todos terminan con {@code OK}, el motor
+ * registra un evento {@code SESION} con {@code activa=true}, el rol y el usuario, y desde ahí los
+ * eventos llevan el rol y {@code sesionActiva=true}. Si un paso de login falla, o el proyecto no
+ * declara pasos de login o el rol, los pasos del caso no se ejecutan y el caso queda {@code
+ * NO_CONCLUYENTE} con el motivo.
+ *
  * <p>Los pasos {@code CAPTURAR} no se envían como {@code EJECUTAR_PASO}: el motor pide la imagen
  * con el mensaje {@code CAPTURAR}, la guarda como {@code capturas/<caso>-<paso>.png} en la carpeta
  * de resultados de {@link SesionService#carpetaResultados()} y registra un evento {@code CAPTURA}
  * con la ruta relativa, antes del {@code PASO_FIN}. La ventana se toma del primer criterio del
  * objetivo que sea {@code TITULO_VENTANA}, {@code CLASE_VENTANA}, {@code TEXTO} o {@code ETIQUETA};
  * sin objetivo se captura la ventana activa. Si el agente no encuentra la ventana, no hay carpeta
- * de resultados o la imagen no se puede guardar, el paso termina con {@code ERROR}.
+ * de resultados o la imagen no se puede guardar, el paso termina con {@code ERROR}. Las capturas de
+ * los pasos de login se guardan como {@code capturas/<caso>-login-<paso>.png}.
  *
  * <p>Si un paso no termina con {@code OK} (el agente responde {@code ERROR}, {@code NO_ENCONTRADO},
  * {@code NO_ALCANZABLE} o {@code TIEMPO_AGOTADO}, o no responde), los pasos siguientes no se
@@ -96,10 +108,9 @@ import java.util.logging.Logger;
  * <p>Lo que falta y su versión:
  *
  * <ul>
- *   <li>v0.1: iniciar sesión con el rol del caso usando los pasos de login del proyecto (hoy un
- *       caso con rol queda {@code NO_CONCLUYENTE} sin ejecutarse); preparar y restaurar los datos
- *       con {@code ProveedorDatos} y consultar el estado final; inferir la sesión activa en el
- *       contexto de los eventos; eventos de progreso para la presentación.
+ *   <li>v0.1: preparar y restaurar los datos con {@code ProveedorDatos} y consultar el estado
+ *       final; inferir la sesión activa cuando el caso inicia sesión con sus propios pasos; eventos
+ *       de progreso para la presentación.
  *   <li>v0.2: expandir los ataques del caso, un intento por payload (hoy un caso con ataques queda
  *       {@code NO_CONCLUYENTE} sin ejecutarse).
  *   <li>v0.3: reintentos y marca de inestables; casos en paralelo según {@code paralelismo};
@@ -117,6 +128,15 @@ public final class EjecucionService {
 
     /** Carpeta, dentro de la de resultados, donde se guardan las capturas. */
     public static final String CARPETA_CAPTURAS = "capturas";
+
+    /** Texto que reemplaza la contraseña del rol en los {@code PASO_INICIO} del login. */
+    public static final String VALOR_OCULTO = "****";
+
+    /** Variable de los pasos de login que se reemplaza por el usuario del rol. */
+    private static final String VARIABLE_USUARIO = "{usuario}";
+
+    /** Variable de los pasos de login que se reemplaza por la contraseña del rol. */
+    private static final String VARIABLE_CONTRASENA = "{contrasena}";
 
     private static final Logger REGISTRO = Logger.getLogger(EjecucionService.class.getName());
     private static final String PREFIJO_HASH = "sha256:";
@@ -177,15 +197,19 @@ public final class EjecucionService {
         long comienzo = System.nanoTime();
         TrazaEnCurso traza = new TrazaEnCurso(caso);
         String motivo;
-        if (caso.rol() != null) {
+        Optional<Rol> rol = caso.rol() == null ? Optional.empty() : proyecto.buscarRol(caso.rol());
+        if (caso.rol() != null && rol.isEmpty()) {
+            motivo = "El proyecto no declara el rol " + caso.rol() + "; el caso no se ejecutó";
+        } else if (caso.rol() != null && proyecto.pasosLogin().isEmpty()) {
             motivo =
-                    "El inicio de sesión con el rol "
+                    "El caso usa el rol "
                             + caso.rol()
-                            + " todavía no está implementado (v0.1); el caso no se ejecutó";
+                            + ", pero el proyecto no declara pasos de login; el caso no se"
+                            + " ejecutó";
         } else if (!caso.ataques().isEmpty()) {
             motivo = "Los ataques todavía no se expanden (v0.2); el caso no se ejecutó";
         } else {
-            motivo = ejecutarPasos(caso, suite.config(), traza);
+            motivo = ejecutarPasos(caso, rol.orElse(null), suite.config(), traza);
         }
         Traza completa = traza.terminar();
         Veredicto veredicto =
@@ -199,8 +223,11 @@ public final class EjecucionService {
                 false);
     }
 
-    /** Ejecuta los pasos en una sesión nueva; devuelve por qué no terminó, o null si terminó. */
-    private String ejecutarPasos(Caso caso, ConfigEjecucion config, TrazaEnCurso traza) {
+    /**
+     * Ejecuta los pasos en una sesión nueva, después del login si hay rol; devuelve por qué no
+     * terminó, o null si terminó.
+     */
+    private String ejecutarPasos(Caso caso, Rol rol, ConfigEjecucion config, TrazaEnCurso traza) {
         ClienteAgente cliente;
         try {
             cliente = sesiones.abrir(proyecto);
@@ -210,9 +237,23 @@ public final class EjecucionService {
         }
         int ultimoPaso = 0;
         try {
+            if (rol != null) {
+                String fallo = iniciarSesion(cliente, rol, config, traza);
+                if (fallo != null) {
+                    return fallo;
+                }
+            }
             for (Paso paso : caso.pasos()) {
                 ultimoPaso = paso.orden();
-                String fallo = ejecutarPaso(cliente, paso, config, traza);
+                String fallo =
+                        ejecutarPaso(
+                                cliente,
+                                paso,
+                                paso.orden(),
+                                "El paso " + paso.orden(),
+                                paso.valor(),
+                                config,
+                                traza);
                 if (fallo != null) {
                     return fallo;
                 }
@@ -224,25 +265,87 @@ public final class EjecucionService {
         }
     }
 
-    /** Ejecuta un paso; devuelve por qué falló, o null si terminó con {@code OK}. */
+    /**
+     * Ejecuta los pasos de login del proyecto con las credenciales del rol y, si todos terminan con
+     * {@code OK}, marca la sesión como activa; devuelve por qué falló, o null si se inició sesión.
+     */
+    private String iniciarSesion(
+            ClienteAgente cliente, Rol rol, ConfigEjecucion config, TrazaEnCurso traza) {
+        for (Paso plantilla : proyecto.pasosLogin()) {
+            Paso paso =
+                    new Paso(
+                            plantilla.orden(),
+                            plantilla.accion(),
+                            plantilla.objetivo(),
+                            reemplazar(plantilla.valor(), rol.usuario(), rol.contrasena()),
+                            plantilla.esperaMaxima(),
+                            plantilla.extensiones());
+            String fallo =
+                    ejecutarPaso(
+                            cliente,
+                            paso,
+                            0,
+                            "El paso " + plantilla.orden() + " del login",
+                            reemplazar(plantilla.valor(), rol.usuario(), VALOR_OCULTO),
+                            config,
+                            traza);
+            if (fallo != null) {
+                return "No se pudo iniciar sesión con el rol " + rol.nombre() + ": " + fallo;
+            }
+        }
+        traza.iniciarSesion();
+        Map<String, Object> sesion = new LinkedHashMap<>();
+        sesion.put("activa", true);
+        sesion.put("rol", rol.nombre());
+        sesion.put("usuario", rol.usuario());
+        sesion.put("criterio", "pasos de login del proyecto terminados con OK");
+        traza.motor(TipoEvento.SESION, 0, sesion);
+        return null;
+    }
+
+    /** Reemplaza las variables de un valor de login; null se mantiene. */
+    private static String reemplazar(String valor, String usuario, String contrasena) {
+        return valor == null
+                ? null
+                : valor.replace(VARIABLE_USUARIO, usuario).replace(VARIABLE_CONTRASENA, contrasena);
+    }
+
+    /**
+     * Ejecuta un paso; devuelve por qué falló, o null si terminó con {@code OK}.
+     *
+     * @param numero número de paso de los eventos: el orden del paso en el caso, o 0 en el login
+     * @param nombre cómo se nombra el paso en el motivo de un fallo
+     * @param valorTraza valor que se registra en el {@code PASO_INICIO}
+     */
     private String ejecutarPaso(
-            ClienteAgente cliente, Paso paso, ConfigEjecucion config, TrazaEnCurso traza) {
+            ClienteAgente cliente,
+            Paso paso,
+            int numero,
+            String nombre,
+            String valorTraza,
+            ConfigEjecucion config,
+            TrazaEnCurso traza) {
         PasoDto dto = TraductorProtocolo.aPasoDto(paso, config);
         String objetivo =
                 paso.objetivo() == null ? null : TraductorProtocolo.describir(paso.objetivo());
         Map<String, Object> inicio = new LinkedHashMap<>();
         inicio.put("accion", dto.getAccion());
         poner(inicio, "objetivo", objetivo);
-        poner(inicio, "valor", dto.getValor());
+        poner(inicio, "valor", valorTraza);
         inicio.put("modo", dto.getModo());
-        traza.motor(TipoEvento.PASO_INICIO, paso.orden(), inicio);
+        traza.motor(TipoEvento.PASO_INICIO, numero, inicio);
 
         long comienzo = System.nanoTime();
         ResultadoPasoDto resultado;
         Map<String, Object> captura = null;
         try {
             if (paso.accion() == Accion.CAPTURAR) {
-                captura = capturar(cliente, traza.caso.id(), paso);
+                captura =
+                        capturar(
+                                cliente,
+                                traza.caso.id(),
+                                paso,
+                                numero == 0 ? "login-" + paso.orden() : String.valueOf(numero));
                 resultado = new ResultadoPasoDto(CodigoResultado.OK, null, milisDesde(comienzo));
             } else {
                 resultado = cliente.enviarPaso(dto);
@@ -252,22 +355,21 @@ public final class EjecucionService {
                     new ResultadoPasoDto(
                             CodigoResultado.ERROR, e.getMessage(), milisDesde(comienzo));
         }
-        traza.agente(cliente.tomarEventos(), paso.orden());
+        traza.agente(cliente.tomarEventos(), numero);
         if (captura != null) {
-            traza.motor(TipoEvento.CAPTURA, paso.orden(), captura);
+            traza.motor(TipoEvento.CAPTURA, numero, captura);
         }
 
         Map<String, Object> fin = new LinkedHashMap<>();
         fin.put("codigo", resultado.getCodigo().name());
         poner(fin, "detalle", resultado.getDetalle());
         fin.put("duracionMs", resultado.getDuracionMs());
-        traza.motor(TipoEvento.PASO_FIN, paso.orden(), fin);
+        traza.motor(TipoEvento.PASO_FIN, numero, fin);
 
         if (resultado.getCodigo() == CodigoResultado.OK) {
             return null;
         }
-        return "El paso "
-                + paso.orden()
+        return nombre
                 + " ("
                 + paso.accion()
                 + (objetivo == null ? "" : " " + objetivo)
@@ -282,8 +384,8 @@ public final class EjecucionService {
      * @return los datos del evento {@code CAPTURA}
      * @throws IOException si el agente no la toma, no hay carpeta o no se puede guardar
      */
-    private Map<String, Object> capturar(ClienteAgente cliente, String idCaso, Paso paso)
-            throws IOException {
+    private Map<String, Object> capturar(
+            ClienteAgente cliente, String idCaso, Paso paso, String sufijo) throws IOException {
         Optional<Path> carpeta = sesiones.carpetaResultados();
         if (carpeta.isEmpty()) {
             throw new IOException("No hay carpeta de resultados donde guardar la captura");
@@ -298,7 +400,7 @@ public final class EjecucionService {
         } catch (IllegalArgumentException e) {
             throw new IOException("El agente envió una captura que no está en Base64", e);
         }
-        String nombre = nombreArchivo(idCaso) + "-" + paso.orden() + ".png";
+        String nombre = nombreArchivo(idCaso) + "-" + sufijo + ".png";
         Path capturas = carpeta.get().resolve(CARPETA_CAPTURAS);
         Files.createDirectories(capturas);
         Files.write(capturas.resolve(nombre), imagen);
@@ -398,6 +500,7 @@ public final class EjecucionService {
 
         private final Caso caso;
         private final List<Evento> eventos = new ArrayList<>();
+        private boolean sesionActiva;
 
         TrazaEnCurso(Caso caso) {
             this.caso = caso;
@@ -419,12 +522,18 @@ public final class EjecucionService {
             }
         }
 
+        /** Desde aquí los eventos llevan el rol del caso y {@code sesionActiva=true}. */
+        void iniciarSesion() {
+            sesionActiva = true;
+        }
+
         Traza terminar() {
             return new Traza(caso.id(), eventos);
         }
 
         private ContextoEvento contexto(int numeroPaso) {
-            return new ContextoEvento(caso.id(), numeroPaso, caso.rol(), false);
+            return new ContextoEvento(
+                    caso.id(), numeroPaso, sesionActiva ? caso.rol() : null, sesionActiva);
         }
     }
 }
