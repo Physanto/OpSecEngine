@@ -46,6 +46,6 @@ Los contratos preservan los veredictos completos de `Oraculo.evaluarResultado`, 
 los motivos no concluyentes, y distinguen falta provisional de evidencia de errores
 persistentes. No contienen implementaciones de carga ni de evaluación.
 
-Este cambio es aditivo. La implementación del proveedor corresponde a P2 y la conexión
-del núcleo se realizará después; la #23 sigue pendiente. La especificación y las pruebas
-de aceptación están en [el contrato de evaluación](../contratos/EVALUACION.md).
+Este cambio es aditivo. El proveedor está implementado en `opsec-oraculos` y el núcleo
+lo descubre y conecta a la ejecución mediante estas interfaces. La especificación y las
+pruebas de aceptación están en [el contrato de evaluación](../contratos/EVALUACION.md).
