@@ -25,7 +25,7 @@ En construcción: base del proyecto terminada (versión `0.0.6`) y desarrollo de
 
 Ya está disponible:
 
-- Contratos versión 1.1: modelos del dominio, interfaces de extensión, protocolo motor-agente, esquemas JSON de los YAML y catálogos (eventos, oráculos, códigos de resultado, CWE).
+- Contratos versión 1.2: modelos del dominio, interfaces de extensión, protocolo motor-agente, esquemas JSON de los YAML y catálogos (eventos, oráculos, códigos de resultado, CWE).
 - Dobles de prueba (`AgenteFalso`, `MotorFalso`) y trazas, mapas y resultados de ejemplo.
 - Núcleo mínimo: carga y validación de proyectos y suites, sesiones, ejecución, evaluación e informes.
 - Agente mínimo: pulsa, llena y espera en modo semántico, y observa consola, ventanas, diálogos y excepciones.

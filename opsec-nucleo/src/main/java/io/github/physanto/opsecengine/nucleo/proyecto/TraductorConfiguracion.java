@@ -4,18 +4,24 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.ComparacionLogin;
 import io.github.physanto.opsecengine.dominio.caso.ConfigEjecucion;
 import io.github.physanto.opsecengine.dominio.caso.Criterio;
 import io.github.physanto.opsecengine.dominio.caso.Enfoque;
 import io.github.physanto.opsecengine.dominio.caso.EstrategiaLocalizacion;
+import io.github.physanto.opsecengine.dominio.caso.IntentoLogin;
 import io.github.physanto.opsecengine.dominio.caso.Localizador;
 import io.github.physanto.opsecengine.dominio.caso.ModoAccion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaAutenticacion;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaValidacion;
+import io.github.physanto.opsecengine.dominio.caso.Senal;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.EntornoDatos;
 import io.github.physanto.opsecengine.dominio.configuracion.OperacionesSensibles;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.configuracion.Rol;
+import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -134,6 +140,10 @@ final class TraductorConfiguracion {
         }
         Set<Enfoque> enfoques = EnumSet.noneOf(Enfoque.class);
         raiz.path("enfoques").forEach(enfoque -> enfoques.add(Enfoque.valueOf(enfoque.asText())));
+        ComparacionLogin enumeracion = enumeracionUsuarios(raiz.get("enumeracionUsuarios"), casos);
+        if (!errores.isEmpty()) {
+            return null;
+        }
         try {
             return new Suite(
                     raiz.get("suite").asText(),
@@ -141,6 +151,7 @@ final class TraductorConfiguracion {
                     enfoques,
                     config(raiz.path("config")),
                     casos,
+                    enumeracion,
                     extensiones(raiz, ""));
         } catch (IllegalArgumentException | NullPointerException e) {
             errores.add(new ErrorConfiguracion("", e.getMessage()));
@@ -158,6 +169,12 @@ final class TraductorConfiguracion {
                             "el rol " + rol + " no está definido en los roles del proyecto"));
         }
         List<Paso> pasos = pasos(nodo.get("pasos"), ruta + "/pasos");
+        int erroresPrevios = errores.size();
+        PoliticaValidacion validacion = validacion(nodo.get("validacion"), pasos, ruta);
+        PoliticaAutenticacion autenticacion = autenticacion(nodo.get("autenticacion"), pasos, ruta);
+        if (errores.size() > erroresPrevios) {
+            return null;
+        }
         try {
             return new Caso(
                     id,
@@ -166,6 +183,9 @@ final class TraductorConfiguracion {
                     pasos,
                     textos(nodo.path("ataques")),
                     textos(nodo.path("oraculos")),
+                    nodo.has("canario") ? nodo.get("canario").asText() : null,
+                    validacion,
+                    autenticacion,
                     extensiones(nodo, ruta));
         } catch (IllegalArgumentException | NullPointerException e) {
             errores.add(new ErrorConfiguracion(ruta, e.getMessage()));
@@ -328,6 +348,140 @@ final class TraductorConfiguracion {
                 nodo.path("reintentos").asInt(porDefecto.reintentos()),
                 nodo.path("semilla").asLong(porDefecto.semilla()),
                 nodo.path("paralelismo").asInt(porDefecto.paralelismo()));
+    }
+
+    /** Traduce la política de validación de un caso (contratos v1.2), o null si no tiene. */
+    private PoliticaValidacion validacion(JsonNode nodo, List<Paso> pasos, String ruta) {
+        if (nodo == null) {
+            return null;
+        }
+        String base = ruta + "/validacion";
+        int entrada = nodo.get("pasoEntrada").asInt();
+        int envio = nodo.get("pasoEnvio").asInt();
+        exigirPaso(pasos, entrada, Accion.LLENAR, base + "/pasoEntrada");
+        exigirPaso(pasos, envio, Accion.PULSAR, base + "/pasoEnvio");
+        try {
+            return new PoliticaValidacion(
+                    entrada,
+                    envio,
+                    nodo.get("valorInvalido").asText(),
+                    senales(nodo.get("aceptacion")),
+                    senales(nodo.get("rechazo")));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            errores.add(new ErrorConfiguracion(base, e.getMessage()));
+            return null;
+        }
+    }
+
+    /** Traduce la política de autenticación de un caso (contratos v1.2), o null si no tiene. */
+    private PoliticaAutenticacion autenticacion(JsonNode nodo, List<Paso> pasos, String ruta) {
+        if (nodo == null) {
+            return null;
+        }
+        String base = ruta + "/autenticacion";
+        List<IntentoLogin> intentos = new ArrayList<>();
+        JsonNode nodosIntentos = nodo.get("intentos");
+        for (int i = 0; i < nodosIntentos.size(); i++) {
+            JsonNode intento = nodosIntentos.get(i);
+            String rutaIntento = base + "/intentos/" + i;
+            int usuario = intento.get("pasoUsuario").asInt();
+            int contrasena = intento.get("pasoContrasena").asInt();
+            int envio = intento.get("pasoEnvio").asInt();
+            exigirPaso(pasos, usuario, Accion.LLENAR, rutaIntento + "/pasoUsuario");
+            exigirPaso(pasos, contrasena, Accion.LLENAR, rutaIntento + "/pasoContrasena");
+            exigirPaso(pasos, envio, Accion.PULSAR, rutaIntento + "/pasoEnvio");
+            try {
+                intentos.add(
+                        new IntentoLogin(
+                                usuario,
+                                contrasena,
+                                envio,
+                                intento.get("usuario").asText(),
+                                intento.get("contrasena").asText(),
+                                intento.path("debil").asBoolean(false)));
+            } catch (IllegalArgumentException | NullPointerException e) {
+                errores.add(new ErrorConfiguracion(rutaIntento, e.getMessage()));
+            }
+        }
+        try {
+            return new PoliticaAutenticacion(
+                    intentos,
+                    nodo.get("fallosPermitidos").asInt(),
+                    nodo.get("retardoMinimoMs").asLong(),
+                    senales(nodo.get("rechazo")),
+                    senales(nodo.get("bloqueo")));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            errores.add(new ErrorConfiguracion(base, e.getMessage()));
+            return null;
+        }
+    }
+
+    /** Traduce la comparación de enumeración de una suite (contratos v1.2), o null si no tiene. */
+    private ComparacionLogin enumeracionUsuarios(JsonNode nodo, List<Caso> casos) {
+        if (nodo == null) {
+            return null;
+        }
+        String base = "/enumeracionUsuarios";
+        String inexistente = nodo.get("casoUsuarioInexistente").asText();
+        String incorrecta = nodo.get("casoContrasenaIncorrecta").asText();
+        int pasoInexistente = nodo.get("pasoUsuarioInexistente").asInt();
+        int pasoIncorrecta = nodo.get("pasoContrasenaIncorrecta").asInt();
+        exigirEnvio(casos, inexistente, pasoInexistente, base + "/casoUsuarioInexistente");
+        exigirEnvio(casos, incorrecta, pasoIncorrecta, base + "/casoContrasenaIncorrecta");
+        try {
+            return new ComparacionLogin(inexistente, pasoInexistente, incorrecta, pasoIncorrecta);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            errores.add(new ErrorConfiguracion(base, e.getMessage()));
+            return null;
+        }
+    }
+
+    private void exigirEnvio(List<Caso> casos, String casoId, int numero, String ruta) {
+        casos.stream()
+                .filter(caso -> caso.id().equals(casoId))
+                .findFirst()
+                .ifPresentOrElse(
+                        caso -> exigirPaso(caso.pasos(), numero, Accion.PULSAR, ruta),
+                        () ->
+                                errores.add(
+                                        new ErrorConfiguracion(
+                                                ruta, "el caso " + casoId + " no existe")));
+    }
+
+    /** Comprueba que el paso número {@code numero} (desde 1) exista y tenga la acción esperada. */
+    private void exigirPaso(List<Paso> pasos, int numero, Accion esperada, String ruta) {
+        if (numero < 1 || numero > pasos.size()) {
+            errores.add(
+                    new ErrorConfiguracion(
+                            ruta,
+                            "el paso "
+                                    + numero
+                                    + " no existe; el caso tiene "
+                                    + pasos.size()
+                                    + " pasos"));
+        } else if (pasos.get(numero - 1).accion() != esperada) {
+            errores.add(
+                    new ErrorConfiguracion(
+                            ruta,
+                            "el paso "
+                                    + numero
+                                    + " es "
+                                    + pasos.get(numero - 1).accion()
+                                    + " y debería ser "
+                                    + esperada));
+        }
+    }
+
+    private List<Senal> senales(JsonNode nodo) {
+        List<Senal> senales = new ArrayList<>();
+        for (JsonNode senal : nodo) {
+            Map<String, Object> campos = new LinkedHashMap<>();
+            for (Map.Entry<String, JsonNode> campo : senal.get("campos").properties()) {
+                campos.put(campo.getKey(), mapper.convertValue(campo.getValue(), Object.class));
+            }
+            senales.add(new Senal(TipoEvento.valueOf(senal.get("tipo").asText()), campos));
+        }
+        return senales;
     }
 
     private static List<String> textos(JsonNode nodo) {

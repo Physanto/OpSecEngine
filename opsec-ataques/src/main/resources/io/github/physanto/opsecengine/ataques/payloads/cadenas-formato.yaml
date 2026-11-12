@@ -1,0 +1,25 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "FORMATO-S-CANARIO"
+  categoria: "CADENAS_FORMATO"
+  aplica_a: ["TEXTO"]
+  payload: "%s{canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Conversión de texto junto a una marca rastreable."
+
+- id: "FORMATO-N-CANARIO"
+  categoria: "CADENAS_FORMATO"
+  aplica_a: ["TEXTO"]
+  payload: "%n{canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Salto de línea de formato junto a una marca rastreable."
+
+- id: "FORMATO-X-CANARIO"
+  categoria: "CADENAS_FORMATO"
+  aplica_a: ["TEXTO"]
+  payload: "%x{canario}"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Conversión hexadecimal junto a una marca rastreable."

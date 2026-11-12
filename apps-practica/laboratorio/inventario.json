@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "aplicaciones": [
+    {
+      "id": "clientes-vulnerable",
+      "origen": "apps-practica/clientes-vulnerable (aplicación de práctica del repositorio)",
+      "permiso": "Código de práctica ya incluido en este repositorio; no incorpora proyectos externos de estudiantes.",
+      "alcance": "Inventario de las pantallas principales, diálogos de componentes y acciones listadas. Excluye mensajes variables de validación y no mide cobertura de código.",
+      "ventanas": [
+        "Portada",
+        "Escoger modo",
+        "Iniciar sesión",
+        "Menú administrador",
+        "Menú cliente",
+        "Buscar persona",
+        "Eliminar persona",
+        "Registrar persona",
+        "Modificar persona",
+        "Componentes de práctica",
+        "Detalle de práctica",
+        "Confirmación de práctica",
+        "Rendimiento y robustez",
+        "Ventana temporal"
+      ],
+      "acciones": [
+        "PULSAR|etiqueta=Avanzar, texto=Avanzar",
+        "PULSAR|etiqueta=Componentes, texto=Componentes",
+        "PULSAR|etiqueta=Rendimiento, texto=Rendimiento",
+        "PULSAR|etiqueta=Nube, texto=Nube",
+        "PULSAR|etiqueta=Local, texto=Local",
+        "PULSAR|etiqueta=Iniciar Sesion, texto=Iniciar Sesion",
+        "PULSAR|etiqueta=Probar excepción, texto=Probar excepción",
+        "PULSAR|etiqueta=Volver, texto=Volver",
+        "PULSAR|etiqueta=Buscar Persona, texto=Buscar Persona",
+        "PULSAR|etiqueta=Registrar Persona, texto=Registrar Persona",
+        "PULSAR|etiqueta=Modificar Persona, texto=Modificar Persona",
+        "PULSAR|etiqueta=Eliminar Persona, texto=Eliminar Persona",
+        "PULSAR|etiqueta=Cerrar Sesion, texto=Cerrar Sesion",
+        "PULSAR|etiqueta=Buscar, texto=Buscar",
+        "PULSAR|etiqueta=Eliminar, texto=Eliminar",
+        "PULSAR|etiqueta=Guardar, texto=Guardar",
+        "PULSAR|etiqueta=Ver tabla, texto=Ver tabla",
+        "PULSAR|etiqueta=Ver lista, texto=Ver lista",
+        "PULSAR|etiqueta=Siguiente persona, texto=Siguiente persona",
+        "PULSAR|etiqueta=Abrir detalle, texto=Abrir detalle",
+        "PULSAR|etiqueta=Abrir confirmación, texto=Abrir confirmación",
+        "PULSAR|etiqueta=Aceptar confirmación, texto=Aceptar confirmación",
+        "PULSAR|etiqueta=Cerrar detalle, texto=Cerrar detalle",
+        "PULSAR|etiqueta=Probar EDT, texto=Probar EDT",
+        "PULSAR|etiqueta=Abrir y cerrar ventana, texto=Abrir y cerrar ventana",
+        "PULSAR|etiqueta=Probar acción lenta, texto=Probar acción lenta",
+        "LLENAR|etiqueta=Usuario, texto=Usuario",
+        "LLENAR|etiqueta=Contraseña, texto=Contraseña",
+        "LLENAR|etiqueta=Uid, texto=Uid",
+        "LLENAR|etiqueta=Nombre, texto=Nombre",
+        "LLENAR|etiqueta=Documento, texto=Documento",
+        "LLENAR|etiqueta=Correo, texto=Correo",
+        "SELECCIONAR|etiqueta=Categorías, texto=Categorías"
+      ]
+    }
+  ]
+}

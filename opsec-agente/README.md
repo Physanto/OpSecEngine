@@ -19,7 +19,8 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `EmisorProtocolo` | `agente` | Implementa `EmisorEventos`: numera y envía los `EVENTO`; guarda los anteriores a la conexión y los envía después del saludo. |
 | `ObservadorConsola` | `agente` | Envuelve `System.out` y `System.err`; emite `CONSOLA` por línea sin cambiar lo que la app muestra. |
 | `RegistroAgente` | `agente` | Mensajes propios del agente en la salida de error original, con el prefijo `[opsec-agente]`. |
-| `AdaptadorSwing` | `agente.swing` | Implementa `AdaptadorToolkit`: `PULSAR`, `LLENAR` y `ESPERAR` en modo `SEMANTICO`, y el árbol de componentes. |
+| `AdaptadorSwing` | `agente.swing` | Implementa `AdaptadorToolkit`: `PULSAR`, `LLENAR` y `ESPERAR` en los modos `SEMANTICO` y `EVENTOS`, y el árbol de componentes. |
+| `AccionesEventos` | `agente.swing` | Envía eventos sintéticos de ratón y teclado al componente elegido, en el EDT. |
 | `BuscadorComponentes` | `agente.swing` | Resuelve localizadores: `ETIQUETA` (`setLabelFor`), `TEXTO`, `NOMBRE_COMPONENTE`, `NOMBRE_ACCESIBLE`, `TIPO`, `TITULO_VENTANA`, `CLASE_VENTANA`; verifica que el componente sea alcanzable. |
 | `EjecutorEdt` | `agente.swing` | Ejecuta en el EDT con tiempo máximo; detecta cuando una acción abre un diálogo modal. |
 | `ObservadorVentanas` | `agente.swing` | Emite `VENTANA_ABIERTA`, `VENTANA_CERRADA` y `DIALOGO` (con el texto de los `JOptionPane`). |
@@ -28,6 +29,8 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 Comportamiento que conviene conocer:
 
 - Antes de actuar, el agente espera hasta `esperaMaximaMs` a que el componente aparezca y sea alcanzable (visible, habilitado y sin un diálogo modal encima).
+- En modo `EVENTOS`, `PULSAR` envía un clic izquierdo con `dispatchEvent`; `LLENAR` selecciona el contenido anterior, lo borra con Retroceso y escribe con eventos de teclado. Los escuchadores de la aplicación reciben las teclas y pueden consumirlas; no se usa `setText` como alternativa. Los eventos de teclado se entregan mediante `KeyboardFocusManager.redispatchEvent` al campo elegido sin depender del foco nativo. Este modo no reproduce las entradas físicas del sistema operativo.
+- En modo `SEMANTICO`, se mantienen `doClick` y `setText`. Los campos no editables se rechazan en ambos modos.
 - Si la acción abre un diálogo modal, el paso termina con `OK` apenas aparece el diálogo.
 - Si el código de la app lanza una excepción durante la acción, se emite `EXCEPCION` con `capturada=false` y el paso termina con `OK`: la acción se hizo y el fallo es de la app.
 - `CERRAR` termina la conversación pero no cierra la app; la detiene el motor.
@@ -36,14 +39,13 @@ Comportamiento que conviene conocer:
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
-1. Modo `EVENTOS` (eventos sintéticos con `dispatchEvent`), que es el modo por defecto de las suites; hoy responde `ERROR`.
-2. Acciones `SELECCIONAR`, `MARCAR`, `IR_A`, `CERRAR_VENTANA` y `CAPTURAR`.
-3. Capturas pintando componentes en `BufferedImage` (`AdaptadorSwing.capturar` y el mensaje `CAPTURAR`).
-4. `ObservadorExcepciones`: manejador global del EDT y de los otros hilos (hoy solo se ven las excepciones de las acciones del agente).
-5. `VENTANA_CERRADA` también al ocultar con `setVisible(false)`.
-6. Localizadores robustos: etiqueta sin `setLabelFor` (por cercanía), estrategia `RUTA`, comparación flexible (mayúsculas, dos puntos finales).
-7. `CERRAR` que termine la app de forma ordenada; modo oculto y supresión de foco; modo `ROBOT`.
-8. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
+1. Acciones `SELECCIONAR`, `MARCAR`, `IR_A`, `CERRAR_VENTANA` y `CAPTURAR`.
+2. Capturas pintando componentes en `BufferedImage` (`AdaptadorSwing.capturar` y el mensaje `CAPTURAR`).
+3. `ObservadorExcepciones`: manejador global del EDT y de los otros hilos (hoy solo se ven las excepciones de las acciones del agente).
+4. `VENTANA_CERRADA` también al ocultar con `setVisible(false)`.
+5. Localizadores robustos: etiqueta sin `setLabelFor` (por cercanía), estrategia `RUTA`, comparación flexible (mayúsculas, dos puntos finales).
+6. `CERRAR` que termine la app de forma ordenada; modo oculto y supresión de foco; modo `ROBOT`.
+7. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
@@ -58,9 +60,9 @@ Nunca puede depender del núcleo ni del dominio.
 
 ## Pruebas
 
-Las pruebas unitarias usan `MotorFalso` de `opsec-soporte-pruebas` para probar el servidor sin el núcleo (`ServidorProtocoloTest`), y prueban la consola y el adaptador sin ventanas (`ObservadorConsolaTest`, `AdaptadorSwingTest`).
+Las pruebas unitarias usan `MotorFalso` de `opsec-soporte-pruebas` para probar el servidor sin el núcleo (`ServidorProtocoloTest`), y prueban la consola, el adaptador y los eventos sintéticos sin ventanas (`ObservadorConsolaTest`, `AdaptadorSwingTest`, `AccionesEventosTest`). Se verifica la entrega de eventos de ratón y teclado, el reemplazo y borrado del texto, las contraseñas, el texto multilínea y el respeto de las teclas consumidas por la aplicación.
 
-La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol. La prueba con ventanas se omite si el entorno no tiene pantalla.
+La prueba de integración `AgenteIT` (failsafe, fase `integration-test`) lanza una JVM con `-javaagent` apuntando al jar empaquetado: con `AplicacionDePrueba` verifica el `HOLA` y los eventos de consola; con `VentanaDePrueba` (una ventana Swing de las pruebas) llena un campo, pulsa botones, recibe el diálogo modal y la excepción, y pide el árbol. Repite la prueba con ventanas en los modos `SEMANTICO` y `EVENTOS`; se omite si el entorno no tiene pantalla.
 
 Desde la raíz del repositorio:
 

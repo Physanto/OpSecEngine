@@ -1,0 +1,15 @@
+# Este proyecto usa EliminarPersona como principal. Mismas dependencias que F2.
+# Validar el formato no demuestra que la ejecución detecte el fallo.
+suite: f3
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F3-CASO
+    descripcion: "Eliminar P002 entrando directamente por el main administrativo."
+    oraculos: [SIN-SESION]
+    pasos:
+      - llenar: {Uid: P002}
+      - pulsar: Eliminar

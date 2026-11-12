@@ -1,0 +1,5 @@
+nombre: rendimiento-f13-corregido
+app:
+  jar: ../../../target/clientes-vulnerable.jar
+  principal: io.github.physanto.opsecengine.practica.gui.RendimientoMuestra
+  argumentosJvm: ["-Dpractica.corregir=todos"]

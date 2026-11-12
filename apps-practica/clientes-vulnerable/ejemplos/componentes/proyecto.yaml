@@ -1,0 +1,4 @@
+nombre: componentes-grabadora
+app:
+  jar: ../../target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=todos"]

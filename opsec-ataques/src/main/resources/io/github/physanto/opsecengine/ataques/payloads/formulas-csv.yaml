@@ -1,0 +1,17 @@
+# Payloads de prueba. Formato: contratos/esquemas/payload.schema.json
+
+- id: "CSV-IGUAL-CANARIO"
+  categoria: "FORMULAS_CSV"
+  aplica_a: ["TEXTO"]
+  payload: "=1+1+N(\"{canario}\")"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Fórmula aritmética con una marca de texto; sin acceso a red ni ejecución de comandos."
+
+- id: "CSV-MAS-CANARIO"
+  categoria: "FORMULAS_CSV"
+  aplica_a: ["TEXTO"]
+  payload: "+1+1+N(\"{canario}\")"
+  usa_canario: true
+  oraculos: ["EXCEPCION-NO-CAPTURADA", "TRAZA-EN-DIALOGO", "APP-TERMINADA"]
+  descripcion: "Fórmula iniciada con signo más y marca rastreable."

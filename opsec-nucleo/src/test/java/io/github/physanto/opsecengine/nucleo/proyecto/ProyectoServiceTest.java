@@ -7,15 +7,20 @@ import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
+import io.github.physanto.opsecengine.dominio.caso.ComparacionLogin;
 import io.github.physanto.opsecengine.dominio.caso.Criterio;
 import io.github.physanto.opsecengine.dominio.caso.Enfoque;
 import io.github.physanto.opsecengine.dominio.caso.EstrategiaLocalizacion;
+import io.github.physanto.opsecengine.dominio.caso.IntentoLogin;
 import io.github.physanto.opsecengine.dominio.caso.Localizador;
 import io.github.physanto.opsecengine.dominio.caso.ModoAccion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
+import io.github.physanto.opsecengine.dominio.caso.PoliticaAutenticacion;
+import io.github.physanto.opsecengine.dominio.caso.Senal;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.OperacionesSensibles;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
+import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -253,6 +258,110 @@ class ProyectoServiceTest {
                         new ErrorConfiguracion(
                                 "/politica/Eliminar Persona/1",
                                 "el rol soporte no está definido en los roles del proyecto"));
+    }
+
+    @Test
+    void cargaElCanarioLasPoliticasYLaComparacionDeLaSuiteDeEjemplo() throws Exception {
+        Suite suite = suiteDeEjemplo();
+
+        assertThat(suite.enumeracionUsuarios()).isEqualTo(new ComparacionLogin("C01", 5, "C02", 5));
+        assertThat(suite.casos().get(3).canario()).isEqualTo("K7Q2");
+        PoliticaAutenticacion autenticacion = suite.casos().get(4).autenticacion();
+        assertThat(autenticacion.fallosPermitidos()).isEqualTo(3);
+        assertThat(autenticacion.retardoMinimoMs()).isEqualTo(30_000L);
+        assertThat(autenticacion.intentos())
+                .hasSize(6)
+                .first()
+                .isEqualTo(new IntentoLogin(3, 4, 5, "Admin", "mala1", false));
+        assertThat(autenticacion.intentos().get(5).pasoEnvio()).isEqualTo(25);
+        assertThat(autenticacion.rechazo())
+                .containsExactly(new Senal(TipoEvento.DIALOGO, Map.of("tipoMensaje", "ERROR")));
+        assertThat(suite.casos().get(0).autenticacion()).isNull();
+    }
+
+    @Test
+    void cargaLaPoliticaDeValidacion() throws Exception {
+        Path suite =
+                escribir(
+                        "suite.yaml",
+                        """
+                        suite: s
+                        casos:
+                          - id: V1
+                            pasos:
+                              - llenar: {Edad: "-5"}
+                              - pulsar: Guardar
+                            validacion:
+                              pasoEntrada: 1
+                              pasoEnvio: 2
+                              valorInvalido: "-5"
+                              aceptacion: [{tipo: DIALOGO, campos: {tipoMensaje: INFORMACION}}]
+                              rechazo: [{tipo: DIALOGO, campos: {tipoMensaje: ERROR}}]
+                        """);
+
+        Caso caso = servicio.cargarSuite(suite, proyectoMinimo()).casos().get(0);
+
+        assertThat(caso.validacion().valorInvalido()).isEqualTo("-5");
+        assertThat(caso.validacion().aceptacion())
+                .containsExactly(
+                        new Senal(TipoEvento.DIALOGO, Map.of("tipoMensaje", "INFORMACION")));
+    }
+
+    @Test
+    void rechazaPoliticasQueApuntanAPasosQueNoExistenOTienenOtraAccion() throws Exception {
+        Path suite =
+                escribir(
+                        "suite.yaml",
+                        """
+                        suite: s
+                        enumeracionUsuarios:
+                          casoUsuarioInexistente: V1
+                          pasoUsuarioInexistente: 1
+                          casoContrasenaIncorrecta: V2
+                          pasoContrasenaIncorrecta: 1
+                        casos:
+                          - id: V1
+                            pasos:
+                              - llenar: {Edad: "-5"}
+                              - pulsar: Guardar
+                            validacion:
+                              pasoEntrada: 1
+                              pasoEnvio: 3
+                              valorInvalido: "-5"
+                              aceptacion: [{tipo: SESION, campos: {activa: true}}]
+                              rechazo: [{tipo: DIALOGO, campos: {tipoMensaje: ERROR}}]
+                        """);
+
+        Proyecto proyecto = proyectoMinimo();
+        assertThat(errores(() -> servicio.cargarSuite(suite, proyecto)))
+                .containsExactly(
+                        new ErrorConfiguracion(
+                                "/casos/0/validacion/pasoEnvio",
+                                "el paso 3 no existe; el caso tiene 2 pasos"));
+
+        Path conCasos =
+                escribir(
+                        "suite2.yaml",
+                        """
+                        suite: s
+                        enumeracionUsuarios:
+                          casoUsuarioInexistente: V1
+                          pasoUsuarioInexistente: 1
+                          casoContrasenaIncorrecta: V2
+                          pasoContrasenaIncorrecta: 1
+                        casos:
+                          - id: V1
+                            pasos: [{llenar: {Usuario: x}}, {pulsar: Entrar}]
+                        """);
+
+        assertThat(errores(() -> servicio.cargarSuite(conCasos, proyecto)))
+                .containsExactly(
+                        new ErrorConfiguracion(
+                                "/enumeracionUsuarios/casoUsuarioInexistente",
+                                "el paso 1 es LLENAR y debería ser PULSAR"),
+                        new ErrorConfiguracion(
+                                "/enumeracionUsuarios/casoContrasenaIncorrecta",
+                                "el caso V2 no existe"));
     }
 
     @Test

@@ -1,11 +1,14 @@
 package io.github.physanto.opsecengine.practica.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.practica.ContextoApp;
 import io.github.physanto.opsecengine.practica.datos.BaseDatos;
 import io.github.physanto.opsecengine.practica.datos.BasesDePrueba;
 import io.github.physanto.opsecengine.practica.datos.Rol;
+import io.github.physanto.opsecengine.practica.fallos.Fallo;
 import io.github.physanto.opsecengine.practica.fallos.Interruptores;
 import io.github.physanto.opsecengine.practica.servicio.Sesion;
 import java.awt.Component;
@@ -22,9 +25,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.AbstractButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPasswordField;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -75,7 +82,8 @@ class VentanasTest {
         JFrame portada = crear(() -> new Portada(contexto));
 
         assertThat(portada.getTitle()).isEqualTo("Portada");
-        assertThat(textosDeBotones(portada)).containsExactly("Avanzar");
+        assertThat(textosDeBotones(portada))
+                .containsExactly("Avanzar", "Componentes", "Rendimiento");
     }
 
     @Test
@@ -84,6 +92,47 @@ class VentanasTest {
 
         assertThat(boton(ventana, "Nube").getName()).isEqualTo("botonNube");
         assertThat(boton(ventana, "Local").getName()).isNull();
+    }
+
+    @Test
+    void componentesPermiteSeleccionarTablaListaYCambiarPestanas() throws Exception {
+        JFrame ventana = crear(() -> new ComponentesMuestra(contexto));
+        enEdt(() -> {
+            JTable tabla = unico(ventana, JTable.class);
+            assertThat(tabla.getName()).isEqualTo("tablaPersonas");
+            assertThat(tabla.isCellEditable(0, 0)).isFalse();
+            boton(ventana, "Siguiente persona").doClick();
+            assertThat(tabla.getSelectedRow()).isEqualTo(1);
+            assertThat(etiqueta(ventana, "Persona seleccionada: P002")).isNotNull();
+            boton(ventana, "Ver lista").doClick();
+            assertThat(unico(ventana, JTabbedPane.class).getSelectedIndex()).isEqualTo(1);
+            JList<?> lista = unico(ventana, JList.class);
+            lista.setSelectedIndex(1);
+            assertThat(etiqueta(ventana, "Categoría seleccionada: Soporte")).isNotNull();
+            boton(ventana, "Ver tabla").doClick();
+            assertThat(unico(ventana, JTabbedPane.class).getSelectedIndex()).isZero();
+            return null;
+        });
+        assertThat(contexto.personas().listar()).hasSize(5);
+    }
+
+    @Test
+    void dialogosAnidadosSonModalesYTienenPropietarioQueLosLibera() throws Exception {
+        JFrame ventana = crear(() -> new ComponentesMuestra(contexto));
+        enEdt(() -> {
+            JDialog detalle = ComponentesMuestra.crearDetalle(ventana);
+            JDialog confirmacion = ComponentesMuestra.crearConfirmacion(detalle);
+            assertThat(detalle.getOwner()).isSameAs(ventana);
+            assertThat(confirmacion.getOwner()).isSameAs(detalle);
+            assertThat(detalle.isModal()).isTrue();
+            assertThat(confirmacion.isModal()).isTrue();
+            assertThat(confirmacion.getName()).isEqualTo("dialogoConfirmacion");
+            assertThat(confirmacion.isDisplayable()).isTrue();
+            ventana.dispose();
+            assertThat(detalle.isDisplayable()).isFalse();
+            assertThat(confirmacion.isDisplayable()).isFalse();
+            return null;
+        });
     }
 
     @Test
@@ -102,15 +151,59 @@ class VentanasTest {
     }
 
     @Test
+    void elBotonDeDiagnosticoDejaEscaparF8SoloCuandoEstaActivo() throws Exception {
+        JFrame vulnerable = crear(() -> new InicioSesion(contexto));
+        ContextoApp corregido =
+                ContextoApp.crear(
+                        base,
+                        Interruptores.corrigiendo(Fallo.F8),
+                        new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8));
+        JFrame reparada = crear(() -> new InicioSesion(corregido));
+
+        enEdt(() -> {
+            assertThatThrownBy(() -> boton(vulnerable, "Probar excepción").doClick())
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("F8");
+            assertThatCode(() -> boton(reparada, "Probar excepción").doClick())
+                    .doesNotThrowAnyException();
+            return null;
+        });
+    }
+
+    @Test
     void losMenusMuestranLasOpcionesDeCadaRol() throws Exception {
         JFrame cliente =
                 crear(() -> new MenuCliente(contexto, Sesion.iniciada("Cliente", Rol.CLIENTE)));
         JFrame admin = crear(() -> new MenuAdministrador(contexto, ADMIN));
 
-        assertThat(textosDeBotones(cliente)).containsExactly("Buscar Persona", "Cerrar Sesion");
+        assertThat(textosDeBotones(cliente))
+                .containsExactly("Buscar Persona", "Modificar Persona", "Cerrar Sesion");
         assertThat(textosDeBotones(admin))
-                .containsExactly("Buscar Persona", "Eliminar Persona", "Cerrar Sesion");
+                .containsExactly(
+                        "Buscar Persona",
+                        "Registrar Persona",
+                        "Modificar Persona",
+                        "Eliminar Persona",
+                        "Cerrar Sesion");
         assertThat(boton(admin, "Eliminar Persona").getName()).isEqualTo("botonEliminarPersona");
+    }
+
+    @Test
+    void losFormulariosDeRegistroYModificacionExponenSusCampos() throws Exception {
+        JFrame registro = crear(() -> new RegistrarPersona(contexto, ADMIN));
+        JFrame modificacion =
+                crear(() ->
+                        new ModificarPersona(contexto, Sesion.iniciada("Cliente", Rol.CLIENTE)));
+
+        for (JFrame ventana : List.of(registro, modificacion)) {
+            assertThat(ventana.getTitle()).isIn("Registrar persona", "Modificar persona");
+            assertThat(boton(ventana, "Guardar").getName())
+                    .isIn("botonGuardarRegistrarPersona", "botonGuardarModificarPersona");
+            assertThat(etiqueta(ventana, "Uid").getLabelFor()).isInstanceOf(JTextField.class);
+            assertThat(etiqueta(ventana, "Nombre").getLabelFor()).isInstanceOf(JTextField.class);
+            assertThat(etiqueta(ventana, "Documento").getLabelFor()).isInstanceOf(JTextField.class);
+            assertThat(etiqueta(ventana, "Correo").getLabelFor()).isInstanceOf(JTextField.class);
+        }
     }
 
     @Test

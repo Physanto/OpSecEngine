@@ -1,0 +1,17 @@
+# OPSEC-F4 es un marcador literal; falta generación/rastreo de canarios, ganchos JDBC y el oráculo.
+# Validar el formato no demuestra que la ejecución detecte el fallo.
+suite: f4
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F4-CASO
+    descripcion: "Intentar el acceso como Admin con SQL concatenado."
+    oraculos: [SQLI-CANARIO]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "Admin' -- OPSEC-F4", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion

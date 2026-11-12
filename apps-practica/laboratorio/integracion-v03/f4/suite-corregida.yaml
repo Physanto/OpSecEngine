@@ -1,0 +1,16 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f4
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F4-CASO
+    oraculos: [SQLI-CANARIO]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "Admin' -- OPSEC-F4", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - esperar: {texto: "Usuario o contraseña incorrectos."}
