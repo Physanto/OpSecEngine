@@ -36,6 +36,9 @@ import javax.swing.WindowConstants;
  * excepción en una tarea posterior del EDT, y "Fallar en hilo", que la lanza en el hilo
  * "trabajador".
  *
+ * <p>El botón "Reutilizar" muestra siempre el mismo diálogo no modal "Reutilizable", que al
+ * cerrarse solo se oculta, y "Liberar" lo destruye con {@code dispose}.
+ *
  * <p>Ni la ventana ni el diálogo pueden recibir el foco. Con pantalla real, el gestor de ventanas
  * le daría el foco al diálogo, y una tecla Espacio o Enter de quien esté usando el equipo pulsaría
  * "Cerrar" y cambiaría el resultado de la prueba. El agente no necesita el foco en los modos
@@ -140,6 +143,14 @@ public final class VentanaDePrueba {
                                 },
                                 "trabajador")
                         .start());
+        JDialog reutilizable = new JDialog(marco, "Reutilizable", false);
+        reutilizable.add(new JLabel("Siempre el mismo diálogo"));
+        reutilizable.setFocusableWindowState(false);
+        reutilizable.pack();
+        JButton reutilizar = new JButton("Reutilizar");
+        reutilizar.addActionListener(e -> reutilizable.setVisible(true));
+        JButton liberar = new JButton("Liberar");
+        liberar.addActionListener(e -> reutilizable.dispose());
         marco.setLayout(new GridLayout(0, 2));
         marco.add(etiqueta);
         marco.add(campo);
@@ -153,6 +164,8 @@ public final class VentanaDePrueba {
         marco.add(pestanas);
         marco.add(fallarDespues);
         marco.add(fallarEnHilo);
+        marco.add(reutilizar);
+        marco.add(liberar);
         marco.pack();
         marco.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         marco.setFocusableWindowState(false);

@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,6 +143,10 @@ class AgenteIT {
                         .isEqualTo(CodigoResultado.NO_ALCANZABLE);
                 assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Cerrar"), null))
                         .isEqualTo(CodigoResultado.OK);
+                esperarVentanaCerrada(motor, "Saludo", true);
+                assertThat(ventanasCerradas(motor, "Saludo"))
+                        .as("se oculta y se destruye en la misma tarea del EDT: un solo evento")
+                        .containsExactly(true);
                 assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Bloqueado"), null))
                         .isEqualTo(CodigoResultado.NO_ALCANZABLE);
                 assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Fallar"), null))
@@ -266,7 +271,47 @@ class AgenteIT {
                                         criterio("TITULO_VENTANA", "Auxiliar"),
                                         null))
                         .isEqualTo(CodigoResultado.OK);
-                esperarEvento(motor, "VENTANA_CERRADA", "titulo", "Auxiliar");
+                esperarVentanaCerrada(motor, "Auxiliar", true);
+                assertThat(ventanasCerradas(motor, "Auxiliar")).containsExactly(true);
+
+                for (int vez = 1; vez <= 2; vez++) {
+                    assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Reutilizar"), null))
+                            .isEqualTo(CodigoResultado.OK);
+                    assertThat(
+                                    paso(
+                                            motor,
+                                            modo,
+                                            "CERRAR_VENTANA",
+                                            criterio("TITULO_VENTANA", "Reutilizable"),
+                                            null))
+                            .isEqualTo(CodigoResultado.OK);
+                }
+                esperar(() -> ventanasCerradas(motor, "Reutilizable").size() == 2);
+                assertThat(ventanasCerradas(motor, "Reutilizable"))
+                        .as("ocultar no libera la ventana")
+                        .containsExactly(false, false);
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Liberar"), null))
+                        .isEqualTo(CodigoResultado.OK);
+                esperar(() -> ventanasCerradas(motor, "Reutilizable").size() == 3);
+                assertThat(ventanasCerradas(motor, "Reutilizable"))
+                        .as("destruir la ventana oculta la informa liberada")
+                        .containsExactly(false, false, true);
+                assertThat(
+                                eventos(motor, "VENTANA_ABIERTA").stream()
+                                        .filter(e ->
+                                                "Reutilizable".equals(e.getDatos().get("titulo")))
+                                        .map(e -> e.getDatos().get("ventanaId"))
+                                        .toList())
+                        .as("volver a mostrarla la abre otra vez con el mismo id")
+                        .hasSize(2)
+                        .containsOnly(
+                                eventos(motor, "VENTANA_CERRADA").stream()
+                                        .filter(e ->
+                                                "Reutilizable".equals(e.getDatos().get("titulo")))
+                                        .findFirst()
+                                        .orElseThrow()
+                                        .getDatos()
+                                        .get("ventanaId"));
 
                 esperarEvento(motor, "CONSOLA", "Detalle pulsado");
                 assertThat(eventos(motor, "CONSOLA"))
@@ -303,6 +348,31 @@ class AgenteIT {
         ResultadoPasoDto resultado =
                 motor.enviarPaso(new PasoDto(accion, localizador, valor, modo, esperaMaximaMs));
         return resultado.getCodigo();
+    }
+
+    /** Valores de {@code liberada} de los {@code VENTANA_CERRADA} de una ventana, en orden. */
+    private static List<Object> ventanasCerradas(MotorFalso motor, String titulo) {
+        return eventos(motor, "VENTANA_CERRADA").stream()
+                .filter(e -> titulo.equals(e.getDatos().get("titulo")))
+                .map(e -> e.getDatos().get("liberada"))
+                .toList();
+    }
+
+    private static void esperarVentanaCerrada(MotorFalso motor, String titulo, boolean liberada)
+            throws InterruptedException {
+        esperar(() -> ventanasCerradas(motor, titulo).contains(liberada));
+    }
+
+    /** Los eventos llegan en paralelo a las respuestas; espera hasta que se cumpla la condición. */
+    private static void esperar(BooleanSupplier condicion) throws InterruptedException {
+        long limite = System.nanoTime() + ESPERA.toNanos();
+        while (System.nanoTime() < limite) {
+            if (condicion.getAsBoolean()) {
+                return;
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("La condición no se cumplió a tiempo");
     }
 
     private static BufferedImage imagen(CapturaDto captura) throws IOException {
