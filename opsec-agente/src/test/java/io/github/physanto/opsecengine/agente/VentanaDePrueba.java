@@ -1,6 +1,10 @@
 package io.github.physanto.opsecengine.agente;
 
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
+import java.awt.Window;
 import java.awt.event.ItemEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -103,6 +107,13 @@ public final class VentanaDePrueba {
                             "Cerrar");
             JDialog dialogo = panel.createDialog(marco, "Saludo");
             dialogo.setFocusableWindowState(false);
+            dialogo.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowOpened(WindowEvent evento) {
+                            System.out.println("Dialogo oculto: " + estaOculta(dialogo));
+                        }
+                    });
             dialogo.setVisible(true);
             dialogo.dispose();
         });
@@ -178,11 +189,33 @@ public final class VentanaDePrueba {
         marco.addWindowListener(
                 new WindowAdapter() {
                     @Override
+                    public void windowOpened(WindowEvent evento) {
+                        System.out.println("Ventana oculta: " + estaOculta(marco));
+                    }
+
+                    @Override
                     public void windowClosing(WindowEvent evento) {
                         System.out.println(LINEA_CIERRE);
                     }
                 });
         marco.setFocusableWindowState(false);
         marco.setVisible(true);
+    }
+
+    private static boolean estaOculta(Window ventana) {
+        if (ventana.getFocusableWindowState()
+                || ventana.isAutoRequestFocus()
+                || ventana.isFocused()) {
+            return false;
+        }
+        for (GraphicsDevice dispositivo :
+                GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            for (GraphicsConfiguration configuracion : dispositivo.getConfigurations()) {
+                if (ventana.getBounds().intersects(configuracion.getBounds())) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

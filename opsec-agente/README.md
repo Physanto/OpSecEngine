@@ -76,6 +76,22 @@ con `Locale.ROOT`, eliminan diacríticos y colapsan espacios. Así, `contrasena`
 `Contraseña` y `  iniciar   sesion ` encuentra `Iniciar Sesión`. Varias coincidencias flexibles
 producen `NO_ENCONTRADO` con motivo `ambiguo`; no se elige arbitrariamente.
 
+### Modo oculto
+
+El argumento opcional `oculto=true` del agente activa `SupresorFoco`. El núcleo lo transmite
+cuando la suite declara `config.oculto: true`. Por defecto las ventanas permanecen visibles.
+El supresor desactiva `autoRequestFocus` y `focusableWindowState` y mueve cada ventana a
+100 píxeles a la derecha del extremo de todas las pantallas, incluso en configuraciones
+con coordenadas negativas. Atiende también diálogos, nuevas presentaciones, activaciones
+y movimientos posteriores de la aplicación. Una revisión en el EDT cada 100 ms corrige
+cambios nativos aunque su notificación no permita recolocar la ventana. Se instala antes de su `main`.
+
+`SEMANTICO` y `EVENTOS` funcionan con ventanas fuera de pantalla y no enfocables; las capturas
+siguen pintando la ventana sin necesitar una pantalla física. La aplicación sigue necesitando
+un entorno gráfico: no se transforma Swing en headless. No se interceptan `toFront()` ni
+`requestFocus()` mediante bytecode. La supresión inicial se aplica al recibir los eventos
+AWT; puede producirse una presentación nativa breve antes de recibirlos.
+
 ### Árbol de la interfaz
 
 `ARBOL` describe todas las ventanas visibles en el EDT, incluidos diálogos y menús emergentes
@@ -98,7 +114,7 @@ exponer su contenido.
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
-1. Modo oculto y supresión de foco; modo `ROBOT`.
+1. Modo `ROBOT`.
 2. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
@@ -138,3 +154,5 @@ En Windows:
 ```bat
 mvnw.cmd -B -pl opsec-agente -am verify
 ```
+
+`SupresorFocoTest` verifica la posición en varias pantallas y la reacción a apertura, activación y recentrado. `AgenteIT` repite el llenado, pulsación, diálogo y capturas en modo oculto con SEMANTICO y EVENTOS, comprobando desde la aplicación que tanto la ventana como su diálogo quedan fuera de todas las pantallas y sin foco.
