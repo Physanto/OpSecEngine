@@ -13,6 +13,12 @@
  * io.github.physanto.opsecengine.oraculos.OraculoExcepcion
  * }</pre>
  *
+ * <p>La evaluación por evento, caso y suite se abstrae con {@link
+ * io.github.physanto.opsecengine.dominio.extension.ProveedorEvaluacion}, {@link
+ * io.github.physanto.opsecengine.dominio.extension.Evaluador} y {@link
+ * io.github.physanto.opsecengine.dominio.extension.EvaluacionCaso}. Solo el proveedor se registra
+ * con ServiceLoader; el evaluador y las sesiones se crean a través de sus contratos.
+ *
  * <p>Un plugin es un JAR con sus implementaciones y sus archivos {@code META-INF/services/} que se
  * copia en la carpeta {@code plugins/}.
  */
