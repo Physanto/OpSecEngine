@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.agente;
 
 import io.github.physanto.opsecengine.agente.swing.AdaptadorSwing;
+import io.github.physanto.opsecengine.agente.swing.ObservadorExcepciones;
 import io.github.physanto.opsecengine.agente.swing.ObservadorVentanas;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import java.awt.AWTError;
@@ -18,6 +19,8 @@ import java.lang.instrument.Instrumentation;
  * <ol>
  *   <li>Lee los argumentos.
  *   <li>Instala el {@link ObservadorConsola}, para que la aplicación tome las salidas observadas.
+ *   <li>Instala el {@link ObservadorExcepciones} como manejador por defecto de excepciones no
+ *       capturadas.
  *   <li>Registra el {@link ObservadorVentanas}.
  *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} en un hilo daemon, que
  *       se conecta con el motor sin retrasar a la aplicación.
@@ -61,6 +64,11 @@ public final class AgenteMain {
             ObservadorConsola.instalar(emisor);
         } catch (RuntimeException e) {
             RegistroAgente.error("No se pudo observar la consola: " + e);
+        }
+        try {
+            ObservadorExcepciones.instalar(emisor, RegistroAgente::error);
+        } catch (RuntimeException e) {
+            RegistroAgente.error("No se pudieron observar las excepciones: " + e);
         }
         try {
             ObservadorVentanas.instalar(emisor, RegistroAgente::error);
