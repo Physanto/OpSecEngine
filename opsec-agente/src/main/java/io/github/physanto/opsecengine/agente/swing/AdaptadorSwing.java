@@ -82,14 +82,27 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     private static final long INTERVALO_BUSQUEDA_MS = 50;
 
     private final EmisorEventos emisor;
+    private final ObservadorVentanas observador;
 
     /**
-     * Crea el adaptador.
+     * Crea el adaptador sin observador de ventanas.
      *
      * @param emisor emisor de los eventos {@code EXCEPCION}; no puede ser null
      */
     public AdaptadorSwing(EmisorEventos emisor) {
+        this(emisor, null);
+    }
+
+    /**
+     * Crea el adaptador. Después de cada acción le pide al observador que informe las ventanas que
+     * ya se ven, para que sus eventos lleguen al motor antes que el resultado del paso.
+     *
+     * @param emisor emisor de los eventos {@code EXCEPCION}; no puede ser null
+     * @param observador observador de ventanas instalado, o null si no hay
+     */
+    public AdaptadorSwing(EmisorEventos emisor, ObservadorVentanas observador) {
         this.emisor = emisor;
+        this.observador = observador;
     }
 
     /**
@@ -496,9 +509,16 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
      * Espera a que el EDT procese los eventos que generó la acción, como la apertura de ventanas,
      * para que sus eventos lleguen al motor antes que el resultado del paso.
      */
-    private static void vaciarColaDeEventos() throws InterruptedException {
+    private void vaciarColaDeEventos() throws InterruptedException {
         try {
-            EjecutorEdt.leer(() -> null, ESPERA_LECTURA_MS);
+            EjecutorEdt.leer(
+                    () -> {
+                        if (observador != null) {
+                            observador.informarVisibles();
+                        }
+                        return null;
+                    },
+                    ESPERA_LECTURA_MS);
         } catch (TimeoutException | ExecutionException e) {
             // Si el EDT sigue ocupado, los eventos llegarán después del resultado
         }

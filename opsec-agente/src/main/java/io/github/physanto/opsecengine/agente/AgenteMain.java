@@ -72,8 +72,9 @@ public final class AgenteMain {
         } catch (RuntimeException e) {
             RegistroAgente.error("No se pudieron observar las excepciones: " + e);
         }
+        ObservadorVentanas ventanas = null;
         try {
-            ObservadorVentanas.instalar(emisor, RegistroAgente::error);
+            ventanas = ObservadorVentanas.instalar(emisor, RegistroAgente::error);
         } catch (RuntimeException | AWTError | LinkageError e) {
             RegistroAgente.error("No se pudieron observar las ventanas: " + e);
         }
@@ -83,7 +84,7 @@ public final class AgenteMain {
                             new ServidorProtocolo(
                                     leidos,
                                     version(),
-                                    new AdaptadorSwing(emisor),
+                                    new AdaptadorSwing(emisor, ventanas),
                                     emisor,
                                     codec,
                                     new CierreAplicacion(RegistroAgente::error)),
