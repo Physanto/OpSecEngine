@@ -37,6 +37,18 @@ class LanzadorProcesoTest {
     }
 
     @Test
+    void transmiteElModoOcultoSoloCuandoSeSolicita() {
+        Proyecto proyecto = proyecto(null, List.of());
+        assertThat(lanzador.comando(proyecto, 4321, "secreto", true))
+                .contains(
+                        "-javaagent:"
+                                + AGENTE.toAbsolutePath()
+                                + "=puerto=4321,token=secreto,oculto=true");
+        assertThat(lanzador.comando(proyecto, 4321, "secreto", false))
+                .isEqualTo(lanzador.comando(proyecto, 4321, "secreto"));
+    }
+
+    @Test
     void informaSuCarpetaDeResultados() {
         assertThat(lanzador.carpetaResultados()).contains(Path.of("resultados"));
     }

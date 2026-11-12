@@ -92,6 +92,20 @@ public final class SesionService implements AutoCloseable {
      * @throws NullPointerException si {@code proyecto} es null
      */
     public synchronized ClienteAgente abrir(Proyecto proyecto) throws IOException {
+        return abrir(proyecto, false);
+    }
+
+    /**
+     * Abre una sesión con el modo oculto solicitado para las ventanas de la aplicación.
+     *
+     * @param proyecto proyecto con la aplicación; no puede ser null
+     * @param oculto si se deben ocultar las ventanas y evitar el foco
+     * @return cliente conectado después del saludo
+     * @throws IOException si falla el arranque o no llega el saludo
+     * @throws IllegalStateException si ya existe una sesión abierta
+     * @throws NullPointerException si proyecto es null
+     */
+    public synchronized ClienteAgente abrir(Proyecto proyecto, boolean oculto) throws IOException {
         Objects.requireNonNull(proyecto, "El proyecto no puede ser null");
         if (cliente != null) {
             throw new IllegalStateException(
@@ -100,7 +114,7 @@ public final class SesionService implements AutoCloseable {
         ClienteAgente nuevo = new ClienteAgente(tiempoMaximoRespuesta);
         Closeable nuevaDetencion = null;
         try {
-            nuevaDetencion = arranque.arrancar(proyecto, nuevo.puerto(), nuevo.token());
+            nuevaDetencion = arranque.arrancar(proyecto, nuevo.puerto(), nuevo.token(), oculto);
             saludo = nuevo.esperarHola(esperaHola);
         } catch (IOException | RuntimeException e) {
             nuevo.close();

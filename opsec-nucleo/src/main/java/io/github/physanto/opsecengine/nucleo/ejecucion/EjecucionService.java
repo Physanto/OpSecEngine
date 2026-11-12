@@ -332,7 +332,7 @@ public final class EjecucionService {
     private String ejecutarPasos(Caso caso, Rol rol, ConfigEjecucion config, TrazaEnCurso traza) {
         ClienteAgente cliente;
         try {
-            cliente = sesiones.abrir(proyecto);
+            cliente = sesiones.abrir(proyecto, config.oculto());
         } catch (IOException | RuntimeException e) {
             REGISTRO.log(Level.WARNING, "No se pudo abrir la sesión del caso " + caso.id(), e);
             return "No se pudo abrir la sesión: " + e.getMessage();
