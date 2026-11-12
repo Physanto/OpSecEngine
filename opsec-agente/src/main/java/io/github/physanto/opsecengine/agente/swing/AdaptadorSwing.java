@@ -106,7 +106,8 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     }
 
     /**
-     * Devuelve el árbol de componentes de las ventanas visibles.
+     * Devuelve el árbol de todas las ventanas visibles, incluidos diálogos y menús emergentes. La
+     * lectura de rutas, alcance y acciones de los nodos ocurre íntegramente en el EDT.
      *
      * @return una raíz por ventana visible; lista vacía si no hay ventanas o si el EDT no responde
      */
