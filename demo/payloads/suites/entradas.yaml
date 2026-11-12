@@ -1,0 +1,22 @@
+suite: entradas
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  oculto: false
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: LOGIN
+    descripcion: Probar entradas sin revelar detalles técnicos en los diálogos.
+    extensiones:
+      payloads:
+        - "'"
+        - "prueba'"
+        - "entrada-normal"
+    oraculos: [TRAZA-EN-DIALOGO]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "{payload}", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - capturar:

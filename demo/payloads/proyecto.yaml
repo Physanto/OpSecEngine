@@ -1,0 +1,5 @@
+nombre: payloads-vulnerable
+app:
+  jar: ../../apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
+  # Aísla la exposición de errores: no mezclarla con contraseñas en consola (F6).
+  argumentosJvm: ["-Dpractica.corregir=F6"]
