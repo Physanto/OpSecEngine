@@ -198,6 +198,54 @@ y [H2](https://h2database.github.io/html/features.html).
 Ambos oráculos se registran por SPI; el emisor debe aportar la clase de componente y la URL
 de conexión. No instrumentan la aplicación ni cambian la integración pendiente del núcleo.
 
+## Rendimiento, robustez y accesibilidad (#47)
+
+`OraculoInterfazCongelada` (`INTERFAZ-CONGELADA`, `EVENTO`, sin CWE) se descubre por SPI.
+Exige `TIEMPO.medida=EDT_BLOQUEADO`, una duración entera no negativa y `umbralMs` entero
+positivo. Solo activa si la duración supera el umbral; la igualdad no activa. Rechaza cadenas,
+fracciones, valores no finitos y números fuera de `long`, sin redondear. Produce un hallazgo
+`CONFIRMADO` con la secuencia de la medida. Una respuesta lenta no demuestra bloqueo del EDT;
+la ausencia de umbral no se sustituye por un valor supuesto.
+
+Las demás capacidades de la §6.6 se evalúan mediante APIs locales, porque el catálogo y los
+eventos todavía no cubren todos sus datos. No se registran por SPI; el llamador debe conservar
+sus veredictos completos y obtener observaciones fiables del ámbito que se prueba:
+
+- `EvaluadorTiemposRespuesta.evaluar(repeticiones, casoId, paso, minimoRepeticiones, umbralP95Ms)`
+  exige al menos dos repeticiones comparables y una medida `TIEMPO.RESPUESTA_ACCION` por traza
+  para el caso y paso elegidos. Devuelve muestra, mediana exacta y p95 por rango más próximo:
+  posición `ceil(0,95*n)` en la lista ordenada, empezando en uno. Un p95 superior al umbral
+  produce `RESPUESTA-LENTA`, probable. Datos inválidos, insuficientes o ambiguos dejan el
+  resultado `NO_CONCLUYENTE`, sin descartar muestras silenciosamente. La evidencia sigue
+  el orden de las trazas de repetición, aunque sus secuencias se reinicien.
+- `EvaluadorCalidadGui.evaluarLiberacion(esperadas, observadas)` requiere ids estables de
+  ventanas que debían liberarse y observaciones finales `Ventana(id, displayable, secuencia)`.
+  Una ventana aún displayable produce `VENTANA-NO-LIBERADA`, probable. No equipara ocultación
+  o `VENTANA_CERRADA` con `dispose`, ni demuestra una fuga de memoria. Si falta una observación
+  esperada, devuelve `NO_CONCLUYENTE`.
+- `EvaluadorCalidadGui.evaluarEtiquetas(controles)` recibe una instantánea completa del ámbito.
+  Un `Control` interactivo, visible y habilitado sin etiqueta asociada ni nombre accesible
+  produce `CONTROL-SIN-ETIQUETA`, probable. El llamador identifica los controles interactivos
+  y las asociaciones reales; no se deducen a partir de textos cercanos.
+- `EvaluadorCalidadGui.evaluarTeclado(recorrido)` compara el orden real de foco con un orden
+  explícito, incluido el cierre de ciclo si se exige, y las activaciones de teclado acreditadas
+  con las esperadas. Produce `ORDEN-TABULACION` o `ACCION-TECLADO-NO-ALCANZADA`, probables.
+  Un recorrido incompleto es `NO_CONCLUYENTE`. Una acción semántica no demuestra uso con teclado.
+- `EvaluadorEscenarioRobustez.evaluar(traza, pasoInicio, pasoFinal, esperado, fallo)` recibe
+  señales `PoliticaValidacionTemporal.Senal` y pasos sin reintentos ambiguos. Evalúa el intervalo
+  desde el primer paso hasta la acción posterior al último, si existe. Conserva excepciones
+  sin capturar y cierres inesperados; una señal explícita de fallo produce
+  `RESULTADO-ROBUSTEZ-INCORRECTO`, probable. Solo devuelve `CUMPLE` con todas las acciones del
+  intervalo terminadas en `OK` y una respuesta controlada del paso final. La falta de evidencia
+  o respuestas tardías deja incertidumbre. El llamador acredita el doble clic, cierre o fallo
+  inyectado; el evaluador no ejecuta estímulos ni inyecta errores desde el agente.
+
+Los ids de estas APIs locales son propuestas, no reservas nuevas. Sus observaciones de GUI
+referencian un registro local de evidencia, sin convertirlas en eventos inexistentes.
+Los resultados no certifican accesibilidad completa, ausencia de fugas ni rendimiento estable
+en otros entornos. La [solicitud de contrato](solicitud-contrato-47.md) detalla los datos y la
+integración pendientes del líder; esta entrega no modifica agente, dominio, núcleo ni contratos.
+
 ## Evaluación por momento
 
 `OraculoSinSesion` (id `SIN-SESION`, momento `CASO`, CWE-306) detecta operaciones SQL o
@@ -313,7 +361,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos de rendimiento, robustez y accesibilidad de la #47.
+1. Formalización e integración de las APIs locales de calidad de la [#47](solicitud-contrato-47.md).
 
 ## Dependencias permitidas
 

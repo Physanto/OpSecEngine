@@ -1,0 +1,5 @@
+{"secuencia":0,"instante":"2026-11-11T12:00:00Z","tipo":"PASO_INICIO","contexto":{"casoId":"ROBUSTEZ47","numeroPaso":1,"sesionActiva":false},"datos":{"accion":"PULSAR","objetivo":"nombre=Guardar","modo":"SEMANTICO"}}
+{"secuencia":1,"instante":"2026-11-11T12:00:01Z","tipo":"PASO_FIN","contexto":{"casoId":"ROBUSTEZ47","numeroPaso":1,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
+{"secuencia":2,"instante":"2026-11-11T12:00:02Z","tipo":"PASO_INICIO","contexto":{"casoId":"ROBUSTEZ47","numeroPaso":2,"sesionActiva":false},"datos":{"accion":"PULSAR","objetivo":"nombre=Guardar","modo":"SEMANTICO"}}
+{"secuencia":3,"instante":"2026-11-11T12:00:03Z","tipo":"ESTADO","contexto":{"casoId":"ROBUSTEZ47","numeroPaso":2,"sesionActiva":false},"datos":{"momento":"DESPUES","consulta":"existencia de un registro duplicado de prueba","resultado":{"cantidad":2},"existe":true}}
+{"secuencia":4,"instante":"2026-11-11T12:00:04Z","tipo":"PASO_FIN","contexto":{"casoId":"ROBUSTEZ47","numeroPaso":2,"sesionActiva":false},"datos":{"codigo":"OK","duracionMs":1}}
