@@ -30,6 +30,31 @@ no. Un `PASO_FIN` con `OK` y componente `JPasswordField` identifica también cam
 Las variables deben llegar materializadas desde la ejecución; el oráculo no carga ni expande
 la biblioteca de ataques. El rastreo por canario requiere los metadatos indicados.
 
+## Canarios en SQL y Firestore (#42)
+
+`OraculoSqliCanario` (`SQLI-CANARIO`) y `OraculoFirestoreRutaCanario`
+(`FIRESTORE-RUTA-CANARIO`) se evalúan al terminar el caso, con CWE-89 y registro SPI.
+Leen la marca exacta de `Caso.extensiones().get("validacion")`, campo `canario`, reutilizando
+la convención local de las #37 y #39. Exigen al menos cuatro caracteres, una marca no vacía
+y sin llaves de plantilla. Primero deben observarla dentro del valor materializado de un
+`LLENAR` del propio caso; solo después buscan coincidencias, distinguiendo mayúsculas.
+
+SQL busca únicamente en `SQL.sql` cuando `tipoSentencia=STATEMENT`. Ignora `PREPARED`,
+parámetros y mensajes de error como destinos. Firestore busca únicamente en `FIRESTORE.ruta`,
+incluidas operaciones de lectura; la aparición en `campos` no activa el oráculo. Un evento
+con error sigue demostrando propagación si la marca está en el destino correspondiente.
+Cada coincidencia produce un hallazgo `PROBABLE` con las secuencias de entrada y backend,
+sin copiar la marca, el payload, la consulta ni la ruta. No confirma explotación ni efectos
+sobre datos, aunque haya filas afectadas. El rastreo parte de `PASO_INICIO`: no exige un
+`PASO_FIN` exitoso, porque el backend puede ejecutarse durante la escritura del campo.
+
+La traza oficial `c13-sqli-login.jsonl`, con `K7Q2` declarado en su contexto, da `NO_CUMPLE`
+por F4; su variante con `PREPARED` no activa el oráculo. Sin metadatos o sin escritura previa
+no hay hallazgos; una lista vacía no demuestra ausencia de inyección. El llamador debe aportar
+la marca y los eventos JDBC o Firestore. Los oráculos no instrumentan la aplicación ni extraen
+canarios de texto arbitrario. La [solicitud de contrato](solicitud-contrato-42.md) propone
+formalizar la asociación entre caso y canario; la conexión al núcleo sigue pendiente.
+
 ## Evaluación por momento
 
 `OraculoSinSesion` (id `SIN-SESION`, momento `CASO`, CWE-306) detecta operaciones SQL o
@@ -145,7 +170,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos de seguridad del catálogo (v0.3): `SQLI-CANARIO`, `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos de seguridad del catálogo (v0.3): `ENUMERACION-USUARIOS`, `SIN-BLOQUEO`, `CREDENCIALES-DEBILES`, `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
 
 ## Dependencias permitidas
 
