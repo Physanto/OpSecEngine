@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
+import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
 import io.github.physanto.opsecengine.protocolo.dto.CriterioDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
@@ -16,6 +17,8 @@ import io.github.physanto.opsecengine.soporte.AplicacionDePrueba;
 import io.github.physanto.opsecengine.soporte.ExcepcionErrorRemoto;
 import io.github.physanto.opsecengine.soporte.MotorFalso;
 import java.awt.GraphicsEnvironment;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -24,8 +27,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -117,6 +122,20 @@ class AgenteIT {
                                         .containsEntry("titulo", "Saludo")
                                         .containsEntry("tipoMensaje", "INFORMACION")
                                         .containsEntry("opciones", List.of("Cerrar")));
+
+                CapturaDto dialogo = motor.pedirCaptura(null);
+                assertThat(dialogo.getVentana())
+                        .as("sin nombre, el diálogo modal")
+                        .isEqualTo("Saludo");
+                assertThat(imagen(dialogo).getWidth()).isPositive();
+                CapturaDto ventana = motor.pedirCaptura(VentanaDePrueba.TITULO);
+                assertThat(ventana.getVentana()).isEqualTo(VentanaDePrueba.TITULO);
+                assertThat(ventana.getFormato()).isEqualTo("png");
+                assertThat(imagen(ventana).getWidth())
+                        .isGreaterThan(imagen(dialogo).getWidth() / 2);
+                assertThatThrownBy(() -> motor.pedirCaptura("Inexistente"))
+                        .isInstanceOf(ExcepcionErrorRemoto.class)
+                        .hasMessageContaining("Inexistente");
 
                 assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Fallar"), null))
                         .as("un diálogo modal tapa la ventana")
@@ -241,6 +260,14 @@ class AgenteIT {
         ResultadoPasoDto resultado =
                 motor.enviarPaso(new PasoDto(accion, localizador, valor, modo, esperaMaximaMs));
         return resultado.getCodigo();
+    }
+
+    private static BufferedImage imagen(CapturaDto captura) throws IOException {
+        BufferedImage imagen =
+                ImageIO.read(
+                        new ByteArrayInputStream(Base64.getDecoder().decode(captura.getBase64())));
+        assertThat(imagen).as("la captura es un PNG válido").isNotNull();
+        return imagen;
     }
 
     private static LocalizadorDto criterio(String estrategia, String valor) {
