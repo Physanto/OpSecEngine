@@ -24,6 +24,21 @@ Contenido:
 
 Pendiente de este reportero: filtros y comparación entre ejecuciones, explicaciones de CWE a partir de `cwe.yaml` y gráficos de rendimiento (ver los issues del módulo).
 
+## Reportero JUnit XML
+
+`ReporteroJunitXml` (formato `junit`) escribe `junit.xml`, el formato que leen las herramientas de integración continua (visor de pruebas de GitHub Actions, Jenkins, GitLab).
+
+| En OpSecEngine | En JUnit XML |
+|---|---|
+| La suite | `<testsuite>` (y `<testsuites>` como raíz), con el manifiesto como `<properties>` |
+| Un caso | `<testcase classname="<suite>" name="<id del caso>">` |
+| Caso `NO_CUMPLE` | Un `<failure message="<título>" type="<CWE u oráculo>">` por cada hallazgo, con oráculo, confianza, explicación y eventos de evidencia |
+| Caso `NO_CONCLUYENTE` | `<skipped message="<motivo>"/>`: no se pudo decidir, así que no cuenta como pasado ni como fallido |
+| Caso `CUMPLE` | Sin elementos; sus hallazgos informativos y su marca de inestable van en `<system-out>` |
+| Hallazgo de suite | Un `<testcase name="(suite) <oráculo>">` aparte, con su `<failure>` |
+
+Se escribe en UTF-8 y se descartan los caracteres que XML 1.0 no admite (por ejemplo, el nulo de un payload de ataque). Las pruebas leen el archivo con un analizador XML estándar; no se ha probado contra el visor de GitHub Actions.
+
 ## Dependencias permitidas
 
 - `opsec-dominio`.
