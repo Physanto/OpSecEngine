@@ -7,10 +7,12 @@ import io.github.physanto.opsecengine.protocolo.ExcepcionProtocolo;
 import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
+import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
+import io.github.physanto.opsecengine.protocolo.dto.SolicitudCapturaDto;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -30,11 +32,14 @@ import java.util.Optional;
  *   <li>{@code EJECUTAR_PASO}: ejecuta el paso y responde {@code RESULTADO_PASO}. Los eventos que
  *       produce el paso se envían antes que el resultado.
  *   <li>{@code ARBOL_SOLICITUD}: responde {@code ARBOL}.
+ *   <li>{@code CAPTURAR}: responde {@code CAPTURA} con la imagen PNG de la ventana pedida. Si
+ *       ninguna ventana visible coincide, o si la captura falla, responde {@code ERROR} con el
+ *       código {@code ERROR_INTERNO} y la causa.
  *   <li>{@code CERRAR}: termina la conversación. Todavía no cierra la aplicación; el motor la
  *       detiene.
  *   <li>{@code ERROR} del motor: lo registra y termina la conversación.
- *   <li>Cualquier otro mensaje, como {@code CAPTURAR} o {@code CONFIG_GANCHOS}: responde {@code
- *       ERROR} con el código {@code NO_IMPLEMENTADO}.
+ *   <li>Cualquier otro mensaje, como {@code CONFIG_GANCHOS}: responde {@code ERROR} con el código
+ *       {@code NO_IMPLEMENTADO}.
  * </ul>
  *
  * <p>También termina cuando el motor cierra la conexión. Corre en un solo hilo y nunca propaga
@@ -134,6 +139,9 @@ final class ServidorProtocolo implements Runnable {
             case EJECUTAR_PASO:
                 ejecutarPaso(canal, mensaje);
                 return true;
+            case CAPTURAR:
+                capturar(canal, mensaje);
+                return true;
             case ARBOL_SOLICITUD:
                 canal.enviar(
                         codec.responder(
@@ -150,6 +158,42 @@ final class ServidorProtocolo implements Runnable {
                                                 + " todavía no está implementado en el agente")));
                 return true;
         }
+    }
+
+    private void capturar(CanalMensajes canal, Mensaje mensaje) throws IOException {
+        SolicitudCapturaDto solicitud;
+        try {
+            solicitud = codec.leerCuerpo(mensaje, SolicitudCapturaDto.class);
+        } catch (ExcepcionProtocolo e) {
+            canal.enviar(
+                    codec.responder(
+                            mensaje,
+                            TipoMensaje.ERROR,
+                            new ErrorDto(ErrorDto.MENSAJE_INVALIDO, e.getMessage())));
+            return;
+        }
+        CapturaDto captura;
+        String problema;
+        try {
+            captura = adaptador.capturar(solicitud.getVentana());
+            problema =
+                    solicitud.getVentana() == null
+                            ? "No hay ninguna ventana visible para capturar"
+                            : "No hay ninguna ventana visible con el título o la clase "
+                                    + solicitud.getVentana();
+        } catch (RuntimeException e) {
+            captura = null;
+            problema = "No se pudo tomar la captura: " + e.getMessage();
+        }
+        if (captura == null) {
+            canal.enviar(
+                    codec.responder(
+                            mensaje,
+                            TipoMensaje.ERROR,
+                            new ErrorDto(ErrorDto.ERROR_INTERNO, problema)));
+            return;
+        }
+        canal.enviar(codec.responder(mensaje, TipoMensaje.CAPTURA, captura));
     }
 
     private void ejecutarPaso(CanalMensajes canal, Mensaje mensaje) throws IOException {
