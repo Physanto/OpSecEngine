@@ -9,3 +9,5 @@ io.github.physanto.opsecengine.oraculos.OraculoFirestoreRutaCanario
 io.github.physanto.opsecengine.oraculos.OraculoEnumeracionUsuarios
 io.github.physanto.opsecengine.oraculos.OraculoCredencialesDebiles
 io.github.physanto.opsecengine.oraculos.OraculoSinBloqueo
+io.github.physanto.opsecengine.oraculos.OraculoContrasenaEnCampoVisible
+io.github.physanto.opsecengine.oraculos.OraculoJdbcSinCifrado

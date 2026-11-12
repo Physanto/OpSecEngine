@@ -125,6 +125,50 @@ seguridad. Un mapa YAML no se convierte en el adaptador automáticamente. La
 [solicitud de contrato](solicitud-contrato-44.md) propone formalizar esos datos; la carga de
 payloads y la conexión al núcleo siguen pendientes.
 
+## Contraseñas visibles y cifrado JDBC (#45)
+
+`OraculoContrasenaEnCampoVisible` (`CONTRASENA-EN-CAMPO-VISIBLE`, `CASO`, CWE-549) correlaciona
+un `LLENAR` no vacío con su `PASO_FIN` correcto, antes de otra acción, y exige una clase de
+componente conocida: `JTextField`, `JTextArea`, `JTextPane` o `JEditorPane`, con nombre corto
+o paquete `javax.swing`. Identifica la contraseña por las mismas palabras y reglas de camelCase
+de `CONTRASENA-EN-CONSOLA`, o por el paso y valor de contraseña de `PoliticaAutenticacion` (#44).
+Un campo de usuario o búsqueda no se clasifica por contener un valor parecido a una contraseña.
+El hallazgo es `PROBABLE` y referencia escritura y final sin copiar valores ni localizadores.
+Ignora clases desconocidas, escrituras fallidas o vacías y `JPasswordField`. No conoce el carácter
+de eco: un `JPasswordField` configurado para mostrar texto requiere más datos del emisor.
+
+`OraculoJdbcSinCifrado` (`JDBC-SIN-CIFRADO`, `EVENTO`, CWE-319) examina `SQL.conexion` de eventos
+del propio caso sin error de backend. Produce un hallazgo `PROBABLE` por evento cuando la URL
+conocida desactiva TLS o permite texto claro, sin copiar URL, consultas ni credenciales:
+
+- MySQL (`jdbc:mysql://`): `sslMode=DISABLED` o `PREFERRED`, `useSSL=false`, o ausencia de una
+  exigencia de TLS. Un `sslMode` explícito prevalece sobre las opciones heredadas. `REQUIRED`,
+  `VERIFY_CA` y `VERIFY_IDENTITY` no activan. Sin `sslMode`, `requireSSL=true` o
+  `verifyServerCertificate=true` descartan el hallazgo salvo `useSSL=false`.
+- PostgreSQL (`jdbc:postgresql://`): `sslmode=disable`, `allow` o `prefer`, o ausencia de
+  exigencia de TLS. Un `sslmode` explícito prevalece sobre `ssl`. `require`, `verify-ca`,
+  `verify-full` y `ssl=true` o `ssl` sin valor no activan.
+- SQL Server (`jdbc:sqlserver://`): solo `encrypt=false` explícito. No infiere un valor
+  predeterminado sin conocer la versión del driver.
+- H2: `jdbc:h2:tcp://` activa; `jdbc:h2:ssl://` y las URLs locales o en memoria no activan.
+  `CIPHER=AES` cifra archivos y no convierte TCP en TLS.
+
+El análisis se limita a esas formas de URL. Se abstiene ante drivers desconocidos, opciones
+TLS no reconocidas, parámetros repetidos, escapes inválidos, llaves y formas MySQL de host
+con paréntesis. Decodifica los parámetros de consulta MySQL/PostgreSQL y conserva sus nombres
+exactos; las claves SQL Server no distinguen mayúsculas. No determina el TLS negociado,
+propiedades suministradas aparte ni validación de certificados. Un resultado sin hallazgos
+no certifica el canal. La app de práctica usa `JPasswordField` y H2 en memoria y no activa
+estos oráculos; las pruebas incluyen trazas positivas y negativas independientes.
+
+La interpretación sigue las referencias oficiales de
+[MySQL Connector/J](https://dev.mysql.com/doc/connector-j/en/connector-j-connp-props-security.html),
+[pgJDBC](https://jdbc.postgresql.org/documentation/ssl/),
+[SQL Server JDBC](https://learn.microsoft.com/en-us/sql/connect/jdbc/setting-the-connection-properties)
+y [H2](https://h2database.github.io/html/features.html).
+Ambos oráculos se registran por SPI; el emisor debe aportar la clase de componente y la URL
+de conexión. No instrumentan la aplicación ni cambian la integración pendiente del núcleo.
+
 ## Evaluación por momento
 
 `OraculoSinSesion` (id `SIN-SESION`, momento `CASO`, CWE-306) detecta operaciones SQL o
@@ -240,7 +284,7 @@ coincidencias. Un campo ausente no equivale a un valor null. Los archivos invál
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 6):
 
-1. Oráculos de seguridad del catálogo (v0.3): `CONTRASENA-EN-CAMPO-VISIBLE`, entre otros.
+1. Oráculos de rendimiento, robustez y accesibilidad de la #47.
 
 ## Dependencias permitidas
 

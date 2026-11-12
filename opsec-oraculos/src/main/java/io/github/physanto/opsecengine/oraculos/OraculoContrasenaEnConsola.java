@@ -214,7 +214,7 @@ public final class OraculoContrasenaEnConsola implements Oraculo {
         return marca;
     }
 
-    private static boolean esCampoDeContrasena(String objetivo) {
+    static boolean esCampoDeContrasena(String objetivo) {
         String normal =
                 Normalizer.normalize(objetivo, Normalizer.Form.NFD)
                         .replaceAll("\\p{M}", "")
