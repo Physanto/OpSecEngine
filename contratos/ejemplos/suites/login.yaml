@@ -16,6 +16,14 @@ config:
   semilla: 42
   paralelismo: 1
 
+# Desde contratos v1.2: los dos intentos que compara ENUMERACION-USUARIOS. El número de
+# paso cuenta cada campo de un llenar como un paso: en C01 y C02 el envío es el paso 5.
+enumeracionUsuarios:
+  casoUsuarioInexistente: C01
+  pasoUsuarioInexistente: 5
+  casoContrasenaIncorrecta: C02
+  pasoContrasenaIncorrecta: 5
+
 casos:
   - id: C01
     descripcion: Usuario inexistente con una contraseña cualquiera.
@@ -57,6 +65,7 @@ casos:
         esperaMaximaMs: 15000
       - capturar:
     ataques: [SQLI-TAUTOLOGIA-CANARIO]
+    canario: K7Q2          # opcional (v1.2); si falta, el motor genera uno
     oraculos: [SQLI-CANARIO, TRAZA-EN-DIALOGO]
 
   - id: C15
@@ -84,3 +93,19 @@ casos:
       - esperar: {claseVentana: GUI_Admin.MenuAdministrador}
       - capturar:
     oraculos: [SIN-BLOQUEO]
+    # Desde contratos v1.2: qué intentos hace el caso y cómo se reconocen el rechazo y el
+    # bloqueo. Cada intento ocupa cuatro pasos: usuario, contraseña, envío y cierre del diálogo.
+    autenticacion:
+      fallosPermitidos: 3
+      retardoMinimoMs: 30000
+      intentos:
+      - {pasoUsuario: 3, pasoContrasena: 4, pasoEnvio: 5, usuario: Admin, contrasena: mala1}
+      - {pasoUsuario: 7, pasoContrasena: 8, pasoEnvio: 9, usuario: Admin, contrasena: mala2}
+      - {pasoUsuario: 11, pasoContrasena: 12, pasoEnvio: 13, usuario: Admin, contrasena: mala3}
+      - {pasoUsuario: 15, pasoContrasena: 16, pasoEnvio: 17, usuario: Admin, contrasena: mala4}
+      - {pasoUsuario: 19, pasoContrasena: 20, pasoEnvio: 21, usuario: Admin, contrasena: mala5}
+      - {pasoUsuario: 23, pasoContrasena: 24, pasoEnvio: 25, usuario: Admin, contrasena: "12345"}
+      rechazo:
+        - {tipo: DIALOGO, campos: {tipoMensaje: ERROR}}
+      bloqueo:
+        - {tipo: DIALOGO, campos: {tipoMensaje: ADVERTENCIA}}
