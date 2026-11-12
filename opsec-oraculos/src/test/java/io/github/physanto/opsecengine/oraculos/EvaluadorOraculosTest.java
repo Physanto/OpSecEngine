@@ -16,6 +16,7 @@ import io.github.physanto.opsecengine.dominio.extension.Oraculo;
 import io.github.physanto.opsecengine.dominio.resultado.Confianza;
 import io.github.physanto.opsecengine.dominio.resultado.EstadoVeredicto;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
+import io.github.physanto.opsecengine.dominio.resultado.Veredicto;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
 import io.github.physanto.opsecengine.soporte.CargadorTrazas;
@@ -304,6 +305,113 @@ class EvaluadorOraculosTest {
         var sesion = evaluador.iniciarCaso(c);
         assertThatIllegalArgumentException().isThrownBy(() -> sesion.terminar(" "));
         assertThat(sesion.terminar(null).estado()).isEqualTo(EstadoVeredicto.CUMPLE);
+    }
+
+    @Test
+    void conservaElVeredictoCompletoDeCasoYSuite() {
+        for (Momento momento : List.of(Momento.CASO, Momento.SUITE)) {
+            Oraculo sinEvidencia =
+                    completo(
+                            "DUDOSO",
+                            momento,
+                            (t, c) -> Veredicto.noConcluyente("falta evidencia"));
+            var evaluador = new EvaluadorOraculos(List.of(sinEvidencia));
+            Contexto c = contexto("X", List.of());
+            Veredicto resultado =
+                    momento == Momento.CASO
+                            ? evaluador.iniciarCaso(c).terminar(null)
+                            : evaluador.evaluarSuite(
+                                    Contexto.deSuite(c.proyecto(), c.suite(), List.of()));
+            assertThat(resultado.estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+            assertThat(resultado.motivo()).isEqualTo("DUDOSO: falta evidencia");
+        }
+    }
+
+    @Test
+    void laFaltaDeEvidenciaSeResuelvePeroLosErroresPersisten() {
+        Oraculo provisional =
+                completo(
+                        "PROVISIONAL",
+                        Momento.EVENTO,
+                        (t, c) ->
+                                t.eventos().size() < 2
+                                        ? Veredicto.noConcluyente("falta el segundo evento")
+                                        : Veredicto.cumple());
+        var evaluador = new EvaluadorOraculos(List.of(provisional));
+        var sesion = evaluador.iniciarCaso(contexto("X", List.of()));
+        assertThat(sesion.registrarEvento(evento("X", 1)).estado())
+                .isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(sesion.registrarEvento(evento("X", 2)).estado())
+                .isEqualTo(EstadoVeredicto.CUMPLE);
+        assertThat(sesion.terminar(null).motivo()).isNull();
+
+        Oraculo roto =
+                completo(
+                        "ROTO",
+                        Momento.EVENTO,
+                        (t, c) -> {
+                            if (t.eventos().size() == 1) {
+                                throw new IllegalStateException("error persistente");
+                            }
+                            return Veredicto.cumple();
+                        });
+        var conError =
+                new EvaluadorOraculos(List.of(provisional, roto))
+                        .iniciarCaso(contexto("X", List.of()));
+        conError.registrarEvento(evento("X", 1));
+        conError.registrarEvento(evento("X", 2));
+        var resultado = conError.terminar(null);
+        assertThat(resultado.estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(resultado.motivo())
+                .contains("ROTO", "error persistente")
+                .doesNotContain("falta el segundo evento");
+    }
+
+    @Test
+    void unVeredictoNuloSeConservaComoErrorYNoDetieneLosDemas() {
+        Oraculo roto = completo("NULO", Momento.CASO, (t, c) -> null);
+        Oraculo info =
+                oraculo(
+                        "INFO",
+                        Momento.CASO,
+                        (t, c) -> List.of(hallazgo("INFO", Confianza.INFO, 0)));
+        var resultado =
+                new EvaluadorOraculos(List.of(roto, info))
+                        .iniciarCaso(contexto("X", List.of()))
+                        .terminar(null);
+        assertThat(resultado.estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+        assertThat(resultado.motivo()).contains("NULO");
+        assertThat(resultado.hallazgos()).hasSize(1);
+    }
+
+    private static Oraculo completo(
+            String id, Momento momento, BiFunction<Traza, Contexto, Veredicto> funcion) {
+        return new Oraculo() {
+            @Override
+            public String id() {
+                return id;
+            }
+
+            @Override
+            public Momento momento() {
+                return momento;
+            }
+
+            @Override
+            public boolean aplica(Caso caso, Contexto contexto) {
+                return true;
+            }
+
+            @Override
+            public List<Hallazgo> evaluar(Traza traza, Contexto contexto) {
+                throw new AssertionError("Se debe conservar evaluarResultado");
+            }
+
+            @Override
+            public Veredicto evaluarResultado(Traza traza, Contexto contexto) {
+                return funcion.apply(traza, contexto);
+            }
+        };
     }
 
     private static Oraculo oraculo(
