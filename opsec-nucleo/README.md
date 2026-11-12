@@ -167,3 +167,7 @@ reproducción de trazas, los veredictos completos y los errores de descubrimient
 `EjecucionServiceTest` comprueba con `AgenteFalso` que los prefijos se evalúan antes de
 enviar el paso siguiente. Las pruebas existentes conservan sus comprobaciones; la traza
 del ejemplo de evaluación ahora contiene un evento real para activar el momento EVENTO.
+
+## Ejecución oculta
+
+`EjecucionService` transmite `suite.config().oculto()` al abrir cada caso. `SesionService` y `ArranqueApp` conservan sus firmas anteriores y añaden sobrecargas para esta opción. `LanzadorProceso` agrega `oculto=true` a los argumentos de `-javaagent` solo cuando se solicita; el agente mantiene las ventanas fuera de pantalla y sin foco. Las sesiones sin esta opción conservan el comando anterior.
