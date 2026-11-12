@@ -20,6 +20,16 @@ class ArgumentosAgenteTest {
         assertThat(argumentos.token()).isEqualTo("a-b_c=");
     }
 
+    @Test
+    void elModoOcultoEsOpcionalYExigeUnBooleano() {
+        assertThat(ArgumentosAgente.leer("puerto=1234,token=x").oculto()).isFalse();
+        assertThat(ArgumentosAgente.leer("puerto=1234,token=x,oculto=false").oculto()).isFalse();
+        assertThat(ArgumentosAgente.leer("puerto=1234,token=x,oculto=true").oculto()).isTrue();
+        assertThatThrownBy(() -> ArgumentosAgente.leer("puerto=1234,token=secreto,oculto=quizas"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageNotContaining("secreto");
+    }
+
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(

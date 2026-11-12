@@ -3,6 +3,8 @@ package io.github.physanto.opsecengine.nucleo.sesion;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Optional;
 
 /**
  * Arranca la aplicación probada de modo que su agente se conecte al motor.
@@ -35,4 +37,32 @@ public interface ArranqueApp {
      * @throws IOException si no se puede arrancar la aplicación
      */
     Closeable arrancar(Proyecto proyecto, int puerto, String token) throws IOException;
+
+    /**
+     * Arranca la aplicación con la opción de ventanas ocultas, sin esperar el saludo.
+     *
+     * <p>La implementación por defecto delega en el arranque de tres argumentos para conservar los
+     * dobles y las expresiones lambda existentes. El lanzador real transmite la opción al agente.
+     *
+     * @param proyecto proyecto que se arranca; no puede ser null
+     * @param puerto puerto del motor
+     * @param token token del saludo; no puede ser null
+     * @param oculto si las ventanas deben quedar fuera de pantalla y sin foco
+     * @return acción que detiene la aplicación
+     * @throws IOException si no se puede arrancar la aplicación
+     */
+    default Closeable arrancar(Proyecto proyecto, int puerto, String token, boolean oculto)
+            throws IOException {
+        return arrancar(proyecto, puerto, token);
+    }
+
+    /**
+     * Devuelve la carpeta de resultados de la ejecución, donde el motor guarda también las
+     * capturas.
+     *
+     * @return la carpeta, o vacío si este arranque no tiene una (el valor por defecto)
+     */
+    default Optional<Path> carpetaResultados() {
+        return Optional.empty();
+    }
 }

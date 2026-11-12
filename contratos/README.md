@@ -1,6 +1,6 @@
 # Contratos de OpSecEngine
 
-Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman los contratos, hoy en la versión 1.2.
+Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman los contratos, hoy en la versión 1.3.
 
 Todo lo que hay aquí es un contrato: se usa tal como está y los cambios se piden con una solicitud de cambio de contrato (ver más abajo). El módulo `opsec-verificacion` valida en cada build que los ejemplos cumplan sus esquemas y que los catálogos coincidan con el código.
 
@@ -102,6 +102,14 @@ Un proyecto de pruebas completo de la app de clientes original, con la misma est
 
 Un ejemplo JSON por tipo de mensaje del protocolo motor ↔ agente. Ver `protocolo/README.md`.
 
+## Evaluación por evento, caso y suite (v1.3)
+
+Las interfaces `ProveedorEvaluacion`, `Evaluador` y `EvaluacionCaso`, en dominio,
+permiten descubrir un proveedor de evaluación con `ServiceLoader` sin que el núcleo
+dependa de clases concretas de oráculos. El proveedor y su integración
+en el núcleo se detallan en [EVALUACION.md](EVALUACION.md). El proveedor y la conexión a los
+eventos de ejecución ya están implementados.
+
 ## Versiones
 
 | Versión | Etiqueta | Cambios |
@@ -109,6 +117,7 @@ Un ejemplo JSON por tipo de mensaje del protocolo motor ↔ agente. Ver `protoco
 | 1 | `contratos-v1` | Versión inicial. |
 | 1.1 | `contratos-v1.1` | Aditivo: campo opcional `app.java` en `proyecto.yaml` (carpeta del JDK o JRE con que se lanza la app) y componente `javaApp` del record `Proyecto`, que conserva el constructor de la v1. |
 | 1.2 | `contratos-v1.2` | Aditivo (#38, #42, #43, #44, #47): secciones opcionales `canario`, `validacion` y `autenticacion` del caso y `enumeracionUsuarios` de la suite, con sus records (`Senal`, `PoliticaValidacion`, `IntentoLogin`, `PoliticaAutenticacion`, `ComparacionLogin`); `Caso` y `Suite` conservan los constructores anteriores. Método por defecto `Oraculo.evaluarResultado`, que permite responder `NO_CONCLUYENTE`. Oráculo `ENTRADA-INVALIDA-ACEPTADA` y `CWE-20`; ids reservados de calidad de la interfaz (`RESPUESTA-LENTA`, `VENTANA-NO-LIBERADA`, `CONTROL-SIN-ETIQUETA`, `ORDEN-TABULACION`, `ACCION-TECLADO-NO-ALCANZADA`, `RESULTADO-ROBUSTEZ-INCORRECTO`); campo opcional `liberada` en `VENTANA_CERRADA`. |
+| 1.3 | `contratos-v1.3` | Aditivo (#23): interfaces `ProveedorEvaluacion`, `Evaluador` y `EvaluacionCaso` para descubrimiento del evaluador, reglas YAML opcionales y evaluación por evento, caso y suite. Se conservan los contratos anteriores. |
 
 ## Cambiar un contrato
 

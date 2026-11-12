@@ -1,0 +1,86 @@
+# SEC-001: casos de inicio de sesión de la integración v0.1.
+# Formato: contratos/esquemas/suite.schema.json
+#
+# No hay "esperado" escrito: los oráculos deciden el veredicto. Con la app vulnerable,
+# C01/C02 (F5), C04 (F7) y C07 (F6) no cumplen; con la corregida, todos cumplen.
+
+suite: sec-001
+version: "1"
+enfoques: [SEGURIDAD, VALIDACION]
+
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+
+# Cada campo de un llenar cuenta como un paso: el envío es el paso 5.
+enumeracionUsuarios:
+  casoUsuarioInexistente: C01
+  pasoUsuarioInexistente: 5
+  casoContrasenaIncorrecta: C02
+  pasoContrasenaIncorrecta: 5
+
+casos:
+  - id: C01
+    descripcion: Usuario inexistente; su mensaje se compara con el de C02.
+    oraculos: [ENUMERACION-USUARIOS]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: NoExiste, Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - capturar:
+
+  - id: C02
+    descripcion: Usuario existente con contraseña incorrecta.
+    oraculos: [ENUMERACION-USUARIOS]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: Admin, Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - capturar:
+
+  - id: C03
+    descripcion: Usuario y contraseña vacíos.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "", Contraseña: ""}
+      - pulsar: Iniciar Sesion
+      - capturar:
+
+  - id: C04
+    descripcion: Una comilla en el usuario provoca un error SQL; el diálogo no debe mostrar la pila.
+    oraculos: [TRAZA-EN-DIALOGO]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "'", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - capturar:
+
+  - id: C05
+    descripcion: Usuario con espacios alrededor.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: " Admin ", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - capturar:
+
+  - id: C06
+    descripcion: Usuario en mayúsculas.
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: ADMIN, Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
+      - capturar:
+
+  - id: C07
+    descripcion: El administrador inicia sesión con su rol; la contraseña no debe quedar en la consola.
+    rol: admin
+    oraculos: [CONTRASENA-EN-CONSOLA]
+    pasos:
+      - esperar: {tituloVentana: Menú administrador}
+      - capturar:

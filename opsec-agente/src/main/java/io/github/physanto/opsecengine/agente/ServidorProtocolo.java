@@ -7,15 +7,19 @@ import io.github.physanto.opsecengine.protocolo.ExcepcionProtocolo;
 import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
+import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
+import io.github.physanto.opsecengine.protocolo.dto.SolicitudCapturaDto;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -30,15 +34,20 @@ import java.util.Optional;
  *   <li>{@code EJECUTAR_PASO}: ejecuta el paso y responde {@code RESULTADO_PASO}. Los eventos que
  *       produce el paso se envían antes que el resultado.
  *   <li>{@code ARBOL_SOLICITUD}: responde {@code ARBOL}.
- *   <li>{@code CERRAR}: termina la conversación. Todavía no cierra la aplicación; el motor la
- *       detiene.
+ *   <li>{@code CAPTURAR}: responde {@code CAPTURA} con la imagen PNG de la ventana pedida. Si
+ *       ninguna ventana visible coincide, o si la captura falla, responde {@code ERROR} con el
+ *       código {@code ERROR_INTERNO} y la causa.
+ *   <li>{@code CERRAR}: emite el evento {@code APP_TERMINADA} con {@code esperada=true} y {@code
+ *       causa=CERRAR}, cierra la conexión (esa es la respuesta: el motor la espera) y después
+ *       ejecuta el cierre de la aplicación que recibió en el constructor.
  *   <li>{@code ERROR} del motor: lo registra y termina la conversación.
- *   <li>Cualquier otro mensaje, como {@code CAPTURAR} o {@code CONFIG_GANCHOS}: responde {@code
- *       ERROR} con el código {@code NO_IMPLEMENTADO}.
+ *   <li>Cualquier otro mensaje, como {@code CONFIG_GANCHOS}: responde {@code ERROR} con el código
+ *       {@code NO_IMPLEMENTADO}.
  * </ul>
  *
- * <p>También termina cuando el motor cierra la conexión. Corre en un solo hilo y nunca propaga
- * errores hacia la aplicación probada.
+ * <p>También termina cuando el motor cierra la conexión; en ese caso, y ante un {@code ERROR} del
+ * motor, no cierra la aplicación. Corre en un solo hilo y nunca propaga errores hacia la aplicación
+ * probada.
  */
 final class ServidorProtocolo implements Runnable {
 
@@ -50,6 +59,8 @@ final class ServidorProtocolo implements Runnable {
     private final AdaptadorToolkit adaptador;
     private final EmisorProtocolo emisor;
     private final CodecMensajes codec;
+    private final Runnable cierre;
+    private boolean cierrePedido;
 
     /**
      * Crea el servidor.
@@ -59,21 +70,28 @@ final class ServidorProtocolo implements Runnable {
      * @param adaptador adaptador que ejecuta las acciones sobre la interfaz
      * @param emisor emisor de eventos que se conecta después del saludo
      * @param codec codec del protocolo
+     * @param cierre acción que cierra la aplicación después de {@code CERRAR}; se ejecuta en el
+     *     hilo del servidor, con la conexión ya cerrada
      */
     ServidorProtocolo(
             ArgumentosAgente argumentos,
             String versionAgente,
             AdaptadorToolkit adaptador,
             EmisorProtocolo emisor,
-            CodecMensajes codec) {
+            CodecMensajes codec,
+            Runnable cierre) {
         this.argumentos = argumentos;
         this.versionAgente = versionAgente;
         this.adaptador = adaptador;
         this.emisor = emisor;
         this.codec = codec;
+        this.cierre = cierre;
     }
 
-    /** Conversa con el motor; registra los errores y nunca los propaga. */
+    /**
+     * Conversa con el motor y, si pidió {@code CERRAR}, cierra la aplicación; registra los errores
+     * y nunca los propaga.
+     */
     @Override
     public void run() {
         try {
@@ -82,6 +100,13 @@ final class ServidorProtocolo implements Runnable {
             RegistroAgente.error("La conversación con el motor terminó: " + e);
         } finally {
             emisor.desconectar();
+        }
+        if (cierrePedido) {
+            try {
+                cierre.run();
+            } catch (RuntimeException e) {
+                RegistroAgente.error("No se pudo cerrar la aplicación: " + e);
+            }
         }
     }
 
@@ -127,12 +152,17 @@ final class ServidorProtocolo implements Runnable {
     private boolean atender(CanalMensajes canal, Mensaje mensaje) throws IOException {
         switch (mensaje.getTipo()) {
             case CERRAR:
+                avisarCierre();
+                cierrePedido = true;
                 return false;
             case ERROR:
                 RegistroAgente.error("El motor respondió un error: " + mensaje);
                 return false;
             case EJECUTAR_PASO:
                 ejecutarPaso(canal, mensaje);
+                return true;
+            case CAPTURAR:
+                capturar(canal, mensaje);
                 return true;
             case ARBOL_SOLICITUD:
                 canal.enviar(
@@ -150,6 +180,50 @@ final class ServidorProtocolo implements Runnable {
                                                 + " todavía no está implementado en el agente")));
                 return true;
         }
+    }
+
+    /** Emite {@code APP_TERMINADA} antes de cortar la conexión, mientras el motor todavía lee. */
+    private void avisarCierre() {
+        Map<String, Object> datos = new LinkedHashMap<>();
+        datos.put("esperada", true);
+        datos.put("causa", "CERRAR");
+        emisor.emitir("APP_TERMINADA", datos);
+    }
+
+    private void capturar(CanalMensajes canal, Mensaje mensaje) throws IOException {
+        SolicitudCapturaDto solicitud;
+        try {
+            solicitud = codec.leerCuerpo(mensaje, SolicitudCapturaDto.class);
+        } catch (ExcepcionProtocolo e) {
+            canal.enviar(
+                    codec.responder(
+                            mensaje,
+                            TipoMensaje.ERROR,
+                            new ErrorDto(ErrorDto.MENSAJE_INVALIDO, e.getMessage())));
+            return;
+        }
+        CapturaDto captura;
+        String problema;
+        try {
+            captura = adaptador.capturar(solicitud.getVentana());
+            problema =
+                    solicitud.getVentana() == null
+                            ? "No hay ninguna ventana visible para capturar"
+                            : "No hay ninguna ventana visible con el título o la clase "
+                                    + solicitud.getVentana();
+        } catch (RuntimeException e) {
+            captura = null;
+            problema = "No se pudo tomar la captura: " + e.getMessage();
+        }
+        if (captura == null) {
+            canal.enviar(
+                    codec.responder(
+                            mensaje,
+                            TipoMensaje.ERROR,
+                            new ErrorDto(ErrorDto.ERROR_INTERNO, problema)));
+            return;
+        }
+        canal.enviar(codec.responder(mensaje, TipoMensaje.CAPTURA, captura));
     }
 
     private void ejecutarPaso(CanalMensajes canal, Mensaje mensaje) throws IOException {

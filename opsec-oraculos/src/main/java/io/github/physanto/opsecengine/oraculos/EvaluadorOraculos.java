@@ -2,6 +2,7 @@ package io.github.physanto.opsecengine.oraculos;
 
 import io.github.physanto.opsecengine.dominio.caso.Caso;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
+import io.github.physanto.opsecengine.dominio.extension.Evaluador;
 import io.github.physanto.opsecengine.dominio.extension.Momento;
 import io.github.physanto.opsecengine.dominio.extension.Oraculo;
 import io.github.physanto.opsecengine.dominio.resultado.Confianza;
@@ -12,8 +13,10 @@ import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.Traza;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -21,9 +24,12 @@ import java.util.Set;
  * Evalúa oráculos al recibir eventos y al finalizar casos y suites, sin depender del núcleo.
  *
  * <p>Recibe los oráculos descubiertos por el llamador. Es seguro entre hilos si los oráculos lo
- * son; cada caso tiene su propia sesión, que debe usarse desde un solo hilo.
+ * son; cada caso tiene su propia sesión, que debe usarse desde un solo hilo. Implementa el contrato
+ * {@link Evaluador} y conserva las APIs anteriores. Usa {@link Oraculo#evaluarResultado} para
+ * conservar los veredictos no concluyentes: la falta provisional de evidencia puede resolverse con
+ * eventos nuevos; los errores de evaluación persisten.
  */
-public final class EvaluadorOraculos {
+public final class EvaluadorOraculos implements Evaluador {
     private final List<Oraculo> oraculos;
 
     /**
@@ -33,7 +39,7 @@ public final class EvaluadorOraculos {
      * @throws NullPointerException si la colección, algún oráculo, id o momento es null
      * @throws IllegalArgumentException si hay ids repetidos
      */
-    public EvaluadorOraculos(Collection<Oraculo> oraculos) {
+    public EvaluadorOraculos(Collection<? extends Oraculo> oraculos) {
         this.oraculos = List.copyOf(oraculos);
         Set<String> ids = new LinkedHashSet<>();
         for (Oraculo oraculo : this.oraculos) {
@@ -51,6 +57,7 @@ public final class EvaluadorOraculos {
      * @return sesión sin eventos ni hallazgos
      * @throws NullPointerException si el contexto o su caso son null
      */
+    @Override
     public EvaluacionCaso iniciarCaso(Contexto contexto) {
         Objects.requireNonNull(contexto, "El contexto no puede ser null");
         Objects.requireNonNull(contexto.caso(), "El contexto debe tener caso");
@@ -65,6 +72,7 @@ public final class EvaluadorOraculos {
      * @throws NullPointerException si el contexto es null
      * @throws IllegalArgumentException si el contexto contiene un caso
      */
+    @Override
     public Veredicto evaluarSuite(Contexto contexto) {
         Objects.requireNonNull(contexto, "El contexto no puede ser null");
         if (contexto.caso() != null) {
@@ -73,7 +81,9 @@ public final class EvaluadorOraculos {
         }
         Set<Hallazgo> hallazgos = new LinkedHashSet<>();
         Set<String> motivos = new LinkedHashSet<>();
-        evaluar(Momento.SUITE, null, contexto, hallazgos, motivos);
+        Map<String, String> actuales = new LinkedHashMap<>();
+        evaluar(Momento.SUITE, null, contexto, hallazgos, motivos, actuales);
+        motivos.addAll(actuales.values());
         return veredicto(hallazgos, motivos);
     }
 
@@ -82,7 +92,8 @@ public final class EvaluadorOraculos {
             Traza traza,
             Contexto contexto,
             Set<Hallazgo> hallazgos,
-            Set<String> motivos) {
+            Set<String> motivos,
+            Map<String, String> actuales) {
         Caso caso = contexto.caso();
         for (Oraculo oraculo : oraculos) {
             if (oraculo.momento() != momento) {
@@ -92,10 +103,21 @@ public final class EvaluadorOraculos {
                 if ((caso != null && caso.oraculos().contains(oraculo.id()))
                         || oraculo.aplica(caso, contexto)) {
                     // Validar la respuesta completa antes de incorporar hallazgos.
-                    hallazgos.addAll(List.copyOf(oraculo.evaluar(traza, contexto)));
+                    Veredicto parcial =
+                            Objects.requireNonNull(
+                                    oraculo.evaluarResultado(traza, contexto),
+                                    "El veredicto es null");
+                    hallazgos.addAll(parcial.hallazgos());
+                    if (parcial.motivo() != null) {
+                        actuales.put(oraculo.id(), oraculo.id() + ": " + parcial.motivo());
+                    } else {
+                        actuales.remove(oraculo.id());
+                    }
+                } else {
+                    actuales.remove(oraculo.id());
                 }
             } catch (RuntimeException e) {
-                motivos.add("Falló el oráculo " + oraculo.id());
+                motivos.add("Falló el oráculo " + oraculo.id() + ": " + e);
             }
         }
     }
@@ -119,11 +141,13 @@ public final class EvaluadorOraculos {
      *
      * <p>No es segura entre hilos. Tras terminar no se admiten más eventos ni otro cierre.
      */
-    public final class EvaluacionCaso {
+    public final class EvaluacionCaso
+            implements io.github.physanto.opsecengine.dominio.extension.EvaluacionCaso {
         private final Contexto contexto;
         private final List<Evento> eventos = new ArrayList<>();
         private final Set<Hallazgo> hallazgos = new LinkedHashSet<>();
         private final Set<String> motivos = new LinkedHashSet<>();
+        private final Map<String, String> actuales = new LinkedHashMap<>();
         private boolean terminada;
 
         private EvaluacionCaso(Contexto contexto) {
@@ -148,6 +172,7 @@ public final class EvaluadorOraculos {
          * @throws IllegalArgumentException si pertenece a otro caso o la secuencia no crece
          * @throws IllegalStateException si el caso ya terminó
          */
+        @Override
         public Veredicto registrarEvento(Evento evento) {
             comprobarAbierta();
             Objects.requireNonNull(evento, "El evento no puede ser null");
@@ -159,8 +184,8 @@ public final class EvaluadorOraculos {
                 throw new IllegalArgumentException("La secuencia del evento debe ser creciente");
             }
             eventos.add(evento);
-            evaluar(Momento.EVENTO, traza(), contexto, hallazgos, motivos);
-            return veredicto(hallazgos, motivos);
+            evaluar(Momento.EVENTO, traza(), contexto, hallazgos, motivos, actuales);
+            return acumulado();
         }
 
         /**
@@ -171,6 +196,7 @@ public final class EvaluadorOraculos {
          * @throws IllegalArgumentException si el motivo no es null pero está en blanco
          * @throws IllegalStateException si el caso ya terminó
          */
+        @Override
         public Veredicto terminar(String motivoIncompleto) {
             comprobarAbierta();
             if (motivoIncompleto != null && motivoIncompleto.isBlank()) {
@@ -180,8 +206,8 @@ public final class EvaluadorOraculos {
             if (motivoIncompleto != null) {
                 motivos.add(motivoIncompleto);
             }
-            evaluar(Momento.CASO, traza(), contexto, hallazgos, motivos);
-            return veredicto(hallazgos, motivos);
+            evaluar(Momento.CASO, traza(), contexto, hallazgos, motivos, actuales);
+            return acumulado();
         }
 
         /**
@@ -189,8 +215,15 @@ public final class EvaluadorOraculos {
          *
          * @return traza de este caso en orden de secuencia
          */
+        @Override
         public Traza traza() {
             return new Traza(contexto.caso().id(), eventos);
+        }
+
+        private Veredicto acumulado() {
+            Set<String> todos = new LinkedHashSet<>(motivos);
+            todos.addAll(actuales.values());
+            return veredicto(hallazgos, todos);
         }
 
         private void comprobarAbierta() {

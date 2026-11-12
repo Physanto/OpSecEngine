@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -82,6 +83,16 @@ public final class LanzadorProceso implements ArranqueApp {
     }
 
     /**
+     * Devuelve la carpeta de resultados que recibió el lanzador.
+     *
+     * @return la carpeta; nunca vacío
+     */
+    @Override
+    public Optional<Path> carpetaResultados() {
+        return Optional.of(carpetaResultados);
+    }
+
+    /**
      * Devuelve el ejecutable {@code java} de la JVM que ejecuta el motor.
      *
      * @return ruta {@code <java.home>/bin/java}; en Windows el sistema agrega {@code .exe}
@@ -117,6 +128,20 @@ public final class LanzadorProceso implements ArranqueApp {
      * @throws NullPointerException si {@code proyecto} o {@code token} son null
      */
     public List<String> comando(Proyecto proyecto, int puerto, String token) {
+        return comando(proyecto, puerto, token, false);
+    }
+
+    /**
+     * Arma el comando con la opción de modo oculto, sin ejecutar el proceso.
+     *
+     * @param proyecto proyecto con la aplicación; no puede ser null
+     * @param puerto puerto donde el motor espera al agente
+     * @param token token de la sesión; no puede ser null
+     * @param oculto si se añade oculto=true a los argumentos del agente
+     * @return comando listo para ProcessBuilder
+     * @throws NullPointerException si proyecto o token es null
+     */
+    public List<String> comando(Proyecto proyecto, int puerto, String token, boolean oculto) {
         Objects.requireNonNull(proyecto, "El proyecto no puede ser null");
         Objects.requireNonNull(token, "El token no puede ser null");
         List<String> comando = new ArrayList<>();
@@ -131,7 +156,8 @@ public final class LanzadorProceso implements ArranqueApp {
                         + "=puerto="
                         + puerto
                         + ",token="
-                        + token);
+                        + token
+                        + (oculto ? ",oculto=true" : ""));
         Path jar = proyecto.jar().toAbsolutePath();
         if (proyecto.clasePrincipal() != null) {
             comando.add("-cp");
@@ -156,7 +182,23 @@ public final class LanzadorProceso implements ArranqueApp {
      * @throws NullPointerException si {@code proyecto} o {@code token} son null
      */
     public Process lanzar(Proyecto proyecto, int puerto, String token) throws IOException {
-        List<String> comando = comando(proyecto, puerto, token);
+        return lanzar(proyecto, puerto, token, false);
+    }
+
+    /**
+     * Lanza la aplicación con la opción de modo oculto solicitada.
+     *
+     * @param proyecto proyecto con la aplicación; no puede ser null
+     * @param puerto puerto donde el motor espera al agente
+     * @param token token de la sesión; no puede ser null
+     * @param oculto si se deben ocultar las ventanas y evitar el foco
+     * @return proceso de la aplicación
+     * @throws IOException si no se puede crear la carpeta de resultados o arrancar la JVM
+     * @throws NullPointerException si proyecto o token es null
+     */
+    public Process lanzar(Proyecto proyecto, int puerto, String token, boolean oculto)
+            throws IOException {
+        List<String> comando = comando(proyecto, puerto, token, oculto);
         if (proyecto.javaApp() != null) {
             exigirJava(proyecto.javaApp());
         }
@@ -183,7 +225,23 @@ public final class LanzadorProceso implements ArranqueApp {
      */
     @Override
     public Closeable arrancar(Proyecto proyecto, int puerto, String token) throws IOException {
-        Process proceso = lanzar(proyecto, puerto, token);
+        return arrancar(proyecto, puerto, token, false);
+    }
+
+    /**
+     * Arranca la aplicación y transmite al agente si sus ventanas deben permanecer ocultas.
+     *
+     * @param proyecto proyecto con la aplicación; no puede ser null
+     * @param puerto puerto donde el motor espera al agente
+     * @param token token de la sesión; no puede ser null
+     * @param oculto si las ventanas deben quedar fuera de pantalla y sin foco
+     * @return acción que detiene el proceso al cerrar la sesión
+     * @throws IOException si no se puede lanzar la aplicación
+     */
+    @Override
+    public Closeable arrancar(Proyecto proyecto, int puerto, String token, boolean oculto)
+            throws IOException {
+        Process proceso = lanzar(proyecto, puerto, token, oculto);
         return () -> detener(proceso);
     }
 

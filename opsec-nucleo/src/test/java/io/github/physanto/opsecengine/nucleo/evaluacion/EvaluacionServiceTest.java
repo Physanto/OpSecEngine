@@ -27,7 +27,18 @@ class EvaluacionServiceTest {
             new Proyecto("p", Path.of("app.jar"), null, null, null, null, null, null, null, null);
     private static final Paso PASO =
             new Paso(1, Accion.PULSAR, Localizador.porTexto("Avanzar"), null, null, null);
-    private static final Traza TRAZA = new Traza("C1", List.of());
+    // La evaluación EVENTO necesita al menos un evento observado.
+    private static final Traza TRAZA =
+            new Traza(
+                    "C1",
+                    List.of(
+                            new io.github.physanto.opsecengine.dominio.traza.Evento(
+                                    0,
+                                    java.time.Instant.EPOCH,
+                                    io.github.physanto.opsecengine.dominio.traza.TipoEvento.CONSOLA,
+                                    new io.github.physanto.opsecengine.dominio.traza.ContextoEvento(
+                                            "C1", 1, null, false),
+                                    null)));
 
     @Test
     void sinHallazgosNiMotivosElCasoCumple() {
