@@ -12,6 +12,7 @@ import io.github.physanto.opsecengine.dominio.traza.ContextoEvento;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.soporte.DatosEjemplo;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -178,6 +179,74 @@ class RendimientoHtmlTest {
         String html = generar(suite);
 
         assertThat(html).doesNotContain("<script").contains("&lt;script&gt;x&lt;/script&gt;");
+    }
+
+    @Test
+    void noPresentaDuracionesInvalidasComoMediciones() throws Exception {
+        for (Number invalida :
+                List.<Number>of(
+                        -1,
+                        1.5,
+                        Double.NaN,
+                        Double.POSITIVE_INFINITY,
+                        new BigInteger("9223372036854775808"))) {
+            Evento medida =
+                    evento(
+                            1,
+                            TipoEvento.TIEMPO,
+                            Map.of("medida", "RESPUESTA_ACCION", "duracionMs", invalida));
+            assertThat(generar(resultado("s", caso("C1", Veredicto.cumple(), medida))))
+                    .as("duración inválida: %s", invalida)
+                    .doesNotContain("Rendimiento y robustez");
+        }
+    }
+
+    @Test
+    void calculaLaMedianaYLaBarraSinDesbordarLong() throws Exception {
+        assertThat(RendimientoHtml.mediana(List.of(Long.MAX_VALUE - 1, Long.MAX_VALUE)))
+                .isEqualTo("9223372036854775806.5");
+        Evento medida =
+                evento(
+                        1,
+                        TipoEvento.TIEMPO,
+                        Map.of("medida", "RESPUESTA_ACCION", "duracionMs", Long.MAX_VALUE));
+        assertThat(generar(resultado("s", caso("C1", Veredicto.cumple(), medida))))
+                .contains("style=\"width:100%\"");
+    }
+
+    @Test
+    void unaDuracionCeroTieneBarraVaciaAunqueExistanOtrasMediciones() throws Exception {
+        Evento cero = evento(1, TipoEvento.PASO_FIN, Map.of("duracionMs", 0));
+        Evento otro = evento(2, TipoEvento.PASO_FIN, Map.of("duracionMs", 100));
+        assertThat(generar(resultado("s", caso("C1", Veredicto.cumple(), cero, otro))))
+                .contains("style=\"width:0%\"");
+    }
+
+    @Test
+    void noMezclaUmbralesDistintosAlAgruparUnaAccion() throws Exception {
+        var bajo = casoConRespuesta("C1", 400);
+        var alto =
+                caso(
+                        "C2",
+                        Veredicto.cumple(),
+                        evento(
+                                1,
+                                TipoEvento.PASO_INICIO,
+                                Map.of("accion", "PULSAR", "objetivo", "texto=Guardar")),
+                        evento(
+                                2,
+                                TipoEvento.TIEMPO,
+                                Map.of(
+                                        "medida",
+                                        "RESPUESTA_ACCION",
+                                        "duracionMs",
+                                        100,
+                                        "umbralMs",
+                                        1000)));
+        String html = generar(resultado("s", bajo, alto));
+        assertThat(html).contains("<span class=\"alto\"");
+        assertThat(html)
+                .contains("<td class=\"num\">250 ms</td>", "<td class=\"num\">1000 ms</td>");
     }
 
     private String generar(ResultadoSuite suite) throws Exception {

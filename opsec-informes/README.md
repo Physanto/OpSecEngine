@@ -30,12 +30,12 @@ Contenido:
 
 **Rendimiento y robustez.** Al final del informe, una sección muestra los datos medidos, en tablas y barras hechas solo con CSS. No decide nada: los veredictos los dan los oráculos `RESPUESTA-LENTA`, `INTERFAZ-CONGELADA` y `VENTANA-NO-LIBERADA`.
 
-- *Tiempos de respuesta por acción:* eventos `TIEMPO` con medida `RESPUESTA_ACCION`, agrupados por la acción y el objetivo de su paso, con muestras, mediana, percentil 95 (por rango más próximo, igual que el oráculo), máximo y umbral. La barra se pone roja si el p95 supera el umbral.
+- *Tiempos de respuesta por acción:* eventos `TIEMPO` con medida `RESPUESTA_ACCION`, agrupados por la acción, el objetivo de su paso y el umbral declarado, con muestras, mediana, percentil 95 (por rango más próximo, igual que el oráculo), máximo y umbral. La barra se pone roja si el p95 supera el umbral.
 - *Pasos más lentos:* los 10 pasos de mayor duración (`duracionMs` de `PASO_FIN`, que el motor registra siempre).
 - *Interfaz bloqueada:* eventos `TIEMPO` con medida `EDT_BLOQUEADO` y su umbral.
 - *Ventanas:* cuántas se abrieron y cuáles no consta que se liberaran: cerradas con `liberada=false` (posible fuga), cerradas sin ese dato o abiertas al terminar el caso.
 
-Cada parte aparece solo si la traza trae sus datos. Hoy el agente emite las ventanas con `liberada` (contratos v1.2), pero todavía no emite eventos `TIEMPO` (#18): esas dos partes están probadas con trazas sintéticas.
+Cada parte aparece solo si la traza trae sus datos. Se descartan duraciones negativas, fraccionarias, no finitas o fuera del rango de enteros de 64 bits; los umbrales distintos se muestran en grupos separados para no ocultar excesos. La mediana y las barras admiten valores grandes sin desbordar. Hoy el agente emite las ventanas con `liberada` (contratos v1.2), pero todavía no emite eventos `TIEMPO` (#18): esas dos partes están probadas con trazas sintéticas.
 
 ## Catálogo de CWE
 

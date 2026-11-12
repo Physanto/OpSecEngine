@@ -4,12 +4,12 @@ import io.github.physanto.opsecengine.dominio.resultado.ResultadoCaso;
 import io.github.physanto.opsecengine.dominio.resultado.ResultadoSuite;
 import io.github.physanto.opsecengine.dominio.traza.Evento;
 import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -56,6 +56,9 @@ final class RendimientoHtml {
     /** Mediciones de un paso: su acción legible y su duración. */
     private record Medida(String caso, int paso, String accion, long ms, Long umbralMs) {}
 
+    /** Mediciones con la misma acción y el mismo umbral declarado. */
+    private record GrupoRespuesta(String accion, Long umbralMs) {}
+
     /** Ventana de un caso y cómo terminó. */
     private record VentanaCaso(String caso, String nombre, String estado, boolean fuga) {}
 
@@ -76,14 +79,18 @@ final class RendimientoHtml {
             for (Evento e : caso.traza().eventos()) {
                 int paso = e.contexto().numeroPaso();
                 String accion = acciones.getOrDefault(paso, nombrePaso(paso));
-                if (e.tipo() == TipoEvento.PASO_FIN && e.numero("duracionMs").isPresent()) {
-                    pasos.add(medida(caso, paso, accion, e));
-                } else if (e.tipo() == TipoEvento.TIEMPO && e.numero("duracionMs").isPresent()) {
+                Long duracion = milisegundos(e.datos().get("duracionMs"));
+                if (duracion == null) {
+                    continue;
+                }
+                if (e.tipo() == TipoEvento.PASO_FIN) {
+                    pasos.add(medida(caso, paso, accion, e, duracion));
+                } else if (e.tipo() == TipoEvento.TIEMPO) {
                     String tipo = e.texto("medida").orElse("");
                     if (tipo.equals("RESPUESTA_ACCION")) {
-                        respuestas.add(medida(caso, paso, accion, e));
+                        respuestas.add(medida(caso, paso, accion, e, duracion));
                     } else if (tipo.equals("EDT_BLOQUEADO")) {
-                        bloqueos.add(medida(caso, paso, accion, e));
+                        bloqueos.add(medida(caso, paso, accion, e, duracion));
                     }
                 }
             }
@@ -112,22 +119,22 @@ final class RendimientoHtml {
             h.append("(eventos TIEMPO con medida RESPUESTA_ACCION).</p>\n");
             return;
         }
-        Map<String, List<Medida>> porAccion = new LinkedHashMap<>();
-        medidas.forEach(m -> porAccion.computeIfAbsent(m.accion(), k -> new ArrayList<>()).add(m));
+        Map<GrupoRespuesta, List<Medida>> porAccion = new LinkedHashMap<>();
+        medidas.forEach(m ->
+                porAccion
+                        .computeIfAbsent(
+                                new GrupoRespuesta(m.accion(), m.umbralMs()),
+                                k -> new ArrayList<>())
+                        .add(m));
         long maximo = medidas.stream().mapToLong(Medida::ms).max().orElse(1);
         h.append("<div class=\"tabla\"><table>\n<thead><tr><th>Acción</th><th>Muestras</th>");
         h.append("<th>Mediana</th><th>p95</th><th>Máximo</th><th>Umbral</th><th></th>");
         h.append("</tr></thead>\n<tbody>\n");
-        for (Map.Entry<String, List<Medida>> grupo : porAccion.entrySet()) {
+        for (Map.Entry<GrupoRespuesta, List<Medida>> grupo : porAccion.entrySet()) {
             List<Long> valores = grupo.getValue().stream().map(Medida::ms).sorted().toList();
             long p95 = percentil95(valores);
-            Long umbral =
-                    grupo.getValue().stream()
-                            .map(Medida::umbralMs)
-                            .filter(u -> u != null)
-                            .max(Comparator.naturalOrder())
-                            .orElse(null);
-            h.append("<tr><td>").append(Html.escapar(grupo.getKey())).append("</td>");
+            Long umbral = grupo.getKey().umbralMs();
+            h.append("<tr><td>").append(Html.escapar(grupo.getKey().accion())).append("</td>");
             h.append("<td class=\"num\">").append(valores.size()).append("</td>");
             h.append("<td class=\"num\">").append(mediana(valores)).append(" ms</td>");
             h.append("<td class=\"num\">").append(p95).append(" ms</td>");
@@ -269,13 +276,10 @@ final class RendimientoHtml {
         return paso == 0 ? "inicio de sesión" : "paso " + paso;
     }
 
-    private static Medida medida(ResultadoCaso caso, int paso, String accion, Evento e) {
+    private static Medida medida(
+            ResultadoCaso caso, int paso, String accion, Evento e, long duracion) {
         return new Medida(
-                caso.casoId(),
-                paso,
-                accion,
-                e.numero("duracionMs").orElseThrow().longValue(),
-                e.numero("umbralMs").map(Number::longValue).orElse(null));
+                caso.casoId(), paso, accion, duracion, milisegundos(e.datos().get("umbralMs")));
     }
 
     private static void fila(StringBuilder h, Medida m) {
@@ -286,12 +290,28 @@ final class RendimientoHtml {
 
     /** Barra horizontal proporcional al máximo; roja si supera su umbral. */
     private static String barra(long valor, long maximo, boolean alta) {
-        long porcentaje = maximo <= 0 ? 0 : Math.max(1, Math.min(100, valor * 100 / maximo));
+        long porcentaje =
+                maximo <= 0 || valor == 0
+                        ? 0
+                        : Math.max(1, Math.min(100, Math.round(100.0 * valor / maximo)));
         return "<div class=\"barra\"><span"
                 + (alta ? " class=\"alto\"" : "")
                 + " style=\"width:"
                 + porcentaje
                 + "%\"></span></div>";
+    }
+
+    /** Acepta solo milisegundos enteros, finitos, no negativos y representables como long. */
+    private static Long milisegundos(Object valor) {
+        if (!(valor instanceof Number numero)) {
+            return null;
+        }
+        try {
+            long ms = new BigDecimal(numero.toString()).longValueExact();
+            return ms >= 0 ? ms : null;
+        } catch (NumberFormatException | ArithmeticException e) {
+            return null;
+        }
     }
 
     /**
@@ -304,10 +324,11 @@ final class RendimientoHtml {
         if (n % 2 == 1) {
             return String.valueOf(ordenados.get(n / 2));
         }
-        double media = (ordenados.get(n / 2 - 1) + ordenados.get(n / 2)) / 2.0;
-        return media == Math.rint(media)
-                ? String.valueOf((long) media)
-                : String.format(Locale.ROOT, "%.1f", media);
+        return BigDecimal.valueOf(ordenados.get(n / 2 - 1))
+                .add(BigDecimal.valueOf(ordenados.get(n / 2)))
+                .divide(BigDecimal.valueOf(2))
+                .stripTrailingZeros()
+                .toPlainString();
     }
 
     /**
