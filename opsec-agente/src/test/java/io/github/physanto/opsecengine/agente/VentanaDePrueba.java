@@ -1,17 +1,23 @@
 package io.github.physanto.opsecengine.agente;
 
 import java.awt.GridLayout;
+import java.awt.event.ItemEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 
 /**
  * Aplicación Swing mínima para las pruebas de integración del agente.
@@ -20,6 +26,11 @@ import javax.swing.SwingUtilities;
  * botón "Saludar" que escribe "Hola, &lt;nombre&gt;" en la consola y lo muestra en un diálogo modal
  * con el botón "Cerrar", un botón "Fallar" que lanza una excepción y un botón deshabilitado
  * "Bloqueado". Termina sola después de 60 segundos.
+ *
+ * <p>Para las acciones de selección y navegación tiene además un combo "Rol" (Cliente o Admin), una
+ * casilla "Recordar", unas pestañas "General" y "Avanzado" (esta con el botón "Detalle") y un botón
+ * "Abrir" que muestra el diálogo no modal "Auxiliar", que se destruye al cerrarlo. Cada cambio se
+ * escribe en la consola.
  *
  * <p>Ni la ventana ni el diálogo pueden recibir el foco. Con pantalla real, el gestor de ventanas
  * le daría el foco al diálogo, y una tecla Espacio o Enter de quien esté usando el equipo pulsaría
@@ -87,12 +98,42 @@ public final class VentanaDePrueba {
         });
         JButton bloqueado = new JButton("Bloqueado");
         bloqueado.setEnabled(false);
+        JLabel etiquetaRol = new JLabel("Rol");
+        JComboBox<String> rol = new JComboBox<>(new String[] {"Cliente", "Admin"});
+        rol.addActionListener(e -> System.out.println("Rol: " + rol.getSelectedItem()));
+        etiquetaRol.setLabelFor(rol);
+        JCheckBox recordar = new JCheckBox("Recordar");
+        recordar.addItemListener(
+                e -> System.out.println("Recordar: " + (e.getStateChange() == ItemEvent.SELECTED)));
+        JTabbedPane pestanas = new JTabbedPane();
+        pestanas.addTab("General", new JPanel());
+        JPanel avanzado = new JPanel();
+        JButton detalle = new JButton("Detalle");
+        detalle.addActionListener(e -> System.out.println("Detalle pulsado"));
+        avanzado.add(detalle);
+        pestanas.addTab("Avanzado", avanzado);
+        pestanas.addChangeListener(e ->
+                System.out.println("Pestaña: " + pestanas.getTitleAt(pestanas.getSelectedIndex())));
+        JButton abrir = new JButton("Abrir");
+        abrir.addActionListener(e -> {
+            JDialog auxiliar = new JDialog(marco, "Auxiliar", false);
+            auxiliar.add(new JLabel("Ventana auxiliar"));
+            auxiliar.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            auxiliar.setFocusableWindowState(false);
+            auxiliar.pack();
+            auxiliar.setVisible(true);
+        });
         marco.setLayout(new GridLayout(0, 2));
         marco.add(etiqueta);
         marco.add(campo);
         marco.add(saludar);
         marco.add(fallar);
         marco.add(bloqueado);
+        marco.add(abrir);
+        marco.add(etiquetaRol);
+        marco.add(rol);
+        marco.add(recordar);
+        marco.add(pestanas);
         marco.pack();
         marco.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         marco.setFocusableWindowState(false);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
+import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
 import io.github.physanto.opsecengine.protocolo.dto.CriterioDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
@@ -16,6 +17,8 @@ import io.github.physanto.opsecengine.soporte.AplicacionDePrueba;
 import io.github.physanto.opsecengine.soporte.ExcepcionErrorRemoto;
 import io.github.physanto.opsecengine.soporte.MotorFalso;
 import java.awt.GraphicsEnvironment;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -24,8 +27,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -118,6 +123,20 @@ class AgenteIT {
                                         .containsEntry("tipoMensaje", "INFORMACION")
                                         .containsEntry("opciones", List.of("Cerrar")));
 
+                CapturaDto dialogo = motor.pedirCaptura(null);
+                assertThat(dialogo.getVentana())
+                        .as("sin nombre, el diálogo modal")
+                        .isEqualTo("Saludo");
+                assertThat(imagen(dialogo).getWidth()).isPositive();
+                CapturaDto ventana = motor.pedirCaptura(VentanaDePrueba.TITULO);
+                assertThat(ventana.getVentana()).isEqualTo(VentanaDePrueba.TITULO);
+                assertThat(ventana.getFormato()).isEqualTo("png");
+                assertThat(imagen(ventana).getWidth())
+                        .isGreaterThan(imagen(dialogo).getWidth() / 2);
+                assertThatThrownBy(() -> motor.pedirCaptura("Inexistente"))
+                        .isInstanceOf(ExcepcionErrorRemoto.class)
+                        .hasMessageContaining("Inexistente");
+
                 assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Fallar"), null))
                         .as("un diálogo modal tapa la ventana")
                         .isEqualTo(CodigoResultado.NO_ALCANZABLE);
@@ -147,12 +166,108 @@ class AgenteIT {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"SEMANTICO", "EVENTOS"})
+    void elAgenteSeleccionaMarcaNavegaYCierraVentanas(String modo) throws Exception {
+        assumeThat(GraphicsEnvironment.isHeadless()).as("necesita pantalla").isFalse();
+        Path salida = carpeta.resolve("navegacion.log");
+        try (MotorFalso motor = new MotorFalso()) {
+            Process proceso = lanzar(motor, VentanaDePrueba.class.getName(), salida);
+            try {
+                motor.esperarHola(ESPERA);
+                assertThat(
+                                paso(
+                                        motor,
+                                        modo,
+                                        "ESPERAR",
+                                        criterio("TITULO_VENTANA", VentanaDePrueba.TITULO),
+                                        null))
+                        .isEqualTo(CodigoResultado.OK);
+
+                assertThat(paso(motor, modo, "SELECCIONAR", criterio("ETIQUETA", "Rol"), "Admin"))
+                        .isEqualTo(CodigoResultado.OK);
+                assertThat(
+                                paso(
+                                        motor,
+                                        modo,
+                                        "SELECCIONAR",
+                                        criterio("ETIQUETA", "Rol"),
+                                        "Gerente",
+                                        300))
+                        .isEqualTo(CodigoResultado.NO_ENCONTRADO);
+                assertThat(paso(motor, modo, "MARCAR", criterio("TEXTO", "Recordar"), "true"))
+                        .isEqualTo(CodigoResultado.OK);
+                assertThat(paso(motor, modo, "MARCAR", criterio("TEXTO", "Recordar"), "true"))
+                        .as("ya estaba marcada; no se vuelve a pulsar")
+                        .isEqualTo(CodigoResultado.OK);
+                assertThat(paso(motor, modo, "MARCAR", criterio("TEXTO", "Recordar"), "false"))
+                        .isEqualTo(CodigoResultado.OK);
+
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Detalle"), null, 300))
+                        .as("está en una pestaña que no se ve")
+                        .isEqualTo(CodigoResultado.NO_ALCANZABLE);
+                assertThat(paso(motor, modo, "IR_A", criterio("TEXTO", "Detalle"), null))
+                        .isEqualTo(CodigoResultado.OK);
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Detalle"), null))
+                        .isEqualTo(CodigoResultado.OK);
+                assertThat(paso(motor, modo, "IR_A", criterio("TEXTO", "General"), null))
+                        .isEqualTo(CodigoResultado.OK);
+
+                assertThat(paso(motor, modo, "PULSAR", criterio("TEXTO", "Abrir"), null))
+                        .isEqualTo(CodigoResultado.OK);
+                assertThat(
+                                paso(
+                                        motor,
+                                        modo,
+                                        "CERRAR_VENTANA",
+                                        criterio("TITULO_VENTANA", "Auxiliar"),
+                                        null))
+                        .isEqualTo(CodigoResultado.OK);
+                esperarEvento(motor, "VENTANA_CERRADA", "titulo", "Auxiliar");
+
+                esperarEvento(motor, "CONSOLA", "Detalle pulsado");
+                assertThat(eventos(motor, "CONSOLA"))
+                        .extracting(e -> e.getDatos().get("texto"))
+                        .containsSubsequence(
+                                "Rol: Admin",
+                                "Recordar: true",
+                                "Recordar: false",
+                                "Pestaña: Avanzado",
+                                "Detalle pulsado",
+                                "Pestaña: General")
+                        .containsOnlyOnce("Recordar: true");
+                assertThat(motor.cerrar()).isTrue();
+            } finally {
+                detener(proceso);
+            }
+        }
+    }
+
     private static CodigoResultado paso(
             MotorFalso motor, String modo, String accion, LocalizadorDto localizador, String valor)
             throws IOException {
+        return paso(motor, modo, accion, localizador, valor, 3000);
+    }
+
+    private static CodigoResultado paso(
+            MotorFalso motor,
+            String modo,
+            String accion,
+            LocalizadorDto localizador,
+            String valor,
+            long esperaMaximaMs)
+            throws IOException {
         ResultadoPasoDto resultado =
-                motor.enviarPaso(new PasoDto(accion, localizador, valor, modo, 3000));
+                motor.enviarPaso(new PasoDto(accion, localizador, valor, modo, esperaMaximaMs));
         return resultado.getCodigo();
+    }
+
+    private static BufferedImage imagen(CapturaDto captura) throws IOException {
+        BufferedImage imagen =
+                ImageIO.read(
+                        new ByteArrayInputStream(Base64.getDecoder().decode(captura.getBase64())));
+        assertThat(imagen).as("la captura es un PNG válido").isNotNull();
+        return imagen;
     }
 
     private static LocalizadorDto criterio(String estrategia, String valor) {
@@ -166,15 +281,22 @@ class AgenteIT {
     /** Los eventos llegan en paralelo a las respuestas; espera hasta que aparezca el buscado. */
     private static void esperarEvento(MotorFalso motor, String tipo, String texto)
             throws InterruptedException {
+        esperarEvento(motor, tipo, "texto", texto);
+    }
+
+    /** Espera un evento del tipo cuyo campo de datos contenga el texto. */
+    private static void esperarEvento(MotorFalso motor, String tipo, String campo, String texto)
+            throws InterruptedException {
         long limite = System.nanoTime() + ESPERA.toNanos();
         while (System.nanoTime() < limite) {
             if (eventos(motor, tipo).stream()
-                    .anyMatch(e -> String.valueOf(e.getDatos().get("texto")).contains(texto))) {
+                    .anyMatch(e -> String.valueOf(e.getDatos().get(campo)).contains(texto))) {
                 return;
             }
             Thread.sleep(50);
         }
-        throw new AssertionError("No llegó un evento " + tipo + " con el texto " + texto);
+        throw new AssertionError(
+                "No llegó un evento " + tipo + " con " + campo + " que contenga " + texto);
     }
 
     private static Process lanzar(MotorFalso motor, String clase, Path salida, String... extra)

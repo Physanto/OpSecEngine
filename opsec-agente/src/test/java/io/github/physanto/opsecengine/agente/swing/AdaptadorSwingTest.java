@@ -28,20 +28,35 @@ class AdaptadorSwingTest {
     }
 
     @Test
-    void rechazaLasAccionesQueTodaviaNoEstanImplementadas() {
+    void laAccionCapturarSePideConElMensajeCapturar() {
         ResultadoPasoDto resultado =
-                adaptador.ejecutar(
-                        new PasoDto("SELECCIONAR", porTexto("Rol"), "Admin", "SEMANTICO", 100));
+                adaptador.ejecutar(new PasoDto("CAPTURAR", null, null, "SEMANTICO", 100));
 
         assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.ERROR);
-        assertThat(resultado.getDetalle()).contains("SELECCIONAR");
+        assertThat(resultado.getDetalle()).contains("mensaje CAPTURAR");
     }
 
     @Test
-    void eventosExigeUnObjetivoParaPulsarYLlenar() {
-        for (String accion : List.of("PULSAR", "LLENAR")) {
+    void capturarDevuelveNullSiNingunaVentanaCoincide() {
+        assertThat(adaptador.capturar("Inexistente")).isNull();
+    }
+
+    @Test
+    void marcarRechazaUnValorQueNoEsBooleano() {
+        ResultadoPasoDto resultado =
+                adaptador.ejecutar(
+                        new PasoDto("MARCAR", porTexto("Recordar"), "quizas", "SEMANTICO", 100));
+
+        assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.ERROR);
+        assertThat(resultado.getDetalle()).contains("true o false", "quizas");
+    }
+
+    @Test
+    void lasAccionesSobreComponentesExigenUnObjetivo() {
+        for (String accion :
+                List.of("PULSAR", "LLENAR", "SELECCIONAR", "MARCAR", "IR_A", "CERRAR_VENTANA")) {
             ResultadoPasoDto resultado =
-                    adaptador.ejecutar(new PasoDto(accion, null, "texto", "EVENTOS", 100));
+                    adaptador.ejecutar(new PasoDto(accion, null, null, "EVENTOS", 100));
 
             assertThat(resultado.getCodigo()).isEqualTo(CodigoResultado.ERROR);
             assertThat(resultado.getDetalle()).contains("necesita un objetivo");
