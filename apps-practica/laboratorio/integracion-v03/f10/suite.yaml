@@ -1,0 +1,24 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f10
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F10-ADMIN
+    rol: admin
+    oraculos: [AUTORIZACION-DIFERENCIAL]
+    pasos:
+      - pulsar: Modificar Persona
+      - llenar: {Uid: P001, Nombre: Control administrador, Documento: "123456789", Correo: control@ejemplo.com}
+      - pulsar: Guardar
+      - esperar: {texto: Persona modificada.}
+  - id: F10-CLIENTE
+    rol: cliente
+    oraculos: [AUTORIZACION-DIFERENCIAL]
+    pasos:
+      - pulsar: Modificar Persona
+      - llenar: {Uid: P001, Nombre: Cambio cliente, Documento: "123456789", Correo: cliente@ejemplo.com}
+      - pulsar: Guardar
+      - esperar: {nombreComponente: resultadoModificarPersona}

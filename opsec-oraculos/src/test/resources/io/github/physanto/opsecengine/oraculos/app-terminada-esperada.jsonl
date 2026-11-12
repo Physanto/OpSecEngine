@@ -1,0 +1,2 @@
+{"secuencia":0,"instante":"2026-10-30T10:00:00Z","tipo":"VENTANA_CERRADA","contexto":{"casoId":"CIERRE","numeroPaso":1,"sesionActiva":false},"datos":{"ventanaId":"v1","clase":"app.Clientes","titulo":"Clientes"}}
+{"secuencia":1,"instante":"2026-10-30T10:00:01Z","tipo":"APP_TERMINADA","contexto":{"casoId":"CIERRE","numeroPaso":1,"sesionActiva":false},"datos":{"esperada":true,"causa":"CERRAR","codigoSalida":0}}

@@ -79,3 +79,41 @@ oraculos:
     momento: EVENTO
     cwe: null
     descripcion: El hilo de interfaz (EDT) queda bloqueado más tiempo que el umbral configurado.
+
+  # Desde contratos v1.2 (#38): necesita la política "validacion" del caso.
+  - id: ENTRADA-INVALIDA-ACEPTADA
+    momento: CASO
+    cwe: CWE-20
+    descripcion: La app acepta un valor que la política de validación del caso declara inválido; sin evidencia suficiente el resultado es NO_CONCLUYENTE.
+
+  # Desde contratos v1.2 (#47): calidad de la interfaz, sin CWE. Quedan reservados; sus
+  # observaciones las emitirá el agente en la v0.5.
+  - id: RESPUESTA-LENTA
+    momento: SUITE
+    cwe: null
+    descripcion: La mediana o el percentil 95 de repeticiones comparables de una misma acción (TIEMPO con medida RESPUESTA_ACCION) supera el umbral.
+
+  - id: VENTANA-NO-LIBERADA
+    momento: CASO
+    cwe: null
+    descripcion: Una ventana se cierra pero conserva sus recursos nativos (VENTANA_CERRADA con liberada=false).
+
+  - id: CONTROL-SIN-ETIQUETA
+    momento: CASO
+    cwe: null
+    descripcion: Un control interactivo visible no tiene etiqueta asociada ni nombre accesible.
+
+  - id: ORDEN-TABULACION
+    momento: CASO
+    cwe: null
+    descripcion: El recorrido del foco con el tabulador no sigue el orden esperado de los controles.
+
+  - id: ACCION-TECLADO-NO-ALCANZADA
+    momento: CASO
+    cwe: null
+    descripcion: Una acción de la ventana no se puede alcanzar ni activar solo con el teclado.
+
+  - id: RESULTADO-ROBUSTEZ-INCORRECTO
+    momento: CASO
+    cwe: null
+    descripcion: Tras un escenario de robustez (doble clic, cierre o fallo inyectado) aparece una señal explícita de resultado incorrecto.

@@ -1,0 +1,1 @@
+{"secuencia":0,"instante":"2026-11-11T12:00:00Z","tipo":"SQL","contexto":{"casoId":"JDBC45","numeroPaso":1,"sesionActiva":true},"datos":{"sql":"SELECT 1","tipoSentencia":"PREPARED","conexion":"jdbc:mysql://servidor/prueba?sslMode=VERIFY_IDENTITY"}}

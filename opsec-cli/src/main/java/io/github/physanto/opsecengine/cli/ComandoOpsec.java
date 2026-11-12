@@ -10,10 +10,11 @@ import picocli.CommandLine.Spec;
  * Comando raíz {@code opsec} de la línea de comandos.
  *
  * <p>Sin subcomando muestra la ayuda. Subcomandos: {@code version} ({@link ComandoVersion}), {@code
- * validar} ({@link ComandoValidar}) y {@code ejecutar} ({@link ComandoEjecutar}). Códigos de
- * salida: 0 si todo salió bien, 1 si el comando encontró errores (por ejemplo, un proyecto
- * inválido), 2 si los argumentos no son válidos, y en {@code ejecutar}, 3 si algún caso no cumple y
- * 4 si alguno quedó no concluyente.
+ * validar} ({@link ComandoValidar}), {@code verificar} ({@link ComandoVerificar}) y {@code
+ * ejecutar} ({@link ComandoEjecutar}). Códigos de salida: 0 si todo salió bien, 1 si el comando
+ * encontró errores (por ejemplo, un proyecto inválido), 2 si los argumentos no son válidos, en
+ * {@code ejecutar}, 3 si algún caso no cumple y 4 si alguno quedó no concluyente, y en {@code
+ * verificar}, 5 si la aplicación no se conecta con el agente.
  *
  * <p>Ejemplo:
  *
@@ -27,7 +28,12 @@ import picocli.CommandLine.Spec;
         name = "opsec",
         description =
                 "OpSecEngine: motor libre de pruebas GUI y de seguridad para aplicaciones Java Swing.",
-        subcommands = {ComandoVersion.class, ComandoValidar.class, ComandoEjecutar.class},
+        subcommands = {
+            ComandoVersion.class,
+            ComandoValidar.class,
+            ComandoVerificar.class,
+            ComandoEjecutar.class
+        },
         versionProvider = ComandoOpsec.Version.class,
         synopsisHeading = "Uso: ",
         descriptionHeading = "%n",

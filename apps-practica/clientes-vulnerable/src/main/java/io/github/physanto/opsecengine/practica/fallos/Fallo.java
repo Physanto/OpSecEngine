@@ -13,7 +13,21 @@ public enum Fallo {
     /** El inicio de sesión responde distinto a un usuario inexistente y a una contraseña mala. */
     F5("Mensajes distintos para usuario inexistente y contraseña incorrecta", "CWE-204"),
     /** La contraseña escrita se imprime en la consola al iniciar sesión. */
-    F6("La contraseña se imprime en la consola al iniciar sesión", "CWE-532");
+    F6("La contraseña se imprime en la consola al iniciar sesión", "CWE-532"),
+    /** Un error de consulta muestra su pila de llamadas al usuario. */
+    F7("Pila de llamadas en el diálogo de error de consulta", "CWE-209"),
+    /** Una acción de diagnóstico deja escapar una excepción al EDT. */
+    F8("Excepción no capturada en una acción de la interfaz", "CWE-248"),
+    /** El registro acepta campos vacíos o con formato inválido. */
+    F9("Registro de personas sin validar campos", "CWE-20"),
+    /** La modificación no verifica el rol del usuario. */
+    F10("Modificación de personas sin autorización", "CWE-862"),
+    /** Trabajo lento ejecutado en el hilo de eventos. */
+    F11("Interfaz bloqueada por trabajo en el EDT", "CWE-400"),
+    /** Ventanas ocultas sin liberar sus recursos nativos. */
+    F12("Ventanas cerradas visualmente pero sin dispose", "CWE-404"),
+    /** Operación con demora innecesaria, fuera del EDT. */
+    F13("Acción lenta por trabajo innecesario", "CWE-400");
 
     private final String descripcion;
     private final String cwe;

@@ -1,0 +1,16 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f2
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: SEMANTICO
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F2-CASO
+    oraculos: [SIN-SESION]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Local
+      - pulsar: Eliminar Persona
+      - llenar: {Uid: P001}
+      - pulsar: Eliminar

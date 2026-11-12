@@ -141,7 +141,14 @@ class CatalogosTest {
                         "JDBC-SIN-CIFRADO",
                         "EXCEPCION-NO-CAPTURADA",
                         "APP-TERMINADA",
-                        "INTERFAZ-CONGELADA");
+                        "INTERFAZ-CONGELADA",
+                        "ENTRADA-INVALIDA-ACEPTADA",
+                        "RESPUESTA-LENTA",
+                        "VENTANA-NO-LIBERADA",
+                        "CONTROL-SIN-ETIQUETA",
+                        "ORDEN-TABULACION",
+                        "ACCION-TECLADO-NO-ALCANZADA",
+                        "RESULTADO-ROBUSTEZ-INCORRECTO");
         for (JsonNode oraculo : oraculos) {
             String id = oraculo.path("id").asText();
             assertThat(nombres(Momento.values()))
@@ -165,8 +172,8 @@ class CatalogosTest {
                 .doesNotHaveDuplicates()
                 .allMatch(id -> id.matches("CWE-[0-9]+"))
                 .contains(
-                        "CWE-89", "CWE-204", "CWE-209", "CWE-306", "CWE-307", "CWE-319", "CWE-521",
-                        "CWE-532", "CWE-798", "CWE-862");
+                        "CWE-20", "CWE-89", "CWE-204", "CWE-209", "CWE-306", "CWE-307", "CWE-319",
+                        "CWE-521", "CWE-532", "CWE-798", "CWE-862");
         for (JsonNode entrada : cwe) {
             String id = entrada.path("id").asText();
             for (String campo : List.of("nombre", "explicacion", "recomendacion")) {

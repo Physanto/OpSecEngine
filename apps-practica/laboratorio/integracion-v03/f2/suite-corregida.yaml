@@ -1,0 +1,16 @@
+# Preparación #67: requiere las dependencias indicadas en matriz.json.
+suite: integracion-f2
+version: "1"
+enfoques: [SEGURIDAD]
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+casos:
+  - id: F2-CASO
+    oraculos: [SIN-SESION]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Local
+      - esperar: {tituloVentana: Modo local}
+      - cerrar_ventana: {tituloVentana: Modo local}
+      - esperar: {tituloVentana: Iniciar sesión}

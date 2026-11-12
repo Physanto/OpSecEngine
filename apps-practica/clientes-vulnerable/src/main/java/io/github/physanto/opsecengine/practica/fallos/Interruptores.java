@@ -88,7 +88,9 @@ public final class Interruptores {
                                 + PROPIEDAD
                                 + ": '"
                                 + parte.trim()
-                                + "'. Valores válidos: F1 a F6 o "
+                                + "'. Valores válidos: "
+                                + lista(EnumSet.allOf(Fallo.class))
+                                + " o "
                                 + TODOS
                                 + ".",
                         e);
