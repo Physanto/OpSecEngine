@@ -159,6 +159,10 @@ eventos:
         tipo: texto
         obligatorio: false
         descripcion: Mensaje de la excepción, si la sentencia falló.
+      - nombre: sensible
+        tipo: booleano
+        obligatorio: false
+        descripcion: true si la operación está en la lista de operaciones sensibles que el motor configuró con CONFIG_GANCHOS. Se omite si no lo está.
 
   - tipo: FIRESTORE
     origen: [agente]
@@ -184,6 +188,10 @@ eventos:
         tipo: texto
         obligatorio: false
         descripcion: Mensaje de la excepción, si la operación falló.
+      - nombre: sensible
+        tipo: booleano
+        obligatorio: false
+        descripcion: true si la operación está en la lista de operaciones sensibles que el motor configuró con CONFIG_GANCHOS. Se omite si no lo está.
 
   - tipo: ARCHIVO
     origen: [agente]

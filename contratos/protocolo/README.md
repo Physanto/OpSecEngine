@@ -36,3 +36,9 @@ ligeros (dentro del árbol de su ventana) como pesados (en una ventana propia). 
 realiza en el EDT. `ejemplos/arbol.json` representa el formulario `InicioSesion` de la app de
 práctica; las pruebas comparan controles, nombres y acciones sin depender del aspecto visual
 ni de los detalles que pueda añadir cada Look and Feel.
+
+## Configuración de ganchos (contratos-v1.5)
+
+`CONFIG_GANCHOS` (motor → agente) reemplaza por completo la configuración de los ganchos del agente: `sqlSensibles`, `firestoreSensibles`, `canarios` y `fallosInyectados`. El agente la aplica a los eventos siguientes y responde con un `RESULTADO_PASO` de código `OK`, con la misma correlación que el mensaje recibido, para confirmar que ya está vigente. Hasta que llega, la configuración está vacía.
+
+Los eventos `SQL` y `FIRESTORE` llevan el campo opcional `sensible=true` cuando su operación está en la lista de sensibles (la comparación no distingue mayúsculas de minúsculas); si no lo está, el campo se omite.
