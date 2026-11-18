@@ -7,6 +7,7 @@ import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
+import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
@@ -205,6 +206,28 @@ public final class ClienteAgente implements AutoCloseable {
                 TipoMensaje.RESULTADO_PASO,
                 ResultadoPasoDto.class,
                 tiempoMaximo.plusMillis(paso.getEsperaMaximaMs()));
+    }
+
+    /**
+     * Envía la configuración de los ganchos del agente y espera su confirmación. Cada envío
+     * reemplaza por completo la configuración anterior.
+     *
+     * @param config operaciones sensibles, canarios y fallos a inyectar; no puede ser null
+     * @return la confirmación del agente, un resultado con código {@code OK}
+     * @throws ExcepcionErrorAgente si el agente responde {@code ERROR}, por ejemplo porque no
+     *     conoce el mensaje
+     * @throws ExcepcionProtocolo si no hay respuesta a tiempo o es de otro tipo
+     * @throws IOException si falla la conexión
+     * @throws IllegalStateException si todavía no se recibió el saludo
+     */
+    public ResultadoPasoDto configurarGanchos(ConfigGanchosDto config) throws IOException {
+        Objects.requireNonNull(config, "La configuración no puede ser null");
+        return solicitar(
+                TipoMensaje.CONFIG_GANCHOS,
+                config,
+                TipoMensaje.RESULTADO_PASO,
+                ResultadoPasoDto.class,
+                tiempoMaximo);
     }
 
     /**
