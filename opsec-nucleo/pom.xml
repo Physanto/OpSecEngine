@@ -58,6 +58,12 @@
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- Solo ordena el reactor para explorar la app de práctica real; no entra en el classpath. -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opsec-clientes-vulnerable</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -96,6 +102,7 @@
                 <configuration>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                        <classpathDependencyExclude>${project.groupId}:opsec-clientes-vulnerable</classpathDependencyExclude>
                     </classpathDependencyExcludes>
                 </configuration>
             </plugin>
@@ -106,6 +113,7 @@
                 <configuration>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>${project.groupId}:opsec-agente</classpathDependencyExclude>
+                        <classpathDependencyExclude>${project.groupId}:opsec-clientes-vulnerable</classpathDependencyExclude>
                     </classpathDependencyExcludes>
                     <systemPropertyVariables>
                         <opsec.agente.jar>${io.github.physanto.opsecengine:opsec-agente:jar:agente}</opsec.agente.jar>
