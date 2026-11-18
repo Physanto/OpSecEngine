@@ -9,6 +9,7 @@ import io.github.physanto.opsecengine.dominio.caso.Localizador;
 import io.github.physanto.opsecengine.dominio.caso.ModoAccion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
+import io.github.physanto.opsecengine.dominio.configuracion.OperacionesSensibles;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.configuracion.Rol;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
@@ -31,6 +32,7 @@ import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
+import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
@@ -43,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
@@ -255,8 +258,44 @@ class EjecucionServiceTest {
             assertThat(agente.esperarFin(ESPERA)).isTrue();
             assertThat(agente.mensajesRecibidos())
                     .extracting(Mensaje::getTipo)
-                    .containsExactly(TipoMensaje.EJECUTAR_PASO, TipoMensaje.CERRAR);
+                    .containsExactly(
+                            TipoMensaje.CONFIG_GANCHOS,
+                            TipoMensaje.EJECUTAR_PASO,
+                            TipoMensaje.CERRAR);
         }
+    }
+
+    @Test
+    void configuraLosGanchosConLosSensiblesDelProyectoYElCanarioDelCaso() throws Exception {
+        Proyecto conSensibles =
+                new Proyecto(
+                        "clientes",
+                        Path.of("no-existe", "app.jar"),
+                        "app.Portada",
+                        null,
+                        null,
+                        null,
+                        null,
+                        new OperacionesSensibles(Set.of("UPDATE", "DELETE"), Set.of("delete")),
+                        null,
+                        null);
+        Paso escribir = llenar(1, "Usuario", "{canario}' OR '1'='1");
+        Caso caso = new Caso("C13", null, null, List.of(escribir), null, null, null);
+
+        ResultadoSuite resultado = ejecutar(conSensibles, List.of(), caso);
+
+        ConfigGanchosDto config =
+                new CodecMensajes()
+                        .leerCuerpo(
+                                agentes.get(0).mensajesRecibidos().get(0), ConfigGanchosDto.class);
+        assertThat(config.getSqlSensibles()).containsExactly("DELETE", "UPDATE");
+        assertThat(config.getFirestoreSensibles()).containsExactly("delete");
+        assertThat(config.getCanarios()).hasSize(1);
+        String canario = config.getCanarios().get(0);
+        assertThat(canario).startsWith("OPSEC").matches("^[^\\s{}]{4,}$");
+        assertThat(resultado.casos().get(0).traza().deTipo(TipoEvento.PASO_INICIO))
+                .extracting(e -> String.valueOf(e.datos().get("valor")))
+                .anyMatch(v -> v.startsWith(canario + "'"));
     }
 
     @Test
