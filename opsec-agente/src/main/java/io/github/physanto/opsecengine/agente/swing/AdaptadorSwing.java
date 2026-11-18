@@ -11,7 +11,10 @@ import io.github.physanto.opsecengine.protocolo.dto.LocalizadorDto;
 import io.github.physanto.opsecengine.protocolo.dto.NodoArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
+import java.awt.AWTException;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
+import java.awt.Point;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -62,8 +65,12 @@ import javax.swing.text.JTextComponent;
  *
  * <p>Las capturas se toman con {@link #capturar(String)}, que pinta la ventana en una imagen PNG.
  * La acción {@code CAPTURAR} dentro de un paso responde {@code ERROR}: la imagen no cabe en el
- * resultado del paso, así que el motor la pide con el mensaje {@code CAPTURAR}. El modo {@code
- * ROBOT} responde {@code ERROR} con un detalle que dice que no está implementado.
+ * resultado del paso, así que el motor la pide con el mensaje {@code CAPTURAR}.
+ *
+ * <p>El modo {@code ROBOT} mueve el cursor real y escribe con el teclado real ({@link
+ * AccionesRobot}). Solo admite {@code PULSAR}, {@code LLENAR} y {@code ESPERAR}; las demás acciones
+ * responden {@code ERROR}, igual que sin pantalla o en modo oculto, porque necesita una ventana
+ * visible y accesible al cursor.
  *
  * <p>Es seguro entre hilos; todo acceso a componentes ocurre en el EDT.
  */
@@ -75,6 +82,9 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     /** Modo de eventos sintéticos de ratón y teclado, sin depender del foco nativo. */
     public static final String MODO_EVENTOS = "EVENTOS";
 
+    /** Modo con el cursor y el teclado reales; necesita pantalla visible. */
+    public static final String MODO_ROBOT = "ROBOT";
+
     /** Tiempo máximo de las lecturas en el EDT, como la del árbol. */
     private static final long ESPERA_LECTURA_MS = 5_000;
 
@@ -83,6 +93,7 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
 
     private final EmisorEventos emisor;
     private final ObservadorVentanas observador;
+    private AccionesRobot robot;
 
     /**
      * Crea el adaptador sin observador de ventanas.
@@ -222,17 +233,25 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
         if (accion == null) {
             return new Resultado(CodigoResultado.ERROR, "El paso no tiene acción");
         }
-        if (!MODO_SEMANTICO.equals(paso.getModo()) && !MODO_EVENTOS.equals(paso.getModo())) {
+        boolean esRobot = MODO_ROBOT.equals(paso.getModo());
+        if (!esRobot
+                && !MODO_SEMANTICO.equals(paso.getModo())
+                && !MODO_EVENTOS.equals(paso.getModo())) {
             return new Resultado(
                     CodigoResultado.ERROR,
                     "El modo "
                             + paso.getModo()
-                            + " todavía no está implementado en el agente; use el modo "
+                            + " no existe en el agente; use "
                             + MODO_SEMANTICO
+                            + ", "
+                            + MODO_EVENTOS
                             + " o "
-                            + MODO_EVENTOS);
+                            + MODO_ROBOT);
         }
         long limite = inicio + TimeUnit.MILLISECONDS.toNanos(paso.getEsperaMaximaMs());
+        if (esRobot && !"ESPERAR".equals(accion)) {
+            return ejecutarRobot(paso, limite);
+        }
         switch (accion) {
             case "MARCAR":
                 if (estadoDeseado(paso.getValor()) == null) {
@@ -263,6 +282,86 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
                         CodigoResultado.ERROR,
                         "La acción " + accion + " todavía no está implementada en el agente");
         }
+    }
+
+    /** Pulsa o llena con el cursor y el teclado reales; no usa el EDT para actuar. */
+    private Resultado ejecutarRobot(PasoDto paso, long limite) throws InterruptedException {
+        String accion = paso.getAccion();
+        if (!"PULSAR".equals(accion) && !"LLENAR".equals(accion)) {
+            return new Resultado(
+                    CodigoResultado.ERROR, "La acción " + accion + " no está soportada en ROBOT");
+        }
+        if (paso.getLocalizador() == null) {
+            return new Resultado(
+                    CodigoResultado.ERROR, "La acción " + accion + " necesita un objetivo");
+        }
+        if (GraphicsEnvironment.isHeadless()) {
+            return new Resultado(
+                    CodigoResultado.ERROR, "El modo ROBOT necesita una pantalla visible");
+        }
+        if (SupresorFoco.modoOcultoActivo()) {
+            return new Resultado(
+                    CodigoResultado.ERROR,
+                    "El modo ROBOT necesita una pantalla visible y no funciona con el modo oculto");
+        }
+        Busqueda busqueda =
+                buscarHasta(() -> BuscadorComponentes.buscar(paso.getLocalizador()), limite);
+        if (busqueda == null) {
+            return new Resultado(
+                    CodigoResultado.TIEMPO_AGOTADO, "La interfaz no respondió a la búsqueda");
+        }
+        if (!busqueda.resultado().isEncontrado()) {
+            return new Resultado(
+                    busqueda.resultado().getCodigo(), busqueda.resultado().getDetalle());
+        }
+        Component componente = busqueda.componente();
+        if ("PULSAR".equals(accion) && !(componente instanceof AbstractButton)) {
+            return noAdmite("pulsar", componente);
+        }
+        if ("LLENAR".equals(accion)) {
+            if (!(componente instanceof JTextComponent)) {
+                return noAdmite("llenar", componente);
+            }
+            if (!((JTextComponent) componente).isEditable()) {
+                return new Resultado(
+                        CodigoResultado.NO_ALCANZABLE, "El campo de texto no es editable");
+            }
+        }
+        Point centro;
+        try {
+            centro = EjecutorEdt.leer(() -> centroEnPantalla(componente), ESPERA_LECTURA_MS);
+        } catch (TimeoutException | ExecutionException e) {
+            return new Resultado(CodigoResultado.TIEMPO_AGOTADO, "No se pudo ubicar el componente");
+        }
+        if (centro == null) {
+            return new Resultado(
+                    CodigoResultado.NO_ALCANZABLE, "El componente no está visible en la pantalla");
+        }
+        try {
+            if (robot == null) {
+                robot = new AccionesRobot();
+            }
+            if ("PULSAR".equals(accion)) {
+                robot.pulsar(centro.x, centro.y);
+            } else {
+                robot.llenar(centro.x, centro.y, paso.getValor());
+            }
+        } catch (AWTException | IllegalStateException | SecurityException e) {
+            return new Resultado(
+                    CodigoResultado.ERROR, "La plataforma no permite el modo ROBOT: " + e);
+        }
+        vaciarColaDeEventos();
+        return new Resultado(CodigoResultado.OK, null);
+    }
+
+    /** Centro del componente en coordenadas de pantalla; null si no se ve. Solo en el EDT. */
+    private static Point centroEnPantalla(Component componente) {
+        if (!componente.isShowing() || componente.getWidth() <= 0 || componente.getHeight() <= 0) {
+            return null;
+        }
+        Point origen = componente.getLocationOnScreen();
+        return new Point(
+                origen.x + componente.getWidth() / 2, origen.y + componente.getHeight() / 2);
     }
 
     private Resultado actuar(PasoDto paso, long limite) throws InterruptedException {
