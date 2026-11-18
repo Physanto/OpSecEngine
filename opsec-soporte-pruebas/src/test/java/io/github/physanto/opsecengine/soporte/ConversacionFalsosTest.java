@@ -9,6 +9,7 @@ import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
+import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.CriterioDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
@@ -90,6 +91,24 @@ class ConversacionFalsosTest {
             assertThat(motor.mensajesRecibidos())
                     .extracting(Mensaje::getTipo)
                     .startsWith(TipoMensaje.HOLA, TipoMensaje.EVENTO, TipoMensaje.RESULTADO_PASO);
+        }
+    }
+
+    @Test
+    void elAgenteConfirmaLaConfiguracionDeLosGanchos() throws Exception {
+        ConfigGanchosDto config =
+                new ConfigGanchosDto(List.of("DELETE"), List.of(), List.of("OPSEC-X"), List.of());
+        try (MotorFalso motor = new MotorFalso();
+                AgenteFalso agente = new AgenteFalso()) {
+            agente.conectar(motor.puerto(), motor.token());
+            motor.esperarHola(ESPERA);
+
+            ResultadoPasoDto confirmacion = motor.configurarGanchos(config);
+
+            assertThat(confirmacion.getCodigo()).isEqualTo(CodigoResultado.OK);
+            assertThat(agente.mensajesRecibidos())
+                    .extracting(Mensaje::getTipo)
+                    .containsExactly(TipoMensaje.CONFIG_GANCHOS);
         }
     }
 
