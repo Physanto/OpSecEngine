@@ -118,7 +118,9 @@ responden `ERROR`. También responde `ERROR`, con un motivo claro, sin pantalla 
 `oculto=true`, porque necesita una ventana visible por encima de las demás. `LLENAR` hace clic en
 el campo, borra con Ctrl+A y Suprimir, y escribe: letras sin tilde, dígitos y espacio con teclas;
 tildes, ñ y símbolos se pegan desde el portapapeles, que queda reemplazado por el último carácter
-pegado.
+pegado. Como el sistema operativo a veces pierde una tecla, `LLENAR` comprueba el texto del
+campo y repite hasta tres veces; si sigue distinto lo da por bueno, porque la aplicación pudo
+filtrarlo.
 
 ### Pendiente para el dueño del módulo (P1)
 

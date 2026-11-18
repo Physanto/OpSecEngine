@@ -23,7 +23,7 @@ import java.awt.event.KeyEvent;
 final class AccionesRobot {
 
     /** Pausa entre pulsaciones para que el sistema operativo las procese en orden. */
-    private static final int PAUSA_MS = 15;
+    private static final int PAUSA_MS = 40;
 
     private final Robot robot;
 
@@ -61,8 +61,10 @@ final class AccionesRobot {
      */
     void llenar(int x, int y, String texto) {
         pulsar(x, y);
+        robot.waitForIdle();
         combinacion(KeyEvent.VK_CONTROL, KeyEvent.VK_A);
         tecla(KeyEvent.VK_DELETE);
+        robot.waitForIdle();
         String contenido = texto == null ? "" : texto;
         for (int i = 0; i < contenido.length(); ) {
             int punto = contenido.codePointAt(i);
@@ -94,6 +96,7 @@ final class AccionesRobot {
         if (mayuscula) {
             robot.keyRelease(KeyEvent.VK_SHIFT);
         }
+        robot.waitForIdle();
     }
 
     private void pegar(String texto) {

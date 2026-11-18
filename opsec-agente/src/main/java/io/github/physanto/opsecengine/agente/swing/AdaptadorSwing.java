@@ -85,6 +85,9 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
     /** Modo con el cursor y el teclado reales; necesita pantalla visible. */
     public static final String MODO_ROBOT = "ROBOT";
 
+    /** Veces que el modo ROBOT escribe un texto antes de darlo por bueno. */
+    private static final int INTENTOS_ROBOT = 3;
+
     /** Tiempo máximo de las lecturas en el EDT, como la del árbol. */
     private static final long ESPERA_LECTURA_MS = 5_000;
 
@@ -344,7 +347,7 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
             if ("PULSAR".equals(accion)) {
                 robot.pulsar(centro.x, centro.y);
             } else {
-                robot.llenar(centro.x, centro.y, paso.getValor());
+                llenarConRobot(componente, centro, paso.getValor());
             }
         } catch (AWTException | IllegalStateException | SecurityException e) {
             return new Resultado(
@@ -352,6 +355,30 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
         }
         vaciarColaDeEventos();
         return new Resultado(CodigoResultado.OK, null);
+    }
+
+    /**
+     * Escribe con el teclado real y comprueba el texto; el sistema operativo a veces pierde una
+     * tecla, así que repite hasta {@value #INTENTOS_ROBOT} veces si el campo no quedó con el texto
+     * pedido. Si tras los intentos sigue distinto, se da por bueno: la aplicación pudo filtrar o
+     * transformar lo escrito.
+     */
+    private void llenarConRobot(Component componente, Point centro, String valor)
+            throws InterruptedException {
+        String esperado = valor == null ? "" : valor;
+        for (int intento = 1; intento <= INTENTOS_ROBOT; intento++) {
+            robot.llenar(centro.x, centro.y, esperado);
+            try {
+                String actual =
+                        EjecutorEdt.leer(
+                                () -> ((JTextComponent) componente).getText(), ESPERA_LECTURA_MS);
+                if (esperado.equals(actual)) {
+                    return;
+                }
+            } catch (TimeoutException | ExecutionException e) {
+                return;
+            }
+        }
     }
 
     /** Centro del componente en coordenadas de pantalla; null si no se ve. Solo en el EDT. */
