@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.agente;
 
 import io.github.physanto.opsecengine.agente.api.AdaptadorToolkit;
+import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
 import io.github.physanto.opsecengine.protocolo.CanalMensajes;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import io.github.physanto.opsecengine.protocolo.ExcepcionProtocolo;
@@ -8,6 +9,8 @@ import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
+import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
+import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
@@ -41,8 +44,10 @@ import java.util.Optional;
  *       causa=CERRAR}, cierra la conexión (esa es la respuesta: el motor la espera) y después
  *       ejecuta el cierre de la aplicación que recibió en el constructor.
  *   <li>{@code ERROR} del motor: lo registra y termina la conversación.
- *   <li>Cualquier otro mensaje, como {@code CONFIG_GANCHOS}: responde {@code ERROR} con el código
- *       {@code NO_IMPLEMENTADO}.
+ *   <li>{@code CONFIG_GANCHOS}: reemplaza la configuración de los ganchos ({@link
+ *       ConfiguracionGanchos}) y responde {@code RESULTADO_PASO} con código {@code OK} para
+ *       confirmar que ya está vigente. Si el cuerpo no es válido responde {@code ERROR}.
+ *   <li>Cualquier otro mensaje: responde {@code ERROR} con el código {@code NO_IMPLEMENTADO}.
  * </ul>
  *
  * <p>También termina cuando el motor cierra la conexión; en ese caso, y ante un {@code ERROR} del
@@ -164,6 +169,9 @@ final class ServidorProtocolo implements Runnable {
             case CAPTURAR:
                 capturar(canal, mensaje);
                 return true;
+            case CONFIG_GANCHOS:
+                configurarGanchos(canal, mensaje);
+                return true;
             case ARBOL_SOLICITUD:
                 canal.enviar(
                         codec.responder(
@@ -224,6 +232,26 @@ final class ServidorProtocolo implements Runnable {
             return;
         }
         canal.enviar(codec.responder(mensaje, TipoMensaje.CAPTURA, captura));
+    }
+
+    private void configurarGanchos(CanalMensajes canal, Mensaje mensaje) throws IOException {
+        ConfigGanchosDto config;
+        try {
+            config = codec.leerCuerpo(mensaje, ConfigGanchosDto.class);
+        } catch (ExcepcionProtocolo e) {
+            canal.enviar(
+                    codec.responder(
+                            mensaje,
+                            TipoMensaje.ERROR,
+                            new ErrorDto(ErrorDto.MENSAJE_INVALIDO, e.getMessage())));
+            return;
+        }
+        ConfiguracionGanchos.reemplazar(config);
+        canal.enviar(
+                codec.responder(
+                        mensaje,
+                        TipoMensaje.RESULTADO_PASO,
+                        new ResultadoPasoDto(CodigoResultado.OK, null, 0)));
     }
 
     private void ejecutarPaso(CanalMensajes canal, Mensaje mensaje) throws IOException {
