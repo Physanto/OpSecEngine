@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.agente.api.AdaptadorToolkit;
 import io.github.physanto.opsecengine.agente.api.ResultadoBusqueda;
+import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
+import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
@@ -87,6 +89,28 @@ class ServidorProtocoloTest {
                     });
         }
         emisor.emitir("CONSOLA", Map.of("flujo", "SALIDA", "texto", "después de cerrar"));
+    }
+
+    @Test
+    void configGanchosReemplazaLaConfiguracionYSeConfirmaConOk() throws Exception {
+        EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
+        try (MotorFalso motor = new MotorFalso()) {
+            iniciar(motor.argumentosAgente(), new AdaptadorFijo(emisor), emisor, () -> {});
+            motor.esperarHola(ESPERA);
+
+            ResultadoPasoDto confirmacion =
+                    motor.configurarGanchos(
+                            new ConfigGanchosDto(
+                                    List.of("DELETE"), List.of("delete"), List.of(), List.of()));
+
+            assertThat(confirmacion.getCodigo()).isEqualTo(CodigoResultado.OK);
+            assertThat(ConfiguracionGanchos.esSqlSensible("delete")).isTrue();
+            assertThat(ConfiguracionGanchos.esFirestoreSensible("DELETE")).isTrue();
+            motor.configurarGanchos(
+                    new ConfigGanchosDto(List.of(), List.of(), List.of(), List.of()));
+            assertThat(ConfiguracionGanchos.esSqlSensible("DELETE")).isFalse();
+            motor.cerrar();
+        }
     }
 
     @Test
