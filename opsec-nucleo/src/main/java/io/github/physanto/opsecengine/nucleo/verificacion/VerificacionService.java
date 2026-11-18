@@ -2,19 +2,18 @@ package io.github.physanto.opsecengine.nucleo.verificacion;
 
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
-import io.github.physanto.opsecengine.dominio.caso.ConfigEjecucion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.EntornoDatos;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.configuracion.Rol;
 import io.github.physanto.opsecengine.dominio.extension.ProveedorDatos;
-import io.github.physanto.opsecengine.nucleo.ejecucion.EjecucionService;
 import io.github.physanto.opsecengine.nucleo.extensiones.RegistroExtensiones;
 import io.github.physanto.opsecengine.nucleo.proyecto.ExcepcionConfiguracion;
 import io.github.physanto.opsecengine.nucleo.proyecto.ProyectoService;
 import io.github.physanto.opsecengine.nucleo.sesion.ArranqueApp;
 import io.github.physanto.opsecengine.nucleo.sesion.ClienteAgente;
+import io.github.physanto.opsecengine.nucleo.sesion.InicioSesion;
 import io.github.physanto.opsecengine.nucleo.sesion.LanzadorProceso;
 import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
 import io.github.physanto.opsecengine.nucleo.sesion.TraductorProtocolo;
@@ -330,36 +329,7 @@ public final class VerificacionService {
         if (rol.isEmpty()) {
             return "el proyecto no declara el rol " + rolNombre;
         }
-        if (proyecto.pasosLogin().isEmpty()) {
-            return "el proyecto no declara pasos de inicio de sesión";
-        }
-        ConfigEjecucion config = grupo.get(0).suite().config();
-        for (Paso plantilla : proyecto.pasosLogin()) {
-            Paso paso =
-                    new Paso(
-                            plantilla.orden(),
-                            plantilla.accion(),
-                            plantilla.objetivo(),
-                            reemplazar(plantilla.valor(), rol.get()),
-                            plantilla.esperaMaxima(),
-                            plantilla.extensiones());
-            ResultadoPasoDto resultado =
-                    cliente.enviarPaso(TraductorProtocolo.aPasoDto(paso, config));
-            if (resultado.getCodigo() != CodigoResultado.OK) {
-                return "falló el paso "
-                        + plantilla.orden()
-                        + " del inicio de sesión: "
-                        + resultado.getCodigo();
-            }
-        }
-        return null;
-    }
-
-    private static String reemplazar(String valor, Rol rol) {
-        return valor == null
-                ? null
-                : valor.replace(EjecucionService.VARIABLE_USUARIO, rol.usuario())
-                        .replace(EjecucionService.VARIABLE_CONTRASENA, rol.contrasena());
+        return InicioSesion.iniciar(proyecto, rol.get(), cliente, grupo.get(0).suite().config());
     }
 
     private static Comprobacion comprobar(Pendiente pendiente, ClienteAgente cliente)

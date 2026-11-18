@@ -157,10 +157,10 @@ public final class EjecucionService {
     public static final String VALOR_OCULTO = "****";
 
     /** Variable de los pasos de login que se reemplaza por el usuario del rol. */
-    public static final String VARIABLE_USUARIO = "{usuario}";
+    private static final String VARIABLE_USUARIO = "{usuario}";
 
     /** Variable de los pasos de login que se reemplaza por la contraseña del rol. */
-    public static final String VARIABLE_CONTRASENA = "{contrasena}";
+    private static final String VARIABLE_CONTRASENA = "{contrasena}";
 
     private static final Logger REGISTRO = Logger.getLogger(EjecucionService.class.getName());
     private static final String PREFIJO_HASH = "sha256:";
