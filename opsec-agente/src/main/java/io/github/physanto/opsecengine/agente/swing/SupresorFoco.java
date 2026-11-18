@@ -29,6 +29,8 @@ import javax.swing.Timer;
  */
 public final class SupresorFoco implements AWTEventListener, AutoCloseable {
 
+    private static volatile boolean modoOculto;
+
     private final Consumer<String> registro;
     private final boolean registrado;
     private final Timer vigilancia;
@@ -54,6 +56,7 @@ public final class SupresorFoco implements AWTEventListener, AutoCloseable {
         boolean activo = !GraphicsEnvironment.isHeadless();
         SupresorFoco supresor = new SupresorFoco(registro, activo);
         if (activo) {
+            modoOculto = true;
             Toolkit.getDefaultToolkit()
                     .addAWTEventListener(
                             supresor,
@@ -129,11 +132,22 @@ public final class SupresorFoco implements AWTEventListener, AutoCloseable {
         return new Point((int) Math.min(Integer.MAX_VALUE, derecha + 100), 0);
     }
 
+    /**
+     * Indica si hay un supresor activo, es decir, si las ventanas están ocultas al usuario. Es
+     * seguro entre hilos.
+     *
+     * @return true si se instaló un supresor con pantalla y todavía no se cerró
+     */
+    public static boolean modoOcultoActivo() {
+        return modoOculto;
+    }
+
     /** Retira el observador desde cualquier hilo; no restaura las ventanas ya preparadas. */
     @Override
     public void close() {
         cerrado = true;
         if (registrado) {
+            modoOculto = false;
             vigilancia.stop();
             Toolkit.getDefaultToolkit().removeAWTEventListener(this);
         }

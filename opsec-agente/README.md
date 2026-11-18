@@ -110,12 +110,21 @@ deshabilitado: `PULSAR`, `LLENAR`, `SELECCIONAR`, `MARCAR` e `IR_A`. Los nodos i
 exploración. Se mantienen en la estructura y en las rutas. Las contraseñas se describen sin
 exponer su contenido.
 
+### Modo `ROBOT`
+
+Mueve el cursor real y escribe con el teclado real (`java.awt.Robot`), como confirmación de que
+la interfaz responde a una persona. Solo admite `PULSAR`, `LLENAR` y `ESPERAR`; las demás acciones
+responden `ERROR`. También responde `ERROR`, con un motivo claro, sin pantalla (headless) o con
+`oculto=true`, porque necesita una ventana visible por encima de las demás. `LLENAR` hace clic en
+el campo, borra con Ctrl+A y Suprimir, y escribe: letras sin tilde, dígitos y espacio con teclas;
+tildes, ñ y símbolos se pegan desde el portapapeles, que queda reemplazado por el último carácter
+pegado.
+
 ### Pendiente para el dueño del módulo (P1)
 
 Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
 
-1. Modo `ROBOT`.
-2. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
+1. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
