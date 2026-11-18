@@ -7,6 +7,7 @@ import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
 import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
+import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
@@ -222,6 +223,26 @@ public final class MotorFalso implements AutoCloseable {
                 TipoMensaje.RESULTADO_PASO,
                 ResultadoPasoDto.class,
                 espera);
+    }
+
+    /**
+     * Envía la configuración de los ganchos y espera la confirmación del agente.
+     *
+     * @param config configuración que reemplaza a la anterior; no puede ser null
+     * @return la confirmación, un resultado con código {@code OK}
+     * @throws ExcepcionErrorRemoto si el agente responde {@code ERROR}
+     * @throws ExcepcionProtocolo si no hay respuesta a tiempo o es de otro tipo
+     * @throws IOException si falla la conexión
+     * @throws IllegalStateException si todavía no se recibió el saludo
+     */
+    public ResultadoPasoDto configurarGanchos(ConfigGanchosDto config) throws IOException {
+        Objects.requireNonNull(config, "La configuración no puede ser null");
+        return solicitar(
+                TipoMensaje.CONFIG_GANCHOS,
+                config,
+                TipoMensaje.RESULTADO_PASO,
+                ResultadoPasoDto.class,
+                tiempoMaximo);
     }
 
     /**
