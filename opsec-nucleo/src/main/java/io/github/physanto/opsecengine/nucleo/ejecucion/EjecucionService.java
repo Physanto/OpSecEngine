@@ -109,7 +109,12 @@ import java.util.logging.Logger;
  * independiente por valor, sustituyendo {@code {payload}} literalmente en los pasos LLENAR. Sus ids
  * terminan en {@code -P1}, {@code -P2}, etc.; cada copia abre una sesión y conserva su propia
  * traza, evaluación y capturas. La expansión se valida antes de abrir cualquier sesión. Esto no
- * selecciona ataques por id del catálogo ni genera canarios.
+ * selecciona ataques por id del catálogo.
+ *
+ * <p>Al abrir cada sesión se envía {@code CONFIG_GANCHOS} al agente con las operaciones sensibles
+ * del proyecto y el canario del caso; si el agente no lo confirma, el caso queda {@code
+ * NO_CONCLUYENTE}. Un caso que escribe {@code {canario}} en un paso {@code LLENAR} sin declarar
+ * canario recibe uno determinista según la semilla y su id; queda en {@link Caso#canario()}.
  *
  * <p>Ejemplo:
  *
@@ -272,7 +277,7 @@ public final class EjecucionService {
      */
     public ResultadoSuite ejecutar(Suite suite) {
         Objects.requireNonNull(suite, "La suite no puede ser null");
-        suite = ExpansorPayloads.expandir(suite);
+        suite = Canarios.preparar(ExpansorPayloads.expandir(suite));
         Instant inicio = Instant.now();
         notificar(suite, null, ProgresoEjecucion.Tipo.SUITE_INICIO, 0, false, null);
         List<ResultadoCaso> resultados = new ArrayList<>();
@@ -348,6 +353,12 @@ public final class EjecucionService {
         }
         int ultimoPaso = 0;
         try {
+            try {
+                cliente.configurarGanchos(Canarios.configuracionGanchos(proyecto, caso));
+            } catch (IOException | RuntimeException e) {
+                REGISTRO.log(Level.WARNING, "No se pudo configurar los ganchos de " + caso.id(), e);
+                return "No se pudo configurar los ganchos del agente: " + e.getMessage();
+            }
             if (rol != null) {
                 String fallo = iniciarSesion(cliente, rol, config, traza);
                 if (fallo != null) {
