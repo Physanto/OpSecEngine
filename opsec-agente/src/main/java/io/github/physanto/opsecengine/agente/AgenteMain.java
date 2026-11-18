@@ -1,5 +1,7 @@
 package io.github.physanto.opsecengine.agente;
 
+import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
+import io.github.physanto.opsecengine.agente.ganchos.GanchoJdbc;
 import io.github.physanto.opsecengine.agente.swing.AdaptadorSwing;
 import io.github.physanto.opsecengine.agente.swing.CierreAplicacion;
 import io.github.physanto.opsecengine.agente.swing.ObservadorExcepciones;
@@ -24,6 +26,7 @@ import java.lang.instrument.Instrumentation;
  *   <li>Instala el {@link ObservadorExcepciones} como manejador por defecto de excepciones no
  *       capturadas.
  *   <li>Si se pide {@code oculto=true}, instala {@link SupresorFoco}.
+ *   <li>Instala el gancho {@link GanchoJdbc}, que emite un evento {@code SQL} por cada sentencia.
  *   <li>Registra el {@link ObservadorVentanas}.
  *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} y el {@link
  *       CierreAplicacion} en un hilo daemon, que se conecta con el motor sin retrasar a la
@@ -80,6 +83,12 @@ public final class AgenteMain {
             } catch (RuntimeException | AWTError | LinkageError e) {
                 RegistroAgente.error("No se pudo instalar el modo oculto: " + e);
             }
+        }
+        try {
+            new GanchoJdbc(RegistroAgente::error)
+                    .instalar(instrumentacion, emisor, ConfiguracionGanchos.actual());
+        } catch (RuntimeException | LinkageError e) {
+            RegistroAgente.error("No se pudo instalar el gancho JDBC: " + e);
         }
         ObservadorVentanas ventanas = null;
         try {

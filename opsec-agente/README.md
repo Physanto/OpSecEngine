@@ -122,11 +122,21 @@ pegado. Como el sistema operativo a veces pierde una tecla, `LLENAR` comprueba e
 campo y repite hasta tres veces; si sigue distinto lo da por bueno, porque la aplicación pudo
 filtrarlo.
 
+### Ganchos JDBC y `CONFIG_GANCHOS`
+
+`GanchoJdbc` (paquete `ganchos`) instrumenta con ByteBuddy las clases que implementan `Statement`, `PreparedStatement` y `Connection` y emite un evento `SQL` por cada ejecución: `sql`, `tipoSentencia` (`STATEMENT` si el SQL llegó como texto; `PREPARED` con `parametros` si vino de un `PreparedStatement`), `operacion`, `filasAfectadas` (si el método devolvió un número), `conexion` (URL sin usuario ni contraseña), `error` y `sensible`. Se instala en `premain`, antes de que la aplicación cargue su driver. Es de fallo seguro (los errores se registran, nunca llegan a la aplicación), usa una marca por hilo para no duplicar eventos cuando el driver llama a sus propios métodos y solo observa las clases que ven el jar del agente.
+
+Los valores de los parámetros se envían como texto, porque el oráculo de canarios los necesita; eso incluye lo que la aplicación escriba en ellos.
+
+`CONFIG_GANCHOS` reemplaza por completo la configuración vigente (`ConfiguracionGanchos`: SQL y Firestore sensibles, canarios y fallos a inyectar) y el agente responde `RESULTADO_PASO` `OK` con la misma correlación (contratos-v1.5). Los eventos `SQL` llevan `sensible=true` si su operación está en la lista, sin distinguir mayúsculas.
+
+`GanchoJdbcIT` lanza una JVM con el agente real y la base H2 del jar de la app de práctica (hay que construirla con `-am`).
+
 ### Pendiente para el dueño del módulo (P1)
 
-Ordenado según `PLAN_DE_TRABAJO.md` (sprints 1 a 4):
+Ordenado según `PLAN_DE_TRABAJO.md`:
 
-1. Ganchos con ByteBuddy (v0.3): `CONFIG_GANCHOS`, JDBC y Firestore.
+1. Ganchos de Firestore (#14), inyección de fallos (#16), inspector y grabadora (#17), tiempos, EDT congelado y fugas (#18) y cobertura (#19).
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
