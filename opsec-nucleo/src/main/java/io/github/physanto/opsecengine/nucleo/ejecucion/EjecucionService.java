@@ -114,7 +114,9 @@ import java.util.logging.Logger;
  * <p>Al abrir cada sesión se envía {@code CONFIG_GANCHOS} al agente con las operaciones sensibles
  * del proyecto y el canario del caso; si el agente no lo confirma, el caso queda {@code
  * NO_CONCLUYENTE}. Un caso que escribe {@code {canario}} en un paso {@code LLENAR} sin declarar
- * canario recibe uno determinista según la semilla y su id; queda en {@link Caso#canario()}.
+ * canario recibe uno determinista según la semilla y su id; queda en {@link Caso#canario()}. Los
+ * fallos del caso ({@link Caso#fallos()}) se envían en un segundo {@code CONFIG_GANCHOS}, después
+ * del inicio de sesión, y terminan con la sesión del caso.
  *
  * <p>Ejemplo:
  *
@@ -363,6 +365,13 @@ public final class EjecucionService {
                 String fallo = iniciarSesion(cliente, rol, config, traza);
                 if (fallo != null) {
                     return fallo;
+                }
+            }
+            if (!caso.fallos().isEmpty()) {
+                try {
+                    cliente.configurarGanchos(Canarios.configuracionGanchos(proyecto, caso, true));
+                } catch (IOException | RuntimeException e) {
+                    return "No se pudieron activar los fallos del caso: " + e.getMessage();
                 }
             }
             for (Paso paso : caso.pasos()) {

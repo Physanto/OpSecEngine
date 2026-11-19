@@ -266,6 +266,47 @@ class EjecucionServiceTest {
     }
 
     @Test
+    void losFallosDelCasoSeActivanDespuesDelLoginEnUnSegundoConfigGanchos() throws Exception {
+        Caso caso =
+                new Caso(
+                        "A1",
+                        null,
+                        "admin",
+                        List.of(pulsar(1, "Avanzar")),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of("SQL_EJECUTAR:java.sql.SQLException:sin red"));
+
+        ejecutar(PROYECTO_CON_LOGIN, List.of(), caso);
+
+        List<Mensaje> recibidos = agentes.get(0).mensajesRecibidos();
+        CodecMensajes codec = new CodecMensajes();
+        assertThat(recibidos)
+                .extracting(Mensaje::getTipo)
+                .startsWith(TipoMensaje.CONFIG_GANCHOS)
+                .containsSubsequence(
+                        TipoMensaje.CONFIG_GANCHOS,
+                        TipoMensaje.EJECUTAR_PASO,
+                        TipoMensaje.CONFIG_GANCHOS,
+                        TipoMensaje.EJECUTAR_PASO);
+        assertThat(codec.leerCuerpo(recibidos.get(0), ConfigGanchosDto.class).getFallosInyectados())
+                .isEmpty();
+        ConfigGanchosDto conFallos = null;
+        int configs = 0;
+        for (Mensaje m : recibidos) {
+            if (m.getTipo() == TipoMensaje.CONFIG_GANCHOS && ++configs == 2) {
+                conFallos = codec.leerCuerpo(m, ConfigGanchosDto.class);
+            }
+        }
+        assertThat(conFallos.getFallosInyectados())
+                .containsExactly("SQL_EJECUTAR:java.sql.SQLException:sin red");
+    }
+
+    @Test
     void configuraLosGanchosConLosSensiblesDelProyectoYElCanarioDelCaso() throws Exception {
         Proyecto conSensibles =
                 new Proyecto(
