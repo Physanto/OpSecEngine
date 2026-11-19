@@ -128,6 +128,78 @@ class GanchoJdbcIT {
         }
     }
 
+    @Test
+    void unFalloInyectadoHaceQueLaConexionYLasSentenciasLancenLaExcepcion() throws Exception {
+        Path jarAgente = Path.of(System.getProperty("opsec.agente.jar"));
+        Path jarApp =
+                Path.of(
+                                "..",
+                                "apps-practica",
+                                "clientes-vulnerable",
+                                "target",
+                                "clientes-vulnerable.jar")
+                        .toAbsolutePath()
+                        .normalize();
+        assertThat(jarApp).as("Construir también la app de práctica con -am").isRegularFile();
+        Path carpeta =
+                Files.createDirectories(
+                        Path.of("target", "registros-it", "fallo-" + System.nanoTime()));
+        Path salida = carpeta.resolve("aplicacion.log");
+        String clases =
+                Path.of(
+                                AplicacionFalloJdbcDePrueba.class
+                                        .getProtectionDomain()
+                                        .getCodeSource()
+                                        .getLocation()
+                                        .toURI())
+                        .toString();
+        try (MotorFalso motor = new MotorFalso()) {
+            Process proceso =
+                    new ProcessBuilder(
+                                    Path.of(System.getProperty("java.home"), "bin", "java")
+                                            .toString(),
+                                    "-Dstdout.encoding=UTF-8",
+                                    "-javaagent:" + jarAgente + "=" + motor.argumentosAgente(),
+                                    "-cp",
+                                    String.join(File.pathSeparator, jarApp.toString(), clases),
+                                    AplicacionFalloJdbcDePrueba.class.getName())
+                            .redirectErrorStream(true)
+                            .redirectOutput(salida.toFile())
+                            .start();
+            try {
+                motor.esperarHola(ESPERA);
+                motor.configurarGanchos(
+                        new ConfigGanchosDto(
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of(
+                                        "SQL_CONEXION:java.sql.SQLException:sin red",
+                                        "SQL_EJECUTAR:java.lang.IllegalStateException:disco lleno")));
+                proceso.getOutputStream().write('\n');
+                proceso.getOutputStream().flush();
+                esperarLinea(salida, "FALLO-LISTO");
+                String texto = Files.readString(salida, StandardCharsets.UTF_8);
+                assertThat(texto)
+                        .contains("conexion: java.sql.SQLException sin red")
+                        .contains("ejecucion: java.lang.IllegalStateException disco lleno");
+                Thread.sleep(300);
+                assertThat(
+                                motor.eventos().stream()
+                                        .filter(e -> e.getTipo().equals("ESTADO"))
+                                        .map(e -> e.getDatos().get("fallo"))
+                                        .collect(Collectors.toList()))
+                        .contains("SQL_CONEXION", "SQL_EJECUTAR");
+                assertThat(motor.cerrar()).isTrue();
+            } finally {
+                proceso.destroy();
+                if (!proceso.waitFor(10, TimeUnit.SECONDS)) {
+                    proceso.destroyForcibly();
+                }
+            }
+        }
+    }
+
     private static EventoDto con(List<EventoDto> eventos, String texto) {
         return eventos.stream()
                 .filter(e -> String.valueOf(e.getDatos().get("sql")).contains(texto))

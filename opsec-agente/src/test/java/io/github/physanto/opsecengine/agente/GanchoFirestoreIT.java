@@ -67,6 +67,8 @@ class GanchoFirestoreIT {
                         motor.eventos().stream()
                                 .filter(e -> e.getTipo().equals("FIRESTORE"))
                                 .collect(Collectors.toList());
+                assertThat(Files.readString(salida, StandardCharsets.UTF_8))
+                        .contains("set: sin fallo");
                 assertThat(eventos).hasSize(4);
                 Map<String, Object> escritura = eventos.get(0).getDatos();
                 assertThat(escritura)
@@ -90,6 +92,68 @@ class GanchoFirestoreIT {
                         .containsEntry("lote", true)
                         .doesNotContainKey("sensible");
                 assertThat(motor.cerrar()).isTrue();
+            } finally {
+                proceso.destroy();
+                if (!proceso.waitFor(10, TimeUnit.SECONDS)) {
+                    proceso.destroyForcibly();
+                }
+            }
+        }
+    }
+
+    @Test
+    void unFalloInyectadoHaceQueLaEscrituraLanceLaExcepcion() throws Exception {
+        Path jarAgente = Path.of(System.getProperty("opsec.agente.jar"));
+        Path carpeta =
+                Files.createDirectories(
+                        Path.of("target", "registros-it", "firestore-fallo-" + System.nanoTime()));
+        Path salida = carpeta.resolve("aplicacion.log");
+        String clases =
+                Path.of(
+                                AplicacionFirestoreDePrueba.class
+                                        .getProtectionDomain()
+                                        .getCodeSource()
+                                        .getLocation()
+                                        .toURI())
+                        .toString();
+        try (MotorFalso motor = new MotorFalso()) {
+            Process proceso =
+                    new ProcessBuilder(
+                                    Path.of(System.getProperty("java.home"), "bin", "java")
+                                            .toString(),
+                                    "-javaagent:" + jarAgente + "=" + motor.argumentosAgente(),
+                                    "-cp",
+                                    clases,
+                                    AplicacionFirestoreDePrueba.class.getName())
+                            .redirectErrorStream(true)
+                            .redirectOutput(salida.toFile())
+                            .start();
+            try {
+                motor.esperarHola(ESPERA);
+                motor.configurarGanchos(
+                        new ConfigGanchosDto(
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of(
+                                        "FIRESTORE_ESCRIBIR:java.lang.IllegalStateException:cuota")));
+                proceso.getOutputStream().write('\n');
+                proceso.getOutputStream().flush();
+                long limite = System.nanoTime() + ESPERA.toNanos();
+                while (System.nanoTime() < limite
+                        && !Files.readString(salida, StandardCharsets.UTF_8)
+                                .contains(AplicacionFirestoreDePrueba.LINEA_LISTO)) {
+                    Thread.sleep(50);
+                }
+                assertThat(Files.readString(salida, StandardCharsets.UTF_8))
+                        .contains("set: java.lang.IllegalStateException cuota");
+                Thread.sleep(300);
+                assertThat(
+                                motor.eventos().stream()
+                                        .filter(e -> e.getTipo().equals("ESTADO"))
+                                        .map(e -> e.getDatos().get("fallo"))
+                                        .collect(Collectors.toList()))
+                        .contains("FIRESTORE_ESCRIBIR");
             } finally {
                 proceso.destroy();
                 if (!proceso.waitFor(10, TimeUnit.SECONDS)) {

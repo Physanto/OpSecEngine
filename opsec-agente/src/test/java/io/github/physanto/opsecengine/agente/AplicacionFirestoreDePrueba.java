@@ -22,7 +22,12 @@ public final class AplicacionFirestoreDePrueba {
         while (System.in.read() != '\n') {
             // espera la orden de la prueba
         }
-        new DocumentReference("personas/123").set(Map.of("nombre", "Ana", "clave", "secreta"));
+        try {
+            new DocumentReference("personas/123").set(Map.of("nombre", "Ana", "clave", "secreta"));
+            System.out.println("set: sin fallo");
+        } catch (RuntimeException e) {
+            System.out.println("set: " + e.getClass().getName() + " " + e.getMessage());
+        }
         try {
             new DocumentReference("personas/fallo").delete();
         } catch (IllegalStateException esperada) {
