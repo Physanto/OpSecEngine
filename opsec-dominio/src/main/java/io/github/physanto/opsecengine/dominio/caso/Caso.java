@@ -31,6 +31,9 @@ import java.util.Objects;
  *     CREDENCIALES-DEBILES} y {@code SIN-BLOQUEO}; puede ser null. Desde contratos v1.2
  * @param extensiones campos adicionales para cambios aditivos del contrato; si es null queda vacío,
  *     y no admite claves ni valores null
+ * @param fallos fallos que los ganchos del agente provocan durante el caso, cada uno con el formato
+ *     {@code <punto>:<clase-excepcion>[:<mensaje>]} (ver {@code contratos/protocolo/README.md}); si
+ *     es null queda vacía, y no admite elementos null ni en blanco. Desde contratos v1.6
  */
 public record Caso(
         String id,
@@ -42,7 +45,8 @@ public record Caso(
         String canario,
         PoliticaValidacion validacion,
         PoliticaAutenticacion autenticacion,
-        Map<String, Object> extensiones) {
+        Map<String, Object> extensiones,
+        List<String> fallos) {
 
     /** Longitud mínima de un canario, para que no se confunda con datos normales. */
     public static final int LONGITUD_MINIMA_CANARIO = 4;
@@ -83,6 +87,54 @@ public record Caso(
         ataques = ataques == null ? List.of() : List.copyOf(ataques);
         oraculos = oraculos == null ? List.of() : List.copyOf(oraculos);
         extensiones = extensiones == null ? Map.of() : Map.copyOf(extensiones);
+        fallos = fallos == null ? List.of() : List.copyOf(fallos);
+        for (String fallo : fallos) {
+            if (fallo.isBlank()) {
+                throw new IllegalArgumentException(
+                        "Un fallo del caso " + id + " no puede estar en blanco");
+            }
+        }
+    }
+
+    /**
+     * Crea un caso sin fallos inyectados, con la forma de los contratos v1.2 a v1.5.
+     *
+     * @param id identificador del caso; ver {@link Caso}
+     * @param descripcion explicación legible del caso; puede ser null
+     * @param rol rol con el que se inicia sesión; null para sin sesión
+     * @param pasos pasos del caso; si es null queda vacía
+     * @param ataques ids de ataques; si es null queda vacía
+     * @param oraculos ids de oráculos adicionales; si es null queda vacía
+     * @param canario canario del caso; puede ser null
+     * @param validacion política de validación; puede ser null
+     * @param autenticacion política de autenticación; puede ser null
+     * @param extensiones campos adicionales; si es null queda vacío
+     * @throws NullPointerException si {@code id} es null o si alguna colección contiene null
+     * @throws IllegalArgumentException si los datos no son válidos
+     */
+    public Caso(
+            String id,
+            String descripcion,
+            String rol,
+            List<Paso> pasos,
+            List<String> ataques,
+            List<String> oraculos,
+            String canario,
+            PoliticaValidacion validacion,
+            PoliticaAutenticacion autenticacion,
+            Map<String, Object> extensiones) {
+        this(
+                id,
+                descripcion,
+                rol,
+                pasos,
+                ataques,
+                oraculos,
+                canario,
+                validacion,
+                autenticacion,
+                extensiones,
+                null);
     }
 
     /**

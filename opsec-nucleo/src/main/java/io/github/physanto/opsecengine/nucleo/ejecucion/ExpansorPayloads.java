@@ -93,7 +93,8 @@ final class ExpansorPayloads {
                                 caso.canario(),
                                 caso.validacion(),
                                 caso.autenticacion(),
-                                extensiones));
+                                extensiones,
+                                caso.fallos()));
             }
         }
         return new Suite(

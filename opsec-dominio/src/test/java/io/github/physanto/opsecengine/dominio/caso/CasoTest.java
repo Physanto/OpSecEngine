@@ -87,4 +87,30 @@ class CasoTest {
     private static Caso caso(String canario) {
         return new Caso("C13", null, null, null, null, null, canario, null, null, null);
     }
+
+    @Test
+    void losFallosSonOpcionalesInmutablesYNoAdmitenTextoEnBlanco() {
+        Caso sin = new Caso("A", null, null, null, null, null, null);
+        List<String> origen =
+                new ArrayList<>(List.of("SQL_CONEXION:java.sql.SQLException:sin red"));
+        Caso con = new Caso("B", null, null, null, null, null, null, null, null, null, origen);
+        origen.clear();
+
+        assertThat(sin.fallos()).isEmpty();
+        assertThat(con.fallos()).containsExactly("SQL_CONEXION:java.sql.SQLException:sin red");
+        assertThatThrownBy(() ->
+                        new Caso(
+                                "C",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                List.of(" ")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
