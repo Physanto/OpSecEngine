@@ -11,6 +11,7 @@ import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.configuracion.Rol;
 import io.github.physanto.opsecengine.dominio.extension.Contexto;
 import io.github.physanto.opsecengine.dominio.extension.EvaluacionCaso;
+import io.github.physanto.opsecengine.dominio.resultado.EstadoVeredicto;
 import io.github.physanto.opsecengine.dominio.resultado.Hallazgo;
 import io.github.physanto.opsecengine.dominio.resultado.Manifiesto;
 import io.github.physanto.opsecengine.dominio.resultado.ResultadoCaso;
@@ -79,9 +80,17 @@ import java.util.logging.Logger;
  * acciones: una acción que agota el plazo puede seguir ejecutándose. Una interrupción impide el
  * siguiente reintento. Cada intento conserva sus propios {@code PASO_INICIO}, eventos del agente y
  * {@code PASO_FIN}, y sus avisos de progreso, con el mismo número de paso. El último resultado
- * decide si se continúa; todos los eventos se evalúan para no ocultar hallazgos. Esto no modifica
- * {@link ConfigEjecucion#reintentos()}, el número de intentos del caso ni su marca de inestable,
- * reservados para la v0.3.
+ * decide si se continúa; todos los eventos se evalúan para no ocultar hallazgos. Esto es distinto
+ * de los reintentos del caso completo ({@link ConfigEjecucion#reintentos()}), que se describen
+ * abajo.
+ *
+ * <p>Si un caso no termina {@code CUMPLE}, se repite entero, en una sesión nueva, hasta {@link
+ * ConfigEjecucion#reintentos()} veces más; se detiene en el primer intento que cumple. {@link
+ * ResultadoCaso#intentos()} cuenta los intentos hechos. Si los intentos no dieron todos el mismo
+ * estado (por ejemplo, falló y luego cumplió), el caso es {@link ResultadoCaso#inestable()} y se
+ * informa el intento más grave, con su veredicto y su traza, para no ocultar hallazgos; las
+ * capturas de un intento reemplazan a las del anterior. Un caso que falla siempre igual no es
+ * inestable. Con cero reintentos (el valor por defecto) cada caso se ejecuta una vez.
  *
  * <p>Los pasos {@code CAPTURAR} no se envían como {@code EJECUTAR_PASO}: el motor pide la imagen
  * con el mensaje {@code CAPTURAR}, la guarda como {@code capturas/<caso>-<paso>.png} en la carpeta
@@ -137,8 +146,7 @@ import java.util.logging.Logger;
  *       final; inferir la sesión activa cuando el caso inicia sesión con sus propios pasos.
  *   <li>v0.2: expandir los ataques del caso, un intento por payload (hoy un caso con ataques queda
  *       {@code NO_CONCLUYENTE} sin ejecutarse).
- *   <li>v0.3: reintentos de casos y marca de inestables; casos en paralelo según {@code
- *       paralelismo}.
+ *   <li>v0.3: casos en paralelo según {@code paralelismo}.
  * </ul>
  */
 public final class EjecucionService {
@@ -295,9 +303,54 @@ public final class EjecucionService {
         return resultado;
     }
 
+    /**
+     * Ejecuta un caso y, si no cumple, lo repite hasta {@link ConfigEjecucion#reintentos()} veces
+     * más, en una sesión nueva cada vez. Se detiene en el primer intento que cumple. Si los
+     * intentos no dieron todos el mismo estado, el caso es inestable y se informa el intento más
+     * grave, para no ocultar hallazgos.
+     */
     private ResultadoCaso ejecutarCaso(Suite suite, Caso caso) {
         long comienzo = System.nanoTime();
         notificar(suite, caso, ProgresoEjecucion.Tipo.CASO_INICIO, 0, false, null);
+        List<ResultadoCaso> intentos = new ArrayList<>();
+        int maximo = 1 + suite.config().reintentos();
+        do {
+            intentos.add(ejecutarIntento(suite, caso));
+        } while (intentos.size() < maximo
+                && !Thread.currentThread().isInterrupted()
+                && intentos.get(intentos.size() - 1).veredicto().estado()
+                        != EstadoVeredicto.CUMPLE);
+        ResultadoCaso elegido = intentos.get(0);
+        boolean inestable = false;
+        for (ResultadoCaso intento : intentos) {
+            EstadoVeredicto estado = intento.veredicto().estado();
+            inestable |= estado != intentos.get(0).veredicto().estado();
+            if (gravedad(estado) >= gravedad(elegido.veredicto().estado())) {
+                elegido = intento;
+            }
+        }
+        ResultadoCaso resultado =
+                new ResultadoCaso(
+                        caso.id(),
+                        elegido.veredicto(),
+                        elegido.traza(),
+                        Duration.ofNanos(System.nanoTime() - comienzo),
+                        intentos.size(),
+                        inestable);
+        notificar(suite, caso, ProgresoEjecucion.Tipo.CASO_FIN, 0, false, null);
+        return resultado;
+    }
+
+    private static int gravedad(EstadoVeredicto estado) {
+        return switch (estado) {
+            case CUMPLE -> 0;
+            case NO_CONCLUYENTE -> 1;
+            case NO_CUMPLE -> 2;
+        };
+    }
+
+    private ResultadoCaso ejecutarIntento(Suite suite, Caso caso) {
+        long comienzo = System.nanoTime();
         TrazaEnCurso traza =
                 new TrazaEnCurso(
                         suite,
@@ -328,7 +381,6 @@ public final class EjecucionService {
                         Duration.ofNanos(System.nanoTime() - comienzo),
                         1,
                         false);
-        notificar(suite, caso, ProgresoEjecucion.Tipo.CASO_FIN, 0, false, null);
         return resultado;
     }
 
