@@ -31,19 +31,12 @@ import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,8 +138,7 @@ import java.util.logging.Logger;
  *   <li>v0.2: expandir los ataques del caso, un intento por payload (hoy un caso con ataques queda
  *       {@code NO_CONCLUYENTE} sin ejecutarse).
  *   <li>v0.3: reintentos de casos y marca de inestables; casos en paralelo según {@code
- *       paralelismo}; manifiesto completo para re-ejecutar exactamente (hoy el hash de la suite se
- *       calcula sobre su contenido traducido, no sobre el archivo).
+ *       paralelismo}.
  * </ul>
  */
 public final class EjecucionService {
@@ -170,7 +162,6 @@ public final class EjecucionService {
     private static final String VARIABLE_CONTRASENA = "{contrasena}";
 
     private static final Logger REGISTRO = Logger.getLogger(EjecucionService.class.getName());
-    private static final String PREFIJO_HASH = "sha256:";
 
     /** Estrategias cuyo valor se usa como título o clase de la ventana que se captura. */
     private static final Set<EstrategiaLocalizacion> ESTRATEGIAS_VENTANA =
@@ -604,59 +595,13 @@ public final class EjecucionService {
 
     private Manifiesto manifiesto(Suite suite, Instant fecha) {
         return new Manifiesto(
-                hashJar(proyecto.jar()),
+                Huellas.jar(proyecto.jar()),
                 VersionMotor.motor(),
                 VersionMotor.java(),
                 VersionMotor.sistemaOperativo(),
                 suite.config().semilla(),
-                hashSuite(suite),
+                Huellas.suite(suite),
                 fecha);
-    }
-
-    private static String hashJar(Path jar) {
-        if (!Files.isRegularFile(jar)) {
-            return HASH_NO_DISPONIBLE;
-        }
-        MessageDigest digest = sha256();
-        try (InputStream flujo = new DigestInputStream(Files.newInputStream(jar), digest)) {
-            flujo.transferTo(OutputStream.nullOutputStream());
-        } catch (IOException e) {
-            REGISTRO.log(Level.WARNING, "No se pudo calcular el hash de " + jar, e);
-            return HASH_NO_DISPONIBLE;
-        }
-        return PREFIJO_HASH + HexFormat.of().formatHex(digest.digest());
-    }
-
-    /** Hash del contenido traducido de la suite, con un orden estable. */
-    private static String hashSuite(Suite suite) {
-        StringBuilder texto =
-                new StringBuilder(suite.nombre()).append('\n').append(suite.version()).append('\n');
-        for (Caso caso : suite.casos()) {
-            texto.append(caso.id()).append('|').append(caso.rol()).append('\n');
-            for (Paso paso : caso.pasos()) {
-                texto.append(paso.orden()).append('|').append(paso.accion()).append('|');
-                if (paso.objetivo() != null) {
-                    for (Criterio criterio : paso.objetivo().criterios()) {
-                        texto.append(criterio.estrategia()).append('=').append(criterio.valor());
-                        texto.append(';');
-                    }
-                }
-                texto.append('|').append(paso.valor()).append('|').append(paso.esperaMaxima());
-                texto.append('\n');
-            }
-        }
-        return PREFIJO_HASH
-                + HexFormat.of()
-                        .formatHex(
-                                sha256().digest(texto.toString().getBytes(StandardCharsets.UTF_8)));
-    }
-
-    private static MessageDigest sha256() {
-        try {
-            return MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("La JVM no tiene SHA-256", e);
-        }
     }
 
     private void notificar(
