@@ -16,6 +16,7 @@ import io.github.physanto.opsecengine.agente.api.Gancho;
 import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import java.lang.instrument.Instrumentation;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.function.Consumer;
@@ -34,6 +35,8 @@ import net.bytebuddy.matcher.ElementMatcher;
  * <ul>
  *   <li>{@code execute}, {@code executeQuery}, {@code executeUpdate} y {@code executeLargeUpdate}
  *       de {@code Statement} con el SQL como argumento: evento con {@code tipoSentencia=STATEMENT}.
+ *   <li>{@code Driver.connect} y las ejecuciones: además provocan los fallos inyectados {@code
+ *       SQL_CONEXION} y {@code SQL_EJECUTAR} (ver {@link InyectorFallos}).
  *   <li>{@code Connection.prepareStatement}: recuerda el SQL; los {@code setXxx(int, ...)} guardan
  *       los parámetros y el {@code execute*()} sin argumentos emite el evento con {@code
  *       tipoSentencia=PREPARED} y {@code parametros}.
@@ -85,6 +88,7 @@ public final class GanchoJdbc implements Gancho {
         try {
             ConfiguracionGanchos.reemplazar(config);
             GestorJdbc.configurar(emisor, registro);
+            InyectorFallos.configurar(emisor, registro);
             String paqueteAgente = paqueteRaizDelAgente();
             new AgentBuilder.Default()
                     .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
@@ -102,8 +106,18 @@ public final class GanchoJdbc implements Gancho {
                             not(isInterface())
                                     .and(
                                             isSubTypeOf(Statement.class)
-                                                    .or(isSubTypeOf(Connection.class))))
+                                                    .or(isSubTypeOf(Connection.class))
+                                                    .or(isSubTypeOf(Driver.class))))
                     .transform((builder, tipo, cargador, modulo, dominio) -> {
+                        if (tipo.isAssignableTo(Driver.class)) {
+                            builder =
+                                    builder.visit(
+                                            Advice.to(ConsejoFallo.Conexion.class)
+                                                    .on(
+                                                            named("connect")
+                                                                    .and(isPublic())
+                                                                    .and(not(isAbstract()))));
+                        }
                         if (tipo.isAssignableTo(Connection.class)) {
                             builder =
                                     builder.visit(
@@ -116,7 +130,11 @@ public final class GanchoJdbc implements Gancho {
                         if (tipo.isAssignableTo(Statement.class)) {
                             builder =
                                     builder.visit(
-                                            Advice.to(ConsejoEjecucion.class).on(ejecuciones()));
+                                                    Advice.to(ConsejoEjecucion.class)
+                                                            .on(ejecuciones()))
+                                            .visit(
+                                                    Advice.to(ConsejoFallo.Sql.class)
+                                                            .on(ejecuciones()));
                         }
                         if (tipo.isAssignableTo(PreparedStatement.class)) {
                             builder =

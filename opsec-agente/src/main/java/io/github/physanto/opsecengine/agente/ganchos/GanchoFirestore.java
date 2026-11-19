@@ -64,6 +64,7 @@ public final class GanchoFirestore implements Gancho {
     public void instalar(Instrumentation inst, EmisorEventos emisor, ConfigGanchosDto config) {
         try {
             GestorFirestore.configurar(emisor, registro);
+            InyectorFallos.configurar(emisor, registro);
             new AgentBuilder.Default()
                     .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
                     .with(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
@@ -72,16 +73,26 @@ public final class GanchoFirestore implements Gancho {
                     .type(named(DOCUMENTO).or(named(LOTE)))
                     .transform((builder, tipo, cargador, modulo, dominio) ->
                             builder.visit(
-                                    Advice.to(ConsejoFirestore.class)
-                                            .on(
-                                                    named("set")
-                                                            .or(named("update"))
-                                                            .or(named("delete"))
-                                                            .or(named("create"))
-                                                            .or(named("get"))
-                                                            .or(named("commit"))
-                                                            .and(isPublic())
-                                                            .and(not(isAbstract())))))
+                                            Advice.to(ConsejoFirestore.class)
+                                                    .on(
+                                                            named("set")
+                                                                    .or(named("update"))
+                                                                    .or(named("delete"))
+                                                                    .or(named("create"))
+                                                                    .or(named("get"))
+                                                                    .or(named("commit"))
+                                                                    .and(isPublic())
+                                                                    .and(not(isAbstract()))))
+                                    .visit(
+                                            Advice.to(ConsejoFallo.Firestore.class)
+                                                    .on(
+                                                            named("set")
+                                                                    .or(named("update"))
+                                                                    .or(named("delete"))
+                                                                    .or(named("create"))
+                                                                    .or(named("commit"))
+                                                                    .and(isPublic())
+                                                                    .and(not(isAbstract())))))
                     .installOn(inst);
         } catch (Throwable e) {
             registro.accept("No se pudo instalar el gancho de Firestore: " + e);
