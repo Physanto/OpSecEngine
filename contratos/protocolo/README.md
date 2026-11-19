@@ -42,3 +42,17 @@ ni de los detalles que pueda añadir cada Look and Feel.
 `CONFIG_GANCHOS` (motor → agente) reemplaza por completo la configuración de los ganchos del agente: `sqlSensibles`, `firestoreSensibles`, `canarios` y `fallosInyectados`. El agente la aplica a los eventos siguientes y responde con un `RESULTADO_PASO` de código `OK`, con la misma correlación que el mensaje recibido, para confirmar que ya está vigente. Hasta que llega, la configuración está vacía.
 
 Los eventos `SQL` y `FIRESTORE` llevan el campo opcional `sensible=true` cuando su operación está en la lista de sensibles (la comparación no distingue mayúsculas de minúsculas); si no lo está, el campo se omite.
+
+## Inyección de fallos (contratos-v1.6)
+
+Cada elemento de `fallosInyectados` de `CONFIG_GANCHOS` (y de `caso.fallos` en la suite) tiene el formato `<punto>:<clase-excepcion>[:<mensaje>]`, por ejemplo `SQL_CONEXION:java.sql.SQLException:sin red`. Los puntos son:
+
+| Punto | Dónde se provoca |
+|---|---|
+| `SQL_CONEXION` | `DriverManager.getConnection` |
+| `SQL_EJECUTAR` | `execute`, `executeQuery` y `executeUpdate` de `Statement` y `PreparedStatement` |
+| `FIRESTORE_ESCRIBIR` | `set`, `update`, `delete`, `create` y `commit` de Firestore |
+| `ARCHIVO_ESCRIBIR` | reservado; todavía no lo atiende ningún gancho |
+
+Antes de ejecutar el método original, el agente lanza la excepción (instanciada con un constructor `(String)`; si la clase no existe o no se puede crear, una `RuntimeException`) y emite un evento `ESTADO` con `fallo=<punto>`. Un punto desconocido se ignora y se registra. Al terminar el caso el motor envía de nuevo `CONFIG_GANCHOS` sin fallos.
+

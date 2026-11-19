@@ -196,6 +196,7 @@ public final class GeneracionService {
                 caso.canario(),
                 caso.validacion(),
                 caso.autenticacion(),
-                caso.extensiones());
+                caso.extensiones(),
+                caso.fallos());
     }
 }
