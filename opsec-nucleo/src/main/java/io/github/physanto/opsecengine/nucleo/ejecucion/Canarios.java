@@ -71,6 +71,19 @@ final class Canarios {
      * @return la configuración para enviar al agente
      */
     static ConfigGanchosDto configuracionGanchos(Proyecto proyecto, Caso caso) {
+        return configuracionGanchos(proyecto, caso, false);
+    }
+
+    /**
+     * Igual que {@link #configuracionGanchos(Proyecto, Caso)}, pero con los fallos del caso si se
+     * piden. Los fallos se activan después del inicio de sesión, para que el login no falle.
+     *
+     * @param proyecto proyecto con las operaciones sensibles
+     * @param caso caso que se va a ejecutar
+     * @param conFallos si se incluyen los fallos del caso
+     * @return la configuración para enviar al agente
+     */
+    static ConfigGanchosDto configuracionGanchos(Proyecto proyecto, Caso caso, boolean conFallos) {
         OperacionesSensibles sensibles = proyecto.sensibles();
         List<String> sql =
                 sensibles == null ? List.of() : new ArrayList<>(new TreeSet<>(sensibles.sql()));
@@ -79,7 +92,8 @@ final class Canarios {
                         ? List.of()
                         : new ArrayList<>(new TreeSet<>(sensibles.firestore()));
         List<String> canarios = caso.canario() == null ? List.of() : List.of(caso.canario());
-        return new ConfigGanchosDto(sql, firestore, canarios, List.of());
+        return new ConfigGanchosDto(
+                sql, firestore, canarios, conFallos ? caso.fallos() : List.of());
     }
 
     /** Canario determinista: {@code OPSEC} y 12 dígitos hexadecimales del SHA-256 de semilla:id. */
