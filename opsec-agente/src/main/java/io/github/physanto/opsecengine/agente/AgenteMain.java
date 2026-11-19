@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.agente;
 
 import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
+import io.github.physanto.opsecengine.agente.ganchos.GanchoFirestore;
 import io.github.physanto.opsecengine.agente.ganchos.GanchoJdbc;
 import io.github.physanto.opsecengine.agente.swing.AdaptadorSwing;
 import io.github.physanto.opsecengine.agente.swing.CierreAplicacion;
@@ -27,6 +28,8 @@ import java.lang.instrument.Instrumentation;
  *       capturadas.
  *   <li>Si se pide {@code oculto=true}, instala {@link SupresorFoco}.
  *   <li>Instala el gancho {@link GanchoJdbc}, que emite un evento {@code SQL} por cada sentencia.
+ *   <li>Instala el gancho {@link GanchoFirestore}, que emite un evento {@code FIRESTORE} por cada
+ *       operación.
  *   <li>Registra el {@link ObservadorVentanas}.
  *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} y el {@link
  *       CierreAplicacion} en un hilo daemon, que se conecta con el motor sin retrasar a la
@@ -89,6 +92,12 @@ public final class AgenteMain {
                     .instalar(instrumentacion, emisor, ConfiguracionGanchos.actual());
         } catch (RuntimeException | LinkageError e) {
             RegistroAgente.error("No se pudo instalar el gancho JDBC: " + e);
+        }
+        try {
+            new GanchoFirestore(RegistroAgente::error)
+                    .instalar(instrumentacion, emisor, ConfiguracionGanchos.actual());
+        } catch (RuntimeException | LinkageError e) {
+            RegistroAgente.error("No se pudo instalar el gancho de Firestore: " + e);
         }
         ObservadorVentanas ventanas = null;
         try {
