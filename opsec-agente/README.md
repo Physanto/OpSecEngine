@@ -132,11 +132,15 @@ Los valores de los parámetros se envían como texto, porque el oráculo de cana
 
 `GanchoJdbcIT` lanza una JVM con el agente real y la base H2 del jar de la app de práctica (hay que construirla con `-am`).
 
+`GanchoFirestore` instrumenta por nombre (sin depender de Firestore al compilar) `com.google.cloud.firestore.DocumentReference` (`set`, `update`, `delete`, `create`, `get`) y `WriteBatch` (`set`, `update`, `delete`, `create`, `commit`) y emite un evento `FIRESTORE` con `operacion`, `ruta` (`getPath()` por reflexión), `campos` (solo los nombres, nunca los valores), `lote`, `error` y `sensible`. Si esas clases no existen en la aplicación no hace nada. `GanchoFirestoreIT` lo prueba con dobles de esas clases que viven solo en las pruebas; no hace falta el emulador.
+
+**Inyección de fallos (#16, contratos-v1.6).** Cada elemento de `fallosInyectados` del `CONFIG_GANCHOS` tiene el formato `<punto>:<clase-excepcion>[:<mensaje>]`. `SQL_CONEXION` se provoca en `Driver.connect` (lo que `DriverManager.getConnection` invoca; así no se instrumenta una clase del JDK), `SQL_EJECUTAR` en `execute*` de `Statement` y `FIRESTORE_ESCRIBIR` en las escrituras de Firestore. El agente lanza la excepción antes del método original, con un constructor `(String)` (o una `RuntimeException` si no existe) y emite un evento `ESTADO` con `fallo` y `excepcion`. `ARCHIVO_ESCRIBIR` está reservado y todavía no lo atiende nadie.
+
 ### Pendiente para el dueño del módulo (P1)
 
 Ordenado según `PLAN_DE_TRABAJO.md`:
 
-1. Ganchos de Firestore (#14), inyección de fallos (#16), inspector y grabadora (#17), tiempos, EDT congelado y fugas (#18) y cobertura (#19).
+1. Inspector y grabadora (#17), tiempos, EDT congelado y fugas (#18) y cobertura (#19).
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
