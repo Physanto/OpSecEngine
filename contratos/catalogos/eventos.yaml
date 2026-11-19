@@ -282,18 +282,18 @@ eventos:
         descripcion: Identificador de la ventana capturada.
 
   - tipo: ESTADO
-    origen: [motor]
-    descripcion: Instantánea del estado de los datos de prueba, tomada por el proveedor de datos.
+    origen: [motor, agente]
+    descripcion: Instantánea del estado de los datos de prueba, tomada por el proveedor de datos (motor), o aviso de que un gancho provocó un fallo inyectado (agente).
     campos:
       - nombre: momento
         tipo: texto
-        obligatorio: true
+        obligatorio: false
         valores: [ANTES, DESPUES]
-        descripcion: Si se tomó antes o después del caso.
+        descripcion: Si se tomó antes o después del caso. Presente en las instantáneas del proveedor de datos.
       - nombre: consulta
         tipo: texto
-        obligatorio: true
-        descripcion: Consulta que se hizo al proveedor de datos.
+        obligatorio: false
+        descripcion: Consulta que se hizo al proveedor de datos. Presente en las instantáneas del proveedor de datos.
       - nombre: existe
         tipo: booleano
         obligatorio: false
@@ -302,6 +302,14 @@ eventos:
         tipo: objeto
         obligatorio: false
         descripcion: Valor devuelto por la consulta, si interesa conservarlo.
+      - nombre: fallo
+        tipo: texto
+        obligatorio: false
+        descripcion: Punto del fallo inyectado que el gancho provocó, por ejemplo SQL_CONEXION. Solo en los eventos del agente (desde contratos v1.6).
+      - nombre: excepcion
+        tipo: texto
+        obligatorio: false
+        descripcion: Clase de la excepción que se lanzó. Solo en los eventos del agente.
 
   - tipo: SESION
     origen: [motor]

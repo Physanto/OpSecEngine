@@ -186,7 +186,8 @@ final class TraductorConfiguracion {
                     nodo.has("canario") ? nodo.get("canario").asText() : null,
                     validacion,
                     autenticacion,
-                    extensiones(nodo, ruta));
+                    extensiones(nodo, ruta),
+                    textos(nodo.path("fallos")));
         } catch (IllegalArgumentException | NullPointerException e) {
             errores.add(new ErrorConfiguracion(ruta, e.getMessage()));
             return null;

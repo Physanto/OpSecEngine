@@ -119,6 +119,7 @@ eventos de ejecución ya están implementados.
 | 1.2 | `contratos-v1.2` | Aditivo (#38, #42, #43, #44, #47): secciones opcionales `canario`, `validacion` y `autenticacion` del caso y `enumeracionUsuarios` de la suite, con sus records (`Senal`, `PoliticaValidacion`, `IntentoLogin`, `PoliticaAutenticacion`, `ComparacionLogin`); `Caso` y `Suite` conservan los constructores anteriores. Método por defecto `Oraculo.evaluarResultado`, que permite responder `NO_CONCLUYENTE`. Oráculo `ENTRADA-INVALIDA-ACEPTADA` y `CWE-20`; ids reservados de calidad de la interfaz (`RESPUESTA-LENTA`, `VENTANA-NO-LIBERADA`, `CONTROL-SIN-ETIQUETA`, `ORDEN-TABULACION`, `ACCION-TECLADO-NO-ALCANZADA`, `RESULTADO-ROBUSTEZ-INCORRECTO`); campo opcional `liberada` en `VENTANA_CERRADA`. |
 | 1.3 | `contratos-v1.3` | Aditivo (#23): interfaces `ProveedorEvaluacion`, `Evaluador` y `EvaluacionCaso` para descubrimiento del evaluador, reglas YAML opcionales y evaluación por evento, caso y suite. Se conservan los contratos anteriores. |
 | 1.5 | `contratos-v1.5` | Aditivo (#15): campo opcional `sensible` en los eventos `SQL` y `FIRESTORE`; el agente responde `CONFIG_GANCHOS` con un `RESULTADO_PASO` `OK` y la misma correlación. |
+| 1.6 | `contratos-v1.6` | Aditivo (#16): sección opcional `fallos` del caso (campo `fallos` del record `Caso`, que conserva el constructor anterior) y formato de `fallosInyectados` en `CONFIG_GANCHOS`; evento `ESTADO` con `fallo`. |
 
 ## Cambiar un contrato
 

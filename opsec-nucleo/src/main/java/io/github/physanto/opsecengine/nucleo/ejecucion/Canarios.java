@@ -139,6 +139,7 @@ final class Canarios {
                 canario,
                 caso.validacion(),
                 caso.autenticacion(),
-                caso.extensiones());
+                caso.extensiones(),
+                caso.fallos());
     }
 }

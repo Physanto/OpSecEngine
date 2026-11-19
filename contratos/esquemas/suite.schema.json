@@ -134,6 +134,15 @@
           "type": "string",
           "pattern": "^[^\\s{}]{4,}$"
         },
+        "fallos": {
+          "description": "Fallos que los ganchos del agente provocan durante el caso, con el formato punto:claseExcepcion[:mensaje]. Puntos: SQL_CONEXION, SQL_EJECUTAR, FIRESTORE_ESCRIBIR, ARCHIVO_ESCRIBIR. Desde contratos v1.6.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(SQL_CONEXION|SQL_EJECUTAR|FIRESTORE_ESCRIBIR|ARCHIVO_ESCRIBIR):[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*(:.*)?$"
+          }
+        },
         "validacion": { "$ref": "#/$defs/validacion" },
         "autenticacion": { "$ref": "#/$defs/autenticacion" },
         "extensiones": {
