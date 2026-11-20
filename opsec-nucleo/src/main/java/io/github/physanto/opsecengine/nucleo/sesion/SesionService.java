@@ -29,8 +29,8 @@ import java.util.logging.Logger;
  * }
  * }</pre>
  *
- * <p>Maneja una sesión a la vez; sus métodos están sincronizados. Las sesiones en paralelo llegan
- * en la v0.3, con una instancia por sesión.
+ * <p>Maneja una sesión a la vez; sus métodos están sincronizados. Para tener varias sesiones en
+ * paralelo se usa una instancia por sesión; {@link #derivar()} crea otra con el mismo arranque.
  */
 public final class SesionService implements AutoCloseable {
 
@@ -71,6 +71,17 @@ public final class SesionService implements AutoCloseable {
         this.arranque = Objects.requireNonNull(arranque, "El arranque no puede ser null");
         this.esperaHola = positiva(esperaHola, "La espera del saludo");
         this.tiempoMaximoRespuesta = positiva(tiempoMaximoRespuesta, "El tiempo máximo");
+    }
+
+    /**
+     * Crea otro servicio independiente con el mismo arranque y las mismas esperas, sin sesión
+     * abierta. Sirve para tener una sesión por hilo cuando se ejecutan casos en paralelo; el
+     * servicio original no cambia.
+     *
+     * @return un servicio nuevo, que el llamador debe cerrar
+     */
+    public SesionService derivar() {
+        return new SesionService(arranque, esperaHola, tiempoMaximoRespuesta);
     }
 
     /**

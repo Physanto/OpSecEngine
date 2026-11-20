@@ -5,6 +5,7 @@ import io.github.physanto.opsecengine.dominio.caso.Caso;
 import io.github.physanto.opsecengine.dominio.caso.ConfigEjecucion;
 import io.github.physanto.opsecengine.dominio.caso.Criterio;
 import io.github.physanto.opsecengine.dominio.caso.EstrategiaLocalizacion;
+import io.github.physanto.opsecengine.dominio.caso.ModoAccion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
 import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
@@ -44,6 +45,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -137,7 +144,20 @@ import java.util.logging.Logger;
  * credenciales y los fallos del observador se registran sin detener la ejecución. El constructor
  * original usa {@link ObservadorProgreso#VACIO}.
  *
- * <p>Ejecuta un caso a la vez; no es seguro entre hilos.
+ * <p>Con {@link ConfigEjecucion#paralelismo()} mayor que uno, los casos se reparten entre ese
+ * número de hilos, cada uno con su propia sesión: el servicio de sesiones recibido atiende al
+ * primero y {@link SesionService#derivar()} crea uno por cada otro hilo. Cada caso sigue abriendo
+ * una aplicación nueva, así que los casos no se interfieren. Los casos de la suite que declaran el
+ * mismo texto en {@code extensiones.grupo} dependen unos de otros: se ejecutan uno tras otro, en el
+ * orden de la suite, en el mismo hilo. El resultado conserva siempre el orden de la suite. No hay
+ * más hilos que unidades independientes (casos sin grupo o grupos). Con el modo {@code ROBOT}, que
+ * usa el cursor real, se ejecuta de a un caso. Las notificaciones al observador se serializan, así
+ * que no necesita ser seguro entre hilos, pero con paralelismo llegan de varios hilos y
+ * entremezcladas entre casos. Si un hilo falla con una excepción no esperada, se cancelan los demás
+ * y se relanza. El proveedor de datos de prueba compartido (v0.1) tendrá que separar los datos de
+ * cada hilo antes de usarse en paralelo.
+ *
+ * <p>No debe llamarse a {@link #ejecutar(Suite)} desde varios hilos a la vez.
  *
  * <p>Lo que falta y su versión:
  *
@@ -146,7 +166,6 @@ import java.util.logging.Logger;
  *       final; inferir la sesión activa cuando el caso inicia sesión con sus propios pasos.
  *   <li>v0.2: expandir los ataques del caso, un intento por payload (hoy un caso con ataques queda
  *       {@code NO_CONCLUYENTE} sin ejecutarse).
- *   <li>v0.3: casos en paralelo según {@code paralelismo}.
  * </ul>
  */
 public final class EjecucionService {
@@ -162,6 +181,12 @@ public final class EjecucionService {
 
     /** Texto que reemplaza la contraseña del rol en los {@code PASO_INICIO} del login. */
     public static final String VALOR_OCULTO = "****";
+
+    /** Clave de {@code extensiones} del caso que une los casos que dependen unos de otros. */
+    public static final String EXTENSION_GRUPO = "grupo";
+
+    /** Tiempo que se espera a que terminen los hilos cancelados tras un fallo. */
+    private static final Duration ESPERA_FIN_HILOS = Duration.ofSeconds(30);
 
     /** Variable de los pasos de login que se reemplaza por el usuario del rol. */
     private static final String VARIABLE_USUARIO = "{usuario}";
@@ -184,6 +209,7 @@ public final class EjecucionService {
     private final EvaluacionService evaluacion;
     private final ObservadorProgreso observador;
     private final int reintentosEspera;
+    private final Object bloqueoObservador = new Object();
 
     /**
      * Crea el servicio.
@@ -281,11 +307,9 @@ public final class EjecucionService {
         suite = Canarios.preparar(ExpansorPayloads.expandir(suite));
         Instant inicio = Instant.now();
         notificar(suite, null, ProgresoEjecucion.Tipo.SUITE_INICIO, 0, false, null);
-        List<ResultadoCaso> resultados = new ArrayList<>();
+        List<ResultadoCaso> resultados = ejecutarCasos(suite);
         List<Traza> trazas = new ArrayList<>();
-        for (Caso caso : suite.casos()) {
-            ResultadoCaso resultado = ejecutarCaso(suite, caso);
-            resultados.add(resultado);
+        for (ResultadoCaso resultado : resultados) {
             trazas.add(resultado.traza());
         }
         List<Hallazgo> hallazgosSuite =
@@ -304,18 +328,135 @@ public final class EjecucionService {
     }
 
     /**
+     * Ejecuta todos los casos y devuelve sus resultados en el orden de la suite. Con un solo hilo
+     * útil corre en el hilo actual con la sesión recibida; si no, reparte las unidades entre hilos.
+     */
+    private List<ResultadoCaso> ejecutarCasos(Suite suite) {
+        List<Caso> casos = suite.casos();
+        List<List<Integer>> unidades = unidades(casos);
+        int hilos = Math.min(hilosUtiles(suite.config()), unidades.size());
+        ResultadoCaso[] resultados = new ResultadoCaso[casos.size()];
+        if (hilos <= 1) {
+            for (int i = 0; i < casos.size(); i++) {
+                resultados[i] = ejecutarCaso(suite, casos.get(i), sesiones);
+            }
+            return List.of(resultados);
+        }
+        AtomicInteger siguiente = new AtomicInteger();
+        AtomicInteger numeroHilo = new AtomicInteger();
+        ExecutorService pool =
+                Executors.newFixedThreadPool(
+                        hilos,
+                        tarea -> {
+                            Thread hilo =
+                                    new Thread(
+                                            tarea,
+                                            "opsec-ejecucion-" + numeroHilo.incrementAndGet());
+                            hilo.setDaemon(true);
+                            return hilo;
+                        });
+        List<Future<?>> tareas = new ArrayList<>();
+        try {
+            for (int i = 0; i < hilos; i++) {
+                SesionService sesion = i == 0 ? sesiones : sesiones.derivar();
+                tareas.add(
+                        pool.submit(() -> {
+                            int unidad;
+                            while (!Thread.currentThread().isInterrupted()
+                                    && (unidad = siguiente.getAndIncrement()) < unidades.size()) {
+                                for (int indice : unidades.get(unidad)) {
+                                    resultados[indice] =
+                                            ejecutarCaso(suite, casos.get(indice), sesion);
+                                }
+                            }
+                        }));
+            }
+            for (Future<?> tarea : tareas) {
+                tarea.get();
+            }
+        } catch (ExecutionException e) {
+            pool.shutdownNow();
+            esperarFin(pool);
+            Throwable causa = e.getCause();
+            if (causa instanceof RuntimeException r) {
+                throw r;
+            }
+            if (causa instanceof Error error) {
+                throw error;
+            }
+            throw new IllegalStateException("Falló la ejecución en paralelo", causa);
+        } catch (InterruptedException e) {
+            pool.shutdownNow();
+            esperarFin(pool);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("La ejecución se interrumpió", e);
+        } finally {
+            pool.shutdown();
+        }
+        return List.of(resultados);
+    }
+
+    /** Espera a que los hilos cancelados cierren sus sesiones, sin perder la interrupción. */
+    private static void esperarFin(ExecutorService pool) {
+        try {
+            if (!pool.awaitTermination(ESPERA_FIN_HILOS.toSeconds(), TimeUnit.SECONDS)) {
+                REGISTRO.warning("Algún hilo de ejecución no terminó a tiempo tras cancelarse");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** Hilos que se pueden usar: el paralelismo de la suite, salvo con el cursor real. */
+    private static int hilosUtiles(ConfigEjecucion config) {
+        if (config.paralelismo() > 1 && config.modo() == ModoAccion.ROBOT) {
+            REGISTRO.warning(
+                    "El modo ROBOT usa el cursor real y no admite paralelismo; se ejecuta de a un"
+                            + " caso");
+            return 1;
+        }
+        return config.paralelismo();
+    }
+
+    /**
+     * Agrupa los índices de los casos en unidades que se ejecutan en un mismo hilo: cada caso sin
+     * grupo es una unidad, y los casos con el mismo {@code extensiones.grupo} forman una unidad en
+     * el orden de la suite. Las unidades quedan ordenadas por su primer caso.
+     */
+    private static List<List<Integer>> unidades(List<Caso> casos) {
+        List<List<Integer>> unidades = new ArrayList<>();
+        Map<String, List<Integer>> grupos = new LinkedHashMap<>();
+        for (int i = 0; i < casos.size(); i++) {
+            Object grupo = casos.get(i).extensiones().get(EXTENSION_GRUPO);
+            if (grupo instanceof String nombre && !nombre.isBlank()) {
+                grupos.computeIfAbsent(
+                                nombre,
+                                clave -> {
+                                    List<Integer> unidad = new ArrayList<>();
+                                    unidades.add(unidad);
+                                    return unidad;
+                                })
+                        .add(i);
+            } else {
+                unidades.add(List.of(i));
+            }
+        }
+        return unidades;
+    }
+
+    /**
      * Ejecuta un caso y, si no cumple, lo repite hasta {@link ConfigEjecucion#reintentos()} veces
      * más, en una sesión nueva cada vez. Se detiene en el primer intento que cumple. Si los
      * intentos no dieron todos el mismo estado, el caso es inestable y se informa el intento más
      * grave, para no ocultar hallazgos.
      */
-    private ResultadoCaso ejecutarCaso(Suite suite, Caso caso) {
+    private ResultadoCaso ejecutarCaso(Suite suite, Caso caso, SesionService sesion) {
         long comienzo = System.nanoTime();
         notificar(suite, caso, ProgresoEjecucion.Tipo.CASO_INICIO, 0, false, null);
         List<ResultadoCaso> intentos = new ArrayList<>();
         int maximo = 1 + suite.config().reintentos();
         do {
-            intentos.add(ejecutarIntento(suite, caso));
+            intentos.add(ejecutarIntento(suite, caso, sesion));
         } while (intentos.size() < maximo
                 && !Thread.currentThread().isInterrupted()
                 && intentos.get(intentos.size() - 1).veredicto().estado()
@@ -349,7 +490,7 @@ public final class EjecucionService {
         };
     }
 
-    private ResultadoCaso ejecutarIntento(Suite suite, Caso caso) {
+    private ResultadoCaso ejecutarIntento(Suite suite, Caso caso, SesionService sesion) {
         long comienzo = System.nanoTime();
         TrazaEnCurso traza =
                 new TrazaEnCurso(
@@ -369,7 +510,7 @@ public final class EjecucionService {
         } else if (!caso.ataques().isEmpty()) {
             motivo = "Los ataques todavía no se expanden (v0.2); el caso no se ejecutó";
         } else {
-            motivo = ejecutarPasos(caso, rol.orElse(null), suite.config(), traza);
+            motivo = ejecutarPasos(caso, rol.orElse(null), suite.config(), traza, sesion);
         }
         Traza completa = traza.terminar();
         Veredicto veredicto = traza.evaluacion.terminar(motivo);
@@ -388,10 +529,11 @@ public final class EjecucionService {
      * Ejecuta los pasos en una sesión nueva, después del login si hay rol; devuelve por qué no
      * terminó, o null si terminó.
      */
-    private String ejecutarPasos(Caso caso, Rol rol, ConfigEjecucion config, TrazaEnCurso traza) {
+    private String ejecutarPasos(
+            Caso caso, Rol rol, ConfigEjecucion config, TrazaEnCurso traza, SesionService sesion) {
         ClienteAgente cliente;
         try {
-            cliente = sesiones.abrir(proyecto, config.oculto());
+            cliente = sesion.abrir(proyecto, config.oculto());
         } catch (IOException | RuntimeException e) {
             REGISTRO.log(Level.WARNING, "No se pudo abrir la sesión del caso " + caso.id(), e);
             return "No se pudo abrir la sesión: " + e.getMessage();
@@ -434,7 +576,7 @@ public final class EjecucionService {
             }
             return null;
         } finally {
-            sesiones.cerrar();
+            sesion.cerrar();
             traza.agente(cliente.tomarEventos(), ultimoPaso);
         }
     }
@@ -676,7 +818,9 @@ public final class EjecucionService {
                         login,
                         codigo);
         try {
-            observador.actualizar(progreso);
+            synchronized (bloqueoObservador) {
+                observador.actualizar(progreso);
+            }
         } catch (RuntimeException e) {
             REGISTRO.log(Level.WARNING, "Falló el observador de progreso", e);
         }
