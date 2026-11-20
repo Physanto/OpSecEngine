@@ -7,18 +7,25 @@ package io.github.physanto.opsecengine.agente;
  * puerto=51234,token=abc}. Son obligatorios {@code puerto} (entre 1 y 65535) y {@code token} (no
  * vacío). Las claves desconocidas se ignoran para que versiones nuevas del motor puedan agregar
  * opciones. El argumento opcional {@code oculto=true} impide el foco y desplaza las ventanas fuera
- * de las pantallas; por defecto es false. Es inmutable.
+ * de las pantallas; por defecto es false. El argumento opcional {@code umbralEdt=<ms>} fija, en
+ * milisegundos, cuánto debe tardar el hilo de interfaz en responder para informarlo como bloqueado
+ * (por defecto {@value #UMBRAL_EDT_POR_DEFECTO_MS}); con {@code 0} no se vigila. Es inmutable.
  */
 final class ArgumentosAgente {
+
+    /** Umbral por defecto de bloqueo del EDT, en milisegundos. */
+    static final long UMBRAL_EDT_POR_DEFECTO_MS = 1_000;
 
     private final int puerto;
     private final String token;
     private final boolean oculto;
+    private final long umbralEdtMs;
 
-    private ArgumentosAgente(int puerto, String token, boolean oculto) {
+    private ArgumentosAgente(int puerto, String token, boolean oculto, long umbralEdtMs) {
         this.puerto = puerto;
         this.token = token;
         this.oculto = oculto;
+        this.umbralEdtMs = umbralEdtMs;
     }
 
     /**
@@ -37,6 +44,7 @@ final class ArgumentosAgente {
         String puerto = null;
         String token = null;
         boolean oculto = false;
+        long umbralEdtMs = UMBRAL_EDT_POR_DEFECTO_MS;
         for (String par : texto.split(",")) {
             int igual = par.indexOf('=');
             if (igual < 0) {
@@ -53,13 +61,15 @@ final class ArgumentosAgente {
                     throw new IllegalArgumentException("El argumento oculto debe ser true o false");
                 }
                 oculto = Boolean.parseBoolean(valor);
+            } else if (clave.equals("umbralEdt")) {
+                umbralEdtMs = leerUmbral(valor);
             }
         }
         if (puerto == null || token == null || token.isEmpty()) {
             throw new IllegalArgumentException(
                     "El agente necesita los argumentos puerto y token: " + sinToken(texto));
         }
-        return new ArgumentosAgente(leerPuerto(puerto), token, oculto);
+        return new ArgumentosAgente(leerPuerto(puerto), token, oculto, umbralEdtMs);
     }
 
     /**
@@ -83,6 +93,28 @@ final class ArgumentosAgente {
     /** Indica si las ventanas deben ejecutarse fuera de pantalla y sin foco. */
     boolean oculto() {
         return oculto;
+    }
+
+    /**
+     * Devuelve el umbral de bloqueo del EDT, en milisegundos.
+     *
+     * @return el umbral, o 0 si no se debe vigilar el EDT
+     */
+    long umbralEdtMs() {
+        return umbralEdtMs;
+    }
+
+    private static long leerUmbral(String texto) {
+        try {
+            long umbral = Long.parseLong(texto);
+            if (umbral >= 0) {
+                return umbral;
+            }
+        } catch (NumberFormatException e) {
+            // Se informa abajo con el mismo mensaje.
+        }
+        throw new IllegalArgumentException(
+                "El argumento umbralEdt debe ser un número de milisegundos, 0 o mayor: " + texto);
     }
 
     private static int leerPuerto(String texto) {

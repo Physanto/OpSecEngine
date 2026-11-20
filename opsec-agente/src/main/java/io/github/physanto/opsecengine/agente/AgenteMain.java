@@ -8,6 +8,7 @@ import io.github.physanto.opsecengine.agente.swing.CierreAplicacion;
 import io.github.physanto.opsecengine.agente.swing.ObservadorExcepciones;
 import io.github.physanto.opsecengine.agente.swing.ObservadorVentanas;
 import io.github.physanto.opsecengine.agente.swing.SupresorFoco;
+import io.github.physanto.opsecengine.agente.swing.VigilanteEdt;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import java.awt.AWTError;
 import java.lang.instrument.Instrumentation;
@@ -31,6 +32,8 @@ import java.lang.instrument.Instrumentation;
  *   <li>Instala el gancho {@link GanchoFirestore}, que emite un evento {@code FIRESTORE} por cada
  *       operación.
  *   <li>Registra el {@link ObservadorVentanas}.
+ *   <li>Si el umbral lo permite ({@code umbralEdt} mayor que cero), arranca el {@link
+ *       VigilanteEdt}, que emite {@code TIEMPO} cuando el hilo de interfaz se bloquea.
  *   <li>Arranca el {@link ServidorProtocolo} con el {@link AdaptadorSwing} y el {@link
  *       CierreAplicacion} en un hilo daemon, que se conecta con el motor sin retrasar a la
  *       aplicación.
@@ -104,6 +107,13 @@ public final class AgenteMain {
             ventanas = ObservadorVentanas.instalar(emisor, RegistroAgente::error);
         } catch (RuntimeException | AWTError | LinkageError e) {
             RegistroAgente.error("No se pudieron observar las ventanas: " + e);
+        }
+        if (leidos.umbralEdtMs() > 0) {
+            try {
+                VigilanteEdt.iniciar(emisor, leidos.umbralEdtMs(), RegistroAgente::error);
+            } catch (RuntimeException e) {
+                RegistroAgente.error("No se pudo vigilar el hilo de interfaz: " + e);
+            }
         }
         try {
             Thread hilo =
