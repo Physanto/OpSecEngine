@@ -87,6 +87,44 @@ class EjecucionServiceIT {
     }
 
     @Test
+    void ejecutaLosCasosEnParaleloConUnaAplicacionPorCaso() throws Exception {
+        Paso pulsar = new Paso(1, Accion.PULSAR, Localizador.porTexto("Avanzar"), null, null, null);
+        List<Caso> casos =
+                List.of("A", "B", "C", "D").stream()
+                        .map(id -> new Caso(id, null, null, List.of(pulsar), null, null, null))
+                        .toList();
+        Suite suite =
+                new Suite(
+                        "paralela",
+                        null,
+                        null,
+                        new ConfigEjecucion(
+                                ModoAccion.SEMANTICO, false, Duration.ofSeconds(1), 0, 0L, 3),
+                        casos,
+                        null);
+        EvaluacionService evaluacion = new EvaluacionService(RegistroExtensiones.descubrir());
+
+        ResultadoSuite resultado;
+        try (SesionService sesiones =
+                new SesionService(new LanzadorProceso(jarAgente(), resultados), ESPERA, ESPERA)) {
+            resultado = new EjecucionService(proyecto(), sesiones, evaluacion).ejecutar(suite);
+        }
+
+        assertThat(resultado.casos())
+                .extracting(ResultadoCaso::casoId)
+                .containsExactly("A", "B", "C", "D");
+        for (ResultadoCaso caso : resultado.casos()) {
+            assertThat(caso.veredicto().estado()).isEqualTo(EstadoVeredicto.NO_CONCLUYENTE);
+            assertThat(caso.veredicto().motivo()).contains("NO_ENCONTRADO", "Avanzar");
+            assertThat(caso.traza().casoId()).isEqualTo(caso.casoId());
+            assertThat(caso.traza().eventos())
+                    .extracting(evento -> evento.tipo())
+                    .containsSubsequence(TipoEvento.PASO_INICIO, TipoEvento.PASO_FIN)
+                    .contains(TipoEvento.CONSOLA);
+        }
+    }
+
+    @Test
     void elLanzadorArrancaLaAplicacionConElJavaDelProyectoYLaDetiene() throws Exception {
         LanzadorProceso lanzador = new LanzadorProceso(jarAgente(), resultados);
 
