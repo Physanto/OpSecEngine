@@ -28,6 +28,7 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `EjecutorEdt` | `agente.swing` | Ejecuta en el EDT con tiempo máximo; detecta cuando una acción abre un diálogo modal. |
 | `ObservadorExcepciones` | `agente.swing` | Manejador por defecto de excepciones no capturadas: emite `EXCEPCION` (`capturada=false`) por las del EDT y las de los demás hilos y las pasa al manejador anterior. |
 | `ObservadorVentanas` | `agente.swing` | Emite `VENTANA_ABIERTA`, `VENTANA_CERRADA` (con `liberada`) y `DIALOGO` (con el texto de los `JOptionPane`). |
+| `VigilanteEdt` | `agente.swing` | Mide cada 100 ms cuánto tarda el EDT en atender una tarea mínima y emite `TIEMPO` con `medida=EDT_BLOQUEADO` si supera el umbral (#18). |
 | `CierreAplicacion` | `agente.swing` | Cierra la app después de `CERRAR`: pide el cierre de sus ventanas y, si no termina sola en 1 s, llama a `System.exit(0)`. |
 | `DescriptorComponentes` | `agente.swing` | Describe componentes como `NodoArbolDto`; nunca incluye el texto de un `JPasswordField`. |
 
@@ -43,6 +44,7 @@ Comportamiento que conviene conocer:
 - Si la acción abre un diálogo modal, el paso termina con `OK` apenas aparece el diálogo.
 - Si el código de la app lanza una excepción durante la acción, se emite `EXCEPCION` con `capturada=false` y el paso termina con `OK`: la acción se hizo y el fallo es de la app.
 - Cada ventana emite `VENTANA_ABIERTA` al mostrarse, también cuando vuelve a mostrarse después de ocultarla (con el mismo `ventanaId`). Ocultarla con `setVisible(false)` emite `VENTANA_CERRADA` con `liberada=false`; destruirla con `dispose` emite `VENTANA_CERRADA` con `liberada=true`, también si ya estaba oculta. El último `VENTANA_CERRADA` de cada `ventanaId` dice si la ventana quedó liberada; si se oculta y se destruye en la misma tarea del EDT, como un `JOptionPane`, sale uno solo con `liberada=true`.
+- **Tiempos (#18).** Cuando una acción sobre un componente termina con `OK`, el agente emite `TIEMPO` con `medida=RESPUESTA_ACCION` y `duracionMs`: lo que tardó la acción en el EDT, sin la espera a que el componente apareciera; no se emite para `ESPERAR` ni en modo `ROBOT`. El `VigilanteEdt` emite `TIEMPO` con `medida=EDT_BLOQUEADO`, `duracionMs` y `umbralMs` cuando una tarea publicada en el EDT tarda más que el umbral (1000 ms por defecto; argumento del agente `umbralEdt=<ms>`, y `0` lo desactiva). El evento sale desde el EDT en cuanto se recupera, un solo evento por bloqueo; si el EDT no se recupera, no se emite nada y el paso del motor termina con `TIEMPO_AGOTADO`. No empieza a medir hasta que haya una ventana visible y un diálogo modal no cuenta como bloqueo. Con estos eventos y `VENTANA_CERRADA` con `liberada=false` los oráculos `INTERFAZ-CONGELADA`, `RESPUESTA-LENTA` y `VENTANA-NO-LIBERADA` deciden con la traza. El motor todavía no pasa `umbralEdt`: usa el valor por defecto.
 - Las excepciones que nadie captura, en el EDT (escuchadores, tareas de `invokeLater`) o en otro hilo, llegan como `EXCEPCION` con `capturada=false`, el nombre del hilo y hasta 30 líneas de pila. Después siguen al manejador que hubiera; si no había, la pila se escribe en `System.err` como sin el agente. No se ven las de hilos con manejador propio ni las que ocurran si la app reemplaza después el manejador por defecto.
 - `CAPTURAR` (mensaje) responde `CAPTURA` con la ventana pintada en PNG con `printAll`, sin `Robot`: funciona aunque la ventana esté tapada o fuera de la pantalla, pero no incluye la barra de título del sistema operativo. La ventana se elige por título o clase (completa o simple); sin nombre, la ventana activa o, si no hay, el último diálogo modal visible o la última ventana visible. Si ninguna coincide, responde `ERROR` con el código `ERROR_INTERNO`. La acción `CAPTURAR` dentro de un `EJECUTAR_PASO` responde `ERROR`: la imagen no cabe en el resultado del paso y el motor debe pedirla con el mensaje.
 - `CERRAR` cierra la app de forma ordenada. El agente emite `APP_TERMINADA` con `esperada=true` y `causa=CERRAR`, cierra la conexión (es la respuesta que espera el motor: así no lo toma como una caída) y le envía `WINDOW_CLOSING` a cada ventana visible, como el botón de cierre. Si la app no termina sola en 1 s (sus ventanas solo se ocultan, pide confirmación, tiene otros hilos vivos o no tiene ventanas), el agente termina la JVM con `System.exit(0)`. El plazo es menor que los 2 s que espera el motor antes de detener el proceso. Si el motor corta la conexión sin `CERRAR`, la app sigue corriendo.
@@ -140,7 +142,7 @@ Los valores de los parámetros se envían como texto, porque el oráculo de cana
 
 Ordenado según `PLAN_DE_TRABAJO.md`:
 
-1. Inspector y grabadora (#17), tiempos, EDT congelado y fugas (#18) y cobertura (#19).
+1. Inspector y grabadora (#17) y cobertura (#19).
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`

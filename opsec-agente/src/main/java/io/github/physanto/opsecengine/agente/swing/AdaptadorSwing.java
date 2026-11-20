@@ -19,8 +19,10 @@ import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -63,6 +65,10 @@ import javax.swing.text.JTextComponent;
  * evento {@code EXCEPCION} con {@code capturada=false}, como si la hubiera recibido el manejador
  * del EDT, y el paso termina con {@code OK}: la acción se hizo y el fallo es de la aplicación.
  *
+ * <p>Cuando una acción sobre un componente termina con {@code OK}, emite un evento {@code TIEMPO}
+ * con {@code medida=RESPUESTA_ACCION} y la duración de la acción en el EDT, sin contar la espera a
+ * que el componente aparezca. No lo emite para {@code ESPERAR} ni en modo {@code ROBOT}.
+ *
  * <p>Las capturas se toman con {@link #capturar(String)}, que pinta la ventana en una imagen PNG.
  * La acción {@code CAPTURAR} dentro de un paso responde {@code ERROR}: la imagen no cabe en el
  * resultado del paso, así que el motor la pide con el mensaje {@code CAPTURAR}.
@@ -84,6 +90,9 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
 
     /** Modo con el cursor y el teclado reales; necesita pantalla visible. */
     public static final String MODO_ROBOT = "ROBOT";
+
+    /** Medida del evento {@code TIEMPO} con la duración de una acción. */
+    public static final String MEDIDA_RESPUESTA_ACCION = "RESPUESTA_ACCION";
 
     /** Veces que el modo ROBOT escribe un texto antes de darlo por bueno. */
     private static final int INTENTOS_ROBOT = 3;
@@ -402,8 +411,26 @@ public final class AdaptadorSwing implements AdaptadorToolkit {
             return new Resultado(encontrado.getCodigo(), encontrado.getDetalle());
         }
         AtomicReference<Resultado> rechazo = new AtomicReference<>();
+        long inicio = System.nanoTime();
         Resultado resultado = ejecutarAccion(() -> rechazo.set(actuarEnEdt(paso)), limite);
-        return rechazo.get() == null ? resultado : rechazo.get();
+        if (rechazo.get() != null) {
+            return rechazo.get();
+        }
+        if (resultado.codigo == CodigoResultado.OK) {
+            emitirTiempoRespuesta(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio));
+        }
+        return resultado;
+    }
+
+    /**
+     * Emite el evento {@code TIEMPO} con medida {@code RESPUESTA_ACCION}: lo que tardó la acción en
+     * el EDT, sin contar la espera a que el componente apareciera.
+     */
+    private void emitirTiempoRespuesta(long duracionMs) {
+        Map<String, Object> datos = new LinkedHashMap<>();
+        datos.put("medida", MEDIDA_RESPUESTA_ACCION);
+        datos.put("duracionMs", duracionMs);
+        emisor.emitir("TIEMPO", datos);
     }
 
     /**

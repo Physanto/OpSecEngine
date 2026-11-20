@@ -9,6 +9,8 @@ import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import java.awt.GraphicsEnvironment;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -103,6 +105,55 @@ class AdaptadorSwingTest {
             assertThat(pulsado.getCodigo()).isEqualTo(CodigoResultado.OK);
             assertThat(campo.getText()).isEqualTo("Contraseña Ñ 123");
             assertThat(pulsaciones).hasValue(1);
+        } finally {
+            SwingUtilities.invokeAndWait(ventana[0]::dispose);
+        }
+    }
+
+    @Test
+    void unaAccionExitosaEmiteSuTiempoDeRespuestaYUnaFallidaNo() throws Exception {
+        Assumptions.assumeFalse(GraphicsEnvironment.isHeadless());
+        List<Map<String, Object>> medidas = new CopyOnWriteArrayList<>();
+        AdaptadorSwing conEventos =
+                new AdaptadorSwing((tipo, datos) -> {
+                    if (tipo.equals("TIEMPO")) {
+                        medidas.add(datos);
+                    }
+                });
+        AtomicInteger pulsaciones = new AtomicInteger();
+        JButton boton = new JButton("Medir");
+        boton.addActionListener(e -> {
+            pulsaciones.incrementAndGet();
+            try {
+                Thread.sleep(150);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        JFrame[] ventana = new JFrame[1];
+        SwingUtilities.invokeAndWait(() -> {
+            ventana[0] = new JFrame("Tiempos");
+            ventana[0].add(boton);
+            ventana[0].setSize(200, 100);
+            ventana[0].setLocation(80, 80);
+            ventana[0].setVisible(true);
+        });
+        try {
+            ResultadoPasoDto fallido =
+                    conEventos.ejecutar(
+                            new PasoDto("PULSAR", porTexto("Inexistente"), null, "EVENTOS", 100));
+            assertThat(fallido.getCodigo()).isEqualTo(CodigoResultado.NO_ENCONTRADO);
+            assertThat(medidas).isEmpty();
+
+            ResultadoPasoDto pulsado =
+                    conEventos.ejecutar(
+                            new PasoDto("PULSAR", porTexto("Medir"), null, "SEMANTICO", 3000));
+
+            assertThat(pulsado.getCodigo()).isEqualTo(CodigoResultado.OK);
+            assertThat(pulsaciones).hasValue(1);
+            assertThat(medidas).hasSize(1);
+            assertThat(medidas.get(0)).containsEntry("medida", "RESPUESTA_ACCION");
+            assertThat((Long) medidas.get(0).get("duracionMs")).isGreaterThanOrEqualTo(150);
         } finally {
             SwingUtilities.invokeAndWait(ventana[0]::dispose);
         }
