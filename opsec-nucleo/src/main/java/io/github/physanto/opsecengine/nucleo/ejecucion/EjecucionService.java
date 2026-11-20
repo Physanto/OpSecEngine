@@ -45,10 +45,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -355,24 +356,25 @@ public final class EjecucionService {
                             hilo.setDaemon(true);
                             return hilo;
                         });
-        List<Future<?>> tareas = new ArrayList<>();
+        CompletionService<Void> terminadas = new ExecutorCompletionService<>(pool);
         try {
             for (int i = 0; i < hilos; i++) {
                 SesionService sesion = i == 0 ? sesiones : sesiones.derivar();
-                tareas.add(
-                        pool.submit(() -> {
-                            int unidad;
-                            while (!Thread.currentThread().isInterrupted()
-                                    && (unidad = siguiente.getAndIncrement()) < unidades.size()) {
-                                for (int indice : unidades.get(unidad)) {
-                                    resultados[indice] =
-                                            ejecutarCaso(suite, casos.get(indice), sesion);
-                                }
-                            }
-                        }));
+                terminadas.submit(() -> {
+                    int unidad;
+                    while (!Thread.currentThread().isInterrupted()
+                            && (unidad = siguiente.getAndIncrement()) < unidades.size()) {
+                        for (int indice : unidades.get(unidad)) {
+                            resultados[indice] = ejecutarCaso(suite, casos.get(indice), sesion);
+                        }
+                    }
+                    return null;
+                });
             }
-            for (Future<?> tarea : tareas) {
-                tarea.get();
+            // Se atiende a los hilos en el orden en que terminan, para cancelar a los demás en
+            // cuanto uno falla y no cuando acabe el primero que se lanzó.
+            for (int i = 0; i < hilos; i++) {
+                terminadas.take().get();
             }
         } catch (ExecutionException e) {
             pool.shutdownNow();

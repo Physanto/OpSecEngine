@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.nucleo.ejecucion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
@@ -174,6 +175,31 @@ class ParalelismoEjecucionTest {
         assertThat(solapadas.get()).isZero();
         // Suite (2) + caso (2 por cada uno) + paso (2 por cada uno) = 18.
         assertThat(recibidas.get()).isEqualTo(18);
+    }
+
+    @Test
+    void siUnHiloFallaSeCancelanLosDemasSinEsperarAlMasLento() {
+        Escenario escenario = new Escenario(null);
+        // El primer arranque tarda 5 s; el fallo de otro hilo no debe esperar a que termine.
+        escenario.demoraPorCaso.put(0, 5_000L);
+        long comienzo = System.nanoTime();
+
+        assertThatThrownBy(() ->
+                        escenario.ejecutarConObservador(
+                                progreso -> {
+                                    if (progreso.tipo() == ProgresoEjecucion.Tipo.CASO_INICIO
+                                            && "B".equals(progreso.casoId())) {
+                                        throw new AssertionError("fallo simulado");
+                                    }
+                                },
+                                2,
+                                caso("A", null),
+                                caso("B", null)))
+                .isInstanceOf(AssertionError.class)
+                .hasMessage("fallo simulado");
+
+        assertThat(Duration.ofNanos(System.nanoTime() - comienzo))
+                .isLessThan(Duration.ofSeconds(3));
     }
 
     private static Caso caso(String id, String grupo) {
