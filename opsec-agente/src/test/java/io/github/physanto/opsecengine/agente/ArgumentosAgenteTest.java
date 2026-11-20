@@ -30,6 +30,20 @@ class ArgumentosAgenteTest {
                 .hasMessageNotContaining("secreto");
     }
 
+    @Test
+    void elUmbralDelEdtEsOpcionalYAdmiteCeroParaNoVigilar() {
+        assertThat(ArgumentosAgente.leer("puerto=1234,token=x").umbralEdtMs())
+                .isEqualTo(ArgumentosAgente.UMBRAL_EDT_POR_DEFECTO_MS);
+        assertThat(ArgumentosAgente.leer("puerto=1234,token=x,umbralEdt=250").umbralEdtMs())
+                .isEqualTo(250);
+        assertThat(ArgumentosAgente.leer("puerto=1234,token=x,umbralEdt=0").umbralEdtMs()).isZero();
+        assertThatThrownBy(() -> ArgumentosAgente.leer("puerto=1234,token=secreto,umbralEdt=-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageNotContaining("secreto");
+        assertThatThrownBy(() -> ArgumentosAgente.leer("puerto=1234,token=x,umbralEdt=mucho"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(
