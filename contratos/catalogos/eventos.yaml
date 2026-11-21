@@ -391,7 +391,7 @@ eventos:
       - nombre: localizador
         tipo: lista
         obligatorio: true
-        descripcion: Criterios que identifican el componente, en orden de preferencia. Cada elemento es un objeto con estrategia (valor de EstrategiaLocalizacion) y valor. Cada criterio se comprobó contra la ventana y encuentra solo este componente; el último es siempre la ruta.
+        descripcion: Criterios que identifican el componente, en orden de preferencia. Cada elemento es un objeto con estrategia (valor de EstrategiaLocalizacion) y valor. Cada criterio se comprobó con el buscador del agente, que con él resuelve este componente (ante un texto repetido elige el primero); el último es siempre la ruta.
 
   - tipo: ACCION_GRABADA
     origen: [agente]

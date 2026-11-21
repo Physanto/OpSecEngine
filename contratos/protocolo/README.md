@@ -63,7 +63,7 @@ Antes de ejecutar el método original, el agente lanza la excepción (instanciad
 - **`INSPECCIONAR`:** el agente resalta el componente que está bajo el cursor. El clic elige el componente y **no llega a la aplicación**; el agente emite un evento `COMPONENTE_INSPECCIONADO` con su localizador y sigue en el modo hasta que el motor pida otro.
 - **`GRABAR`:** la aplicación funciona con normalidad y el agente emite un evento `ACCION_GRABADA` por cada acción del usuario (`PULSAR`, `LLENAR`, `SELECCIONAR` o `MARCAR`), en el orden en que ocurrieron. El texto escrito en un campo se emite una vez, al dejar de editarlo (al perder el foco, al pulsar Enter o antes de cualquier otra acción).
 
-El campo `localizador` de ambos eventos es una lista de criterios `{estrategia, valor}` ordenados de más a menos legible (`NOMBRE_COMPONENTE`, `ETIQUETA`, `TEXTO`, `NOMBRE_ACCESIBLE` y, siempre al final, `RUTA`). El agente comprueba cada criterio contra la ventana abierta y solo incluye los que encuentran únicamente ese componente, así que el localizador sirve tal cual en un paso. Los eventos viajan en un `EVENTO` como el resto. Ejemplo del `cuerpo` de una acción grabada:
+El campo `localizador` de ambos eventos es una lista de criterios `{estrategia, valor}` ordenados de más a menos legible (`NOMBRE_COMPONENTE`, `ETIQUETA`, `TEXTO`, `NOMBRE_ACCESIBLE` y, siempre al final, `RUTA`). El agente comprueba cada criterio con su buscador contra las ventanas abiertas y solo incluye los que resuelven ese componente (ante un texto repetido el buscador elige el primero), así que el localizador sirve tal cual en un paso. Los eventos viajan en un `EVENTO` como el resto. Ejemplo del `cuerpo` de una acción grabada:
 
 ```json
 {
