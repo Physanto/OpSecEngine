@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.nucleo.sesion;
 
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
+import io.github.physanto.opsecengine.nucleo.cobertura.ConfigCobertura;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -25,6 +26,9 @@ import java.util.logging.Logger;
  * se une con {@link File#pathSeparator}, así que el comando sirve en Windows, macOS y Linux sin
  * pasar por una consola del sistema.
  *
+ * <p>Con {@link #conCobertura(ConfigCobertura)} también carga el agente de JaCoCo, antes que el del
+ * motor, para medir qué código de la aplicación ejercitan las suites.
+ *
  * <p>La salida estándar y la de error de la aplicación se agregan al final de {@value
  * #ARCHIVO_SALIDA} y {@value #ARCHIVO_ERRORES} en la carpeta de resultados, que se crea si no
  * existe.
@@ -48,6 +52,7 @@ public final class LanzadorProceso implements ArranqueApp {
     private final Path java;
     private final Path jarAgente;
     private final Path carpetaResultados;
+    private final ConfigCobertura cobertura;
 
     /**
      * Crea un lanzador que usa el {@code java} de la JVM actual, salvo que el proyecto indique otro
@@ -74,12 +79,30 @@ public final class LanzadorProceso implements ArranqueApp {
      * @throws NullPointerException si algún parámetro es null
      */
     public LanzadorProceso(Path java, Path jarAgente, Path carpetaResultados) {
+        this(java, jarAgente, carpetaResultados, null);
+    }
+
+    private LanzadorProceso(
+            Path java, Path jarAgente, Path carpetaResultados, ConfigCobertura cobertura) {
+        this.cobertura = cobertura;
         this.java = Objects.requireNonNull(java, "La ruta de java no puede ser null");
         this.jarAgente =
                 Objects.requireNonNull(jarAgente, "La ruta del jar del agente no puede ser null");
         this.carpetaResultados =
                 Objects.requireNonNull(
                         carpetaResultados, "La carpeta de resultados no puede ser null");
+    }
+
+    /**
+     * Crea otro lanzador igual que carga también el agente de JaCoCo, para medir la cobertura de la
+     * aplicación. El agente de JaCoCo va antes que el del motor en la línea de comandos. El
+     * lanzador original no cambia.
+     *
+     * @param cobertura configuración de JaCoCo; null para quitar la cobertura
+     * @return un lanzador nuevo con esa cobertura
+     */
+    public LanzadorProceso conCobertura(ConfigCobertura cobertura) {
+        return new LanzadorProceso(java, jarAgente, carpetaResultados, cobertura);
     }
 
     /**
@@ -150,6 +173,9 @@ public final class LanzadorProceso implements ArranqueApp {
                         ? java.toString()
                         : ejecutableJava(proyecto.javaApp()).toString());
         comando.addAll(proyecto.argumentosJvm());
+        if (cobertura != null) {
+            comando.add(cobertura.argumentoAgente());
+        }
         comando.add(
                 "-javaagent:"
                         + jarAgente.toAbsolutePath()
