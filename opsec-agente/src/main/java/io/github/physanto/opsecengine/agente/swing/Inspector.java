@@ -14,6 +14,7 @@ import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.AWTEventListener;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
@@ -32,9 +33,10 @@ import javax.swing.SwingUtilities;
  *
  * <p>Cubre cada ventana visible con un panel transparente en lugar de su panel de cristal (glass
  * pane); al detenerse, devuelve el panel original tal como estaba. Las ventanas que se abren
- * mientras está activo también se cubren. Cada clic con el botón izquierdo emite un evento {@code
- * COMPONENTE_INSPECCIONADO} y el inspector sigue activo hasta {@link #detener()}. El teclado no se
- * bloquea. No cubre los menús desplegables ni las ventanas emergentes pesadas.
+ * mientras está activo también se cubren, en cuanto la aplicación las muestra. Cada clic con el
+ * botón izquierdo emite un evento {@code COMPONENTE_INSPECCIONADO} y el inspector sigue activo
+ * hasta {@link #detener()}. El teclado no se bloquea. No cubre los menús desplegables ni las
+ * ventanas emergentes pesadas.
  *
  * <p>Todos sus métodos deben llamarse desde el EDT; no es seguro entre hilos.
  */
@@ -66,7 +68,9 @@ final class Inspector {
             return;
         }
         activo = true;
-        Toolkit.getDefaultToolkit().addAWTEventListener(ventanasNuevas, AWTEvent.WINDOW_EVENT_MASK);
+        Toolkit.getDefaultToolkit()
+                .addAWTEventListener(
+                        ventanasNuevas, AWTEvent.WINDOW_EVENT_MASK | AWTEvent.COMPONENT_EVENT_MASK);
         for (Window ventana : Window.getWindows()) {
             instalar(ventana);
         }
@@ -95,17 +99,27 @@ final class Inspector {
     }
 
     private void alCambiarVentanas(AWTEvent evento) {
+        if (!(evento.getSource() instanceof Window)) {
+            return;
+        }
         try {
-            if (evento instanceof WindowEvent && evento.getSource() instanceof Window) {
-                Window ventana = (Window) evento.getSource();
-                if (evento.getID() == WindowEvent.WINDOW_OPENED) {
+            Window ventana = (Window) evento.getSource();
+            switch (evento.getID()) {
+                case WindowEvent.WINDOW_OPENED:
+                case WindowEvent.WINDOW_ACTIVATED:
+                // Algunos gestores de ventanas tardan en avisar de que se abrió.
+                case ComponentEvent.COMPONENT_SHOWN:
+                    // Llega en cuanto la aplicación muestra la ventana, sin esperar al sistema.
                     instalar(ventana);
-                } else if (evento.getID() == WindowEvent.WINDOW_CLOSED) {
+                    break;
+                case WindowEvent.WINDOW_CLOSED:
                     Superposicion superposicion = instaladas.remove(ventana);
                     if (superposicion != null) {
                         superposicion.retirar();
                     }
-                }
+                    break;
+                default:
+                    break;
             }
         } catch (RuntimeException e) {
             errores.accept("El inspector no pudo cubrir una ventana: " + e);
