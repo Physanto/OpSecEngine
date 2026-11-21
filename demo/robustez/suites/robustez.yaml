@@ -1,0 +1,23 @@
+# ROBUSTEZ-001 (#16): casos con un fallo inyectado en el agente.
+# Formato: contratos/esquemas/suite.schema.json
+#
+# El motor activa los fallos del caso cuando la app ya mostró su primera ventana, para que no
+# interfieran con su arranque.
+
+suite: robustez-001
+version: "1"
+
+config:
+  modo: EVENTOS
+  esperaMaximaPasoMs: 10000
+
+casos:
+  - id: R01
+    descripcion: Si la conexión a la base falla al iniciar sesión, el diálogo no debe mostrar la pila.
+    oraculos: [TRAZA-EN-DIALOGO]
+    fallos: ["SQL_CONEXION:java.sql.SQLException:conexión inyectada"]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: Admin, Contraseña: "Admin#2026"}
+      - pulsar: Iniciar Sesion
