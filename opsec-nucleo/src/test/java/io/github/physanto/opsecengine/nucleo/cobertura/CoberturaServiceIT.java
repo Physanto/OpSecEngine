@@ -65,7 +65,9 @@ class CoberturaServiceIT {
         Path carpeta =
                 Files.createDirectories(
                         Path.of("target", "registros-it", "cobertura-" + System.nanoTime()));
-        ConfigCobertura cobertura = ConfigCobertura.en(jarJacoco, carpeta, List.of(PRACTICA + "*"));
+        // Sin el volcado de JaCoCo al salir: los datos solo pueden venir del volcado en CERRAR.
+        ConfigCobertura cobertura =
+                ConfigCobertura.en(jarJacoco, carpeta, List.of(PRACTICA + "*")).sinVolcadoAlSalir();
         // Cada caso arranca su propia aplicación: uno llega al inicio de sesión y el otro al menú.
         Suite suite =
                 new Suite(

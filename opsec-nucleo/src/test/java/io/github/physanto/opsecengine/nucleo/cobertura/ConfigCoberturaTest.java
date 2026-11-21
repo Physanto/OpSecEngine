@@ -45,6 +45,15 @@ class ConfigCoberturaTest {
     }
 
     @Test
+    void elVolcadoAlSalirSePuedeDesactivarParaComprobarElVolcadoDeCerrar() {
+        ConfigCobertura config = ConfigCobertura.en(JACOCO, CARPETA, null);
+
+        assertThat(config.argumentoAgente()).contains("dumponexit=true");
+        assertThat(config.sinVolcadoAlSalir().argumentoAgente()).contains("dumponexit=false");
+        assertThat(config.sinVolcadoAlSalir().archivoExec()).isEqualTo(config.archivoExec());
+    }
+
+    @Test
     void losPatronesDeClasesSeUnenConDosPuntos() {
         ConfigCobertura config = ConfigCobertura.en(JACOCO, CARPETA, List.of("a.*", "b.C"));
 
