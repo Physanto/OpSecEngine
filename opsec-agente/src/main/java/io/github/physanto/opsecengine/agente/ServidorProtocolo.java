@@ -2,6 +2,7 @@ package io.github.physanto.opsecengine.agente;
 
 import io.github.physanto.opsecengine.agente.api.AdaptadorToolkit;
 import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
+import io.github.physanto.opsecengine.agente.swing.ControlInteraccion;
 import io.github.physanto.opsecengine.protocolo.CanalMensajes;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import io.github.physanto.opsecengine.protocolo.ExcepcionProtocolo;
@@ -13,6 +14,7 @@ import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
 import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
+import io.github.physanto.opsecengine.protocolo.dto.ModoInteraccionDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.SolicitudCapturaDto;
@@ -47,6 +49,10 @@ import java.util.Optional;
  *   <li>{@code CONFIG_GANCHOS}: reemplaza la configuración de los ganchos ({@link
  *       ConfiguracionGanchos}) y responde {@code RESULTADO_PASO} con código {@code OK} para
  *       confirmar que ya está vigente. Si el cuerpo no es válido responde {@code ERROR}.
+ *   <li>{@code MODO_INTERACCION}: activa el inspector o la grabadora del {@link ControlInteraccion}
+ *       (o los desactiva) y responde {@code RESULTADO_PASO}: {@code OK} cuando el modo ya está
+ *       vigente, {@code ERROR} con la causa si no se pudo activar. Sin control de interacción
+ *       responde {@code ERROR} con el código {@code NO_IMPLEMENTADO}.
  *   <li>Cualquier otro mensaje: responde {@code ERROR} con el código {@code NO_IMPLEMENTADO}.
  * </ul>
  *
@@ -65,7 +71,9 @@ final class ServidorProtocolo implements Runnable {
     private final EmisorProtocolo emisor;
     private final CodecMensajes codec;
     private final Runnable cierre;
+    private final ControlInteraccion interaccion;
     private boolean cierrePedido;
+    private boolean interaccionUsada;
 
     /**
      * Crea el servidor.
@@ -85,6 +93,30 @@ final class ServidorProtocolo implements Runnable {
             EmisorProtocolo emisor,
             CodecMensajes codec,
             Runnable cierre) {
+        this(argumentos, versionAgente, adaptador, emisor, codec, cierre, null);
+    }
+
+    /**
+     * Crea el servidor con inspector y grabadora.
+     *
+     * @param argumentos puerto y token del motor
+     * @param versionAgente versión que se informa en el {@code HOLA}
+     * @param adaptador adaptador que ejecuta las acciones sobre la interfaz
+     * @param emisor emisor de eventos que se conecta después del saludo
+     * @param codec codec del protocolo
+     * @param cierre acción que cierra la aplicación después de {@code CERRAR}; se ejecuta en el
+     *     hilo del servidor, con la conexión ya cerrada
+     * @param interaccion atiende {@code MODO_INTERACCION}; puede ser null si no está disponible
+     */
+    ServidorProtocolo(
+            ArgumentosAgente argumentos,
+            String versionAgente,
+            AdaptadorToolkit adaptador,
+            EmisorProtocolo emisor,
+            CodecMensajes codec,
+            Runnable cierre,
+            ControlInteraccion interaccion) {
+        this.interaccion = interaccion;
         this.argumentos = argumentos;
         this.versionAgente = versionAgente;
         this.adaptador = adaptador;
@@ -104,6 +136,11 @@ final class ServidorProtocolo implements Runnable {
         } catch (IOException | RuntimeException e) {
             RegistroAgente.error("La conversación con el motor terminó: " + e);
         } finally {
+            if (interaccionUsada && !cierrePedido) {
+                // El motor se fue sin pedir CERRAR: la aplicación sigue, sin inspector ni
+                // grabadora.
+                interaccion.detener();
+            }
             emisor.desconectar();
         }
         if (cierrePedido) {
@@ -172,6 +209,19 @@ final class ServidorProtocolo implements Runnable {
             case CONFIG_GANCHOS:
                 configurarGanchos(canal, mensaje);
                 return true;
+            case MODO_INTERACCION:
+                if (interaccion == null) {
+                    canal.enviar(
+                            codec.responder(
+                                    mensaje,
+                                    TipoMensaje.ERROR,
+                                    new ErrorDto(
+                                            ErrorDto.NO_IMPLEMENTADO,
+                                            "El agente no tiene inspector ni grabadora")));
+                } else {
+                    cambiarModo(canal, mensaje);
+                }
+                return true;
             case ARBOL_SOLICITUD:
                 canal.enviar(
                         codec.responder(
@@ -232,6 +282,24 @@ final class ServidorProtocolo implements Runnable {
             return;
         }
         canal.enviar(codec.responder(mensaje, TipoMensaje.CAPTURA, captura));
+    }
+
+    private void cambiarModo(CanalMensajes canal, Mensaje mensaje) throws IOException {
+        ModoInteraccionDto modo;
+        try {
+            modo = codec.leerCuerpo(mensaje, ModoInteraccionDto.class);
+        } catch (ExcepcionProtocolo e) {
+            canal.enviar(
+                    codec.responder(
+                            mensaje,
+                            TipoMensaje.ERROR,
+                            new ErrorDto(ErrorDto.MENSAJE_INVALIDO, e.getMessage())));
+            return;
+        }
+        interaccionUsada = true;
+        canal.enviar(
+                codec.responder(
+                        mensaje, TipoMensaje.RESULTADO_PASO, interaccion.activar(modo.getModo())));
     }
 
     private void configurarGanchos(CanalMensajes canal, Mensaje mensaje) throws IOException {

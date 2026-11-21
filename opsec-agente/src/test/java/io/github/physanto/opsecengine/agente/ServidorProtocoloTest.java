@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.github.physanto.opsecengine.agente.api.AdaptadorToolkit;
 import io.github.physanto.opsecengine.agente.api.ResultadoBusqueda;
 import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
+import io.github.physanto.opsecengine.agente.swing.ControlInteraccion;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import io.github.physanto.opsecengine.protocolo.dto.CapturaDto;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
@@ -14,11 +15,13 @@ import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import io.github.physanto.opsecengine.protocolo.dto.LocalizadorDto;
+import io.github.physanto.opsecengine.protocolo.dto.ModoInteraccionDto;
 import io.github.physanto.opsecengine.protocolo.dto.NodoArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.soporte.ExcepcionErrorRemoto;
 import io.github.physanto.opsecengine.soporte.MotorFalso;
+import java.awt.GraphicsEnvironment;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -114,6 +117,55 @@ class ServidorProtocoloTest {
     }
 
     @Test
+    void modoInteraccionSeConfirmaConOkOConErrorSiNoSePuedeActivar() throws Exception {
+        EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
+        try (MotorFalso motor = new MotorFalso()) {
+            iniciar(
+                    motor.argumentosAgente(),
+                    new AdaptadorFijo(emisor),
+                    emisor,
+                    () -> {},
+                    new ControlInteraccion(emisor, mensaje -> {}));
+            motor.esperarHola(ESPERA);
+
+            ResultadoPasoDto grabar =
+                    motor.modoInteraccion(new ModoInteraccionDto(ModoInteraccionDto.GRABAR));
+            ResultadoPasoDto ninguno =
+                    motor.modoInteraccion(new ModoInteraccionDto(ModoInteraccionDto.NINGUNO));
+
+            assertThat(grabar.getCodigo())
+                    .isEqualTo(
+                            GraphicsEnvironment.isHeadless()
+                                    ? CodigoResultado.ERROR
+                                    : CodigoResultado.OK);
+            if (GraphicsEnvironment.isHeadless()) {
+                assertThat(grabar.getDetalle()).contains("Sin entorno gráfico");
+            }
+            assertThat(ninguno.getCodigo()).isEqualTo(CodigoResultado.OK);
+            motor.cerrar();
+        }
+    }
+
+    @Test
+    void modoInteraccionSinControlRespondeNoImplementado() throws Exception {
+        EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
+        try (MotorFalso motor = new MotorFalso()) {
+            iniciar(motor.argumentosAgente(), new AdaptadorFijo(emisor), emisor, () -> {});
+            motor.esperarHola(ESPERA);
+
+            assertThatThrownBy(() ->
+                            motor.modoInteraccion(
+                                    new ModoInteraccionDto(ModoInteraccionDto.INSPECCIONAR)))
+                    .isInstanceOfSatisfying(
+                            ExcepcionErrorRemoto.class,
+                            error ->
+                                    assertThat(error.getError().getCodigo())
+                                            .isEqualTo(ErrorDto.NO_IMPLEMENTADO));
+            motor.cerrar();
+        }
+    }
+
+    @Test
     void noCierraLaAplicacionSiElMotorCortaLaConexion() throws Exception {
         EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
         CountDownLatch cierre = new CountDownLatch(1);
@@ -163,6 +215,15 @@ class ServidorProtocoloTest {
             AdaptadorToolkit adaptador,
             EmisorProtocolo emisor,
             Runnable cierre) {
+        return iniciar(argumentos, adaptador, emisor, cierre, null);
+    }
+
+    private static Thread iniciar(
+            String argumentos,
+            AdaptadorToolkit adaptador,
+            EmisorProtocolo emisor,
+            Runnable cierre,
+            ControlInteraccion interaccion) {
         Thread hilo =
                 new Thread(
                         new ServidorProtocolo(
@@ -171,7 +232,8 @@ class ServidorProtocoloTest {
                                 adaptador,
                                 emisor,
                                 CODEC,
-                                cierre),
+                                cierre,
+                                interaccion),
                         "servidor-prueba");
         hilo.setDaemon(true);
         hilo.start();
