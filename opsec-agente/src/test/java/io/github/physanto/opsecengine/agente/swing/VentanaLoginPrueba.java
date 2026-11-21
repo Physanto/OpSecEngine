@@ -43,6 +43,7 @@ final class VentanaLoginPrueba {
         Assumptions.assumeFalse(GraphicsEnvironment.isHeadless());
         VentanaLoginPrueba login = new VentanaLoginPrueba();
         SwingUtilities.invokeAndWait(login::construir);
+        login.esperarTamanoEstable();
         return login;
     }
 
@@ -63,8 +64,30 @@ final class VentanaLoginPrueba {
         ventana.add(panel);
         ventana.getRootPane().setDefaultButton(ingresar);
         ventana.setSize(420, 260);
+        // Un tamaño fijo evita que un gestor de ventanas con mosaicos la redimensione.
+        ventana.setResizable(false);
         ventana.setLocation(80, 80);
         ventana.setVisible(true);
+    }
+
+    /**
+     * Espera a que el sistema deje de cambiar el tamaño de la ventana y la distribuye de nuevo: la
+     * búsqueda de una etiqueta depende de la posición de los controles.
+     */
+    private void esperarTamanoEstable() throws Exception {
+        java.awt.Dimension anterior = null;
+        int estables = 0;
+        long limite = System.nanoTime() + 3_000_000_000L;
+        while (estables < 4 && System.nanoTime() < limite) {
+            java.awt.Dimension actual = enEdt(ventana::getSize);
+            estables = actual.equals(anterior) ? estables + 1 : 0;
+            anterior = actual;
+            Thread.sleep(50);
+        }
+        SwingUtilities.invokeAndWait(() -> {
+            ventana.validate();
+            ventana.getContentPane().doLayout();
+        });
     }
 
     /** Registra en {@link #eventos} lo que se emite. */
