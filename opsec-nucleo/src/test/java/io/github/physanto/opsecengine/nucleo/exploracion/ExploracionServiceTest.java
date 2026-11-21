@@ -70,11 +70,15 @@ class ExploracionServiceTest {
                     "EscogerModo|Local", List.of("MenuLocal"),
                     "EscogerModo|Nube", List.of("InicioSesion"));
 
+    /** Clase con {@code main} que abre directamente la ventana de elección de modo. */
+    private static final String ENTRADA = "App.EscogerModoDirecto";
+
     @TempDir Path carpeta;
 
     private final List<AgenteFalso> agentes = new ArrayList<>();
     private final List<String> pulsados = new CopyOnWriteArrayList<>();
     private final List<String> avisos = new CopyOnWriteArrayList<>();
+    private final List<String> clasesLanzadas = new CopyOnWriteArrayList<>();
 
     @AfterEach
     void cerrar() {
@@ -160,6 +164,60 @@ class ExploracionServiceTest {
     }
 
     @Test
+    void exploraCadaPuntoDeEntradaEnSuPropioContextoYSinIniciarSesion() {
+        Rol admin = new Rol("admin", "Admin", "x");
+        ConfigExploracion conEntrada = configuracion(4).conEntradas(List.of(ENTRADA));
+
+        MapaApp mapa = explorar(proyecto(List.of(admin), false), conEntrada);
+
+        String contexto = MapaApp.contextoEntrada(ENTRADA);
+        assertThat(mapa.contextos()).contains(MapaApp.SIN_SESION, "rol:admin", contexto);
+        assertThat(clasesLanzadas).contains(ENTRADA);
+        assertThat(
+                        mapa.transiciones().stream()
+                                .filter(t -> t.contexto().equals(contexto))
+                                .map(t -> t.origen() + "->" + t.destino()))
+                .as("desde la ventana de entrada se llega a las demás sin pasar por la portada")
+                .containsExactlyInAnyOrder("EscogerModo->MenuLocal", "EscogerModo->InicioSesion");
+        assertThat(mapa.alcanzablesDesde("EscogerModo", contexto))
+                .extracting(Ventana::id)
+                .contains("MenuLocal");
+    }
+
+    @Test
+    void leeLasEntradasDeLasExtensionesDelProyecto() {
+        Proyecto base = proyecto(List.of(), false);
+        Proyecto conExtension =
+                new Proyecto(
+                        base.nombre(),
+                        base.jar(),
+                        base.clasePrincipal(),
+                        base.argumentosJvm(),
+                        base.javaApp(),
+                        base.datos(),
+                        base.roles(),
+                        base.pasosLogin(),
+                        base.sensibles(),
+                        base.politica(),
+                        Map.of(
+                                ExploracionService.EXTENSION_ENTRADAS,
+                                List.of(ENTRADA, ENTRADA, " ")));
+
+        MapaApp mapa = explorar(conExtension, configuracion(4));
+
+        assertThat(mapa.contextos()).contains(MapaApp.contextoEntrada(ENTRADA));
+        assertThat(clasesLanzadas.stream().filter(ENTRADA::equals)).isNotEmpty();
+    }
+
+    @Test
+    void laConfiguracionRechazaUnaEntradaEnBlancoYPorDefectoNoTiene() {
+        assertThat(ConfigExploracion.porDefecto().entradas()).isEmpty();
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> ConfigExploracion.porDefecto().conEntradas(List.of(" ")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void elMapaSeGuardaYSeLeeSinPerderNada() throws Exception {
         MapaApp mapa = explorar(proyecto(List.of(), false), configuracion(4));
         Path archivo = carpeta.resolve(MapaJson.ARCHIVO);
@@ -180,7 +238,8 @@ class ExploracionServiceTest {
     private MapaApp explorar(Proyecto proyecto, ConfigExploracion config) {
         ArranqueApp arranque =
                 (p, puerto, token) -> {
-                    nuevaApp(puerto, token, proyecto.pasosLogin().isEmpty());
+                    clasesLanzadas.add(String.valueOf(p.clasePrincipal()));
+                    nuevaApp(puerto, token, proyecto.pasosLogin().isEmpty(), p.clasePrincipal());
                     return () -> {};
                 };
         try (SesionService sesiones = new SesionService(arranque, ESPERA, ESPERA)) {
@@ -189,10 +248,14 @@ class ExploracionServiceTest {
     }
 
     /** Crea una instancia nueva de la aplicación simulada, con su propio estado. */
-    private void nuevaApp(int puerto, String token, boolean sinLogin) throws java.io.IOException {
+    private void nuevaApp(int puerto, String token, boolean sinLogin, String clasePrincipal)
+            throws java.io.IOException {
         AgenteFalso agente = new AgenteFalso();
         agentes.add(agente);
-        List<String> visibles = new ArrayList<>(List.of("Portada"));
+        // La clase de entrada abre directamente la ventana de elección de modo.
+        List<String> visibles =
+                new ArrayList<>(
+                        List.of(ENTRADA.equals(clasePrincipal) ? "EscogerModo" : "Portada"));
         agente.conArbol(arbol(visibles));
         agente.respuestaPorDefecto(new ResultadoPasoDto(CodigoResultado.OK, null, 1));
         agente.cuandoPaso(paso ->
