@@ -2,7 +2,7 @@
 # Formato: contratos/esquemas/suite.schema.json
 #
 # No hay "esperado" escrito: los oráculos deciden el veredicto. Con la app vulnerable,
-# C01/C02 (F5), C04 (F7) y C07 (F6) no cumplen; con la corregida, todos cumplen.
+# C01/C02 (F5), C04 (F7), C07 (F6) y C13 (F4) no cumplen; con la corregida, todos cumplen.
 
 suite: sec-001
 version: "1"
@@ -83,4 +83,14 @@ casos:
     oraculos: [CONTRASENA-EN-CONSOLA]
     pasos:
       - esperar: {tituloVentana: Menú administrador}
+      - capturar:
+
+  - id: C13
+    descripcion: Un texto con comilla y marca en el usuario no debe llegar concatenado a una sentencia SQL.
+    oraculos: [SQLI-CANARIO]
+    pasos:
+      - pulsar: Avanzar
+      - pulsar: Nube
+      - llenar: {Usuario: "Admin' -- {canario}", Contraseña: "Prueba#2026"}
+      - pulsar: Iniciar Sesion
       - capturar:

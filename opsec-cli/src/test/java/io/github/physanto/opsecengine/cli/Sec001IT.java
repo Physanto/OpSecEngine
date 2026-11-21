@@ -47,9 +47,10 @@ class Sec001IT {
         Ejecucion ejecucion = ejecutar(carpeta.resolve("proyecto.yaml"), vulnerable);
         assertThat(ejecucion.codigo()).as(ejecucion.salida()).isEqualTo(3);
         Map<String, JsonNode> casos = leerCasos(vulnerable);
-        assertThat(casos).hasSize(7);
+        assertThat(casos).hasSize(8);
         assertThat(oraculos(casos.get("C04"))).contains("TRAZA-EN-DIALOGO");
         assertThat(oraculos(casos.get("C07"))).contains("CONTRASENA-EN-CONSOLA");
+        assertThat(oraculos(casos.get("C13"))).contains("SQLI-CANARIO");
         assertThat(oraculosSuite(vulnerable)).contains("ENUMERACION-USUARIOS");
         assertThat(ejecucion.salida()).doesNotContain("Admin#2026");
         comprobarHtml(vulnerable);
