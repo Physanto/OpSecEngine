@@ -33,6 +33,7 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `Inspector` | `agente.swing` | Cubre cada ventana con un panel transparente que resalta el componente bajo el cursor; el clic emite `COMPONENTE_INSPECCIONADO` y no llega a la aplicación (#17). |
 | `Grabadora` | `agente.swing` | Observa ratón, teclado y foco de AWT y emite `ACCION_GRABADA` (`PULSAR`, `LLENAR`, `SELECCIONAR`, `MARCAR`) (#17). |
 | `LocalizadoresComponente` | `agente.swing` | Calcula, para un componente, los criterios de localizador que el buscador resuelve a ese mismo componente (inversa de `BuscadorComponentes`) (#17). |
+| `CoberturaJacoco` | `agente.cobertura` | Si el motor cargó el agente de JaCoCo, escribe en su archivo la cobertura de la sesión al recibir `CERRAR`, antes de que la app termine (#19). No depende de JaCoCo: lo busca por reflexión. |
 | `CierreAplicacion` | `agente.swing` | Cierra la app después de `CERRAR`: pide el cierre de sus ventanas y, si no termina sola en 1 s, llama a `System.exit(0)`. |
 | `DescriptorComponentes` | `agente.swing` | Describe componentes como `NodoArbolDto`; nunca incluye el texto de un `JPasswordField`. |
 
@@ -150,11 +151,15 @@ Los valores de los parámetros se envían como texto, porque el oráculo de cana
 - **`GRABAR`.** La aplicación funciona con normalidad. `PULSAR` por clic (o espacio) sobre botones y elementos de menú, y Enter en un campo de una línea cuando hay botón por defecto; `MARCAR` con el estado en que quedó una casilla o botón de alternancia; `SELECCIONAR` cuando cambia la opción de un combo o una lista; `LLENAR` con el texto completo de un campo, una sola vez, al perder el foco, al pulsar Enter, antes de cualquier otra acción o al detener la grabación. Un campo de contraseña lleva `sensible=true` y su valor tal como se escribió. No se graban todavía las pestañas, las tablas ni los árboles, ni las flechas internas de combos, spinners y barras de desplazamiento. Un menú se graba como la secuencia de pulsaciones sobre sus elementos.
 - **Localizador.** `LocalizadoresComponente` propone, en orden, `NOMBRE_COMPONENTE`, `ETIQUETA` (campos, combos, listas, tablas y árboles; busca entre las etiquetas de la ventana), `TEXTO`, `NOMBRE_ACCESIBLE` y `RUTA`, y solo conserva los criterios con los que `BuscadorComponentes` resuelve ese mismo componente (con un texto repetido el buscador elige el primero, así que el segundo componente solo conserva la ruta). Por eso lo grabado se puede reproducir con el propio agente. El orden de los eventos es el de las acciones del usuario.
 
+### Cobertura con JaCoCo (#19)
+
+El motor (`LanzadorProceso` con una `ConfigCobertura`) arranca la app con dos agentes: primero el de JaCoCo (`-javaagent:jacocoagent.jar=destfile=<carpeta>/jacoco.exec,append=true,...`) y después este. El agente del motor no incluye ni necesita JaCoCo. Al recibir `CERRAR`, y antes de emitir `APP_TERMINADA`, `CoberturaJacoco` llama por reflexión a `RT.getAgent().dump(true)`: JaCoCo añade al archivo lo reunido hasta entonces y reinicia sus contadores. Así el archivo queda completo aunque el motor detenga después el proceso a la fuerza, y la escritura que JaCoCo hace al salir no duplica datos. Sin JaCoCo cargado no hace nada ni registra errores; si JaCoCo falla al escribir, lo registra y la sesión sigue. El informe se genera en el núcleo (`CoberturaService`).
+
 ### Pendiente para el dueño del módulo (P1)
 
 Ordenado según `PLAN_DE_TRABAJO.md`:
 
-1. Cobertura (#19).
+1. Fallos inyectados: `ARCHIVO_ESCRIBIR` no tiene gancho y `SQL_CONEXION` no cubre `DataSource.getConnection`.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
