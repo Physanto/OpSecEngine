@@ -31,9 +31,11 @@ import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
 import io.github.physanto.opsecengine.protocolo.Mensaje;
 import io.github.physanto.opsecengine.protocolo.TipoMensaje;
+import io.github.physanto.opsecengine.protocolo.dto.ArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
 import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
+import io.github.physanto.opsecengine.protocolo.dto.NodoArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.soporte.AgenteFalso;
@@ -287,6 +289,7 @@ class EjecucionServiceTest {
         CodecMensajes codec = new CodecMensajes();
         assertThat(recibidos)
                 .extracting(Mensaje::getTipo)
+                .doesNotContain(TipoMensaje.ARBOL_SOLICITUD)
                 .startsWith(TipoMensaje.CONFIG_GANCHOS)
                 .containsSubsequence(
                         TipoMensaje.CONFIG_GANCHOS,
@@ -304,6 +307,101 @@ class EjecucionServiceTest {
         }
         assertThat(conFallos.getFallosInyectados())
                 .containsExactly("SQL_EJECUTAR:java.sql.SQLException:sin red");
+    }
+
+    @Test
+    void sinRolLosFallosEsperanALaPrimeraVentanaDeLaAplicacion() throws Exception {
+        ArbolDto conVentana =
+                new ArbolDto(
+                        List.of(
+                                new NodoArbolDto(
+                                        "javax.swing.JFrame",
+                                        "Portada",
+                                        null,
+                                        null,
+                                        true,
+                                        true,
+                                        false,
+                                        List.of())));
+        ArranqueApp arranque =
+                (proyecto, puerto, token) -> {
+                    AgenteFalso agente = new AgenteFalso();
+                    agente.cuandoPaso(texto("Avanzar"))
+                            .responder(new ResultadoPasoDto(CodigoResultado.OK, null, 1));
+                    agentes.add(agente);
+                    agente.conectar(puerto, token);
+                    // La aplicación tarda en mostrar su primera ventana.
+                    Thread aparece =
+                            new Thread(() -> {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+                                agente.conArbol(conVentana);
+                            });
+                    aparece.setDaemon(true);
+                    aparece.start();
+                    return agente::close;
+                };
+        Caso caso = casoConFallos(pulsar(1, "Avanzar"));
+
+        ejecutar(PROYECTO, arranque, List.of(), caso);
+
+        List<TipoMensaje> tipos =
+                agentes.get(0).mensajesRecibidos().stream().map(Mensaje::getTipo).toList();
+        assertThat(tipos)
+                .as("consulta las ventanas varias veces antes de activar los fallos")
+                .containsSubsequence(
+                        TipoMensaje.CONFIG_GANCHOS,
+                        TipoMensaje.ARBOL_SOLICITUD,
+                        TipoMensaje.ARBOL_SOLICITUD,
+                        TipoMensaje.CONFIG_GANCHOS,
+                        TipoMensaje.EJECUTAR_PASO);
+    }
+
+    @Test
+    void sinVentanasLosFallosSeActivanDeTodosModosTrasLaEspera() throws Exception {
+        Caso caso = casoConFallos(pulsar(1, "Avanzar"));
+        Suite suite =
+                new Suite(
+                        "sin-ventanas",
+                        "1",
+                        null,
+                        new ConfigEjecucion(
+                                ModoAccion.SEMANTICO, false, Duration.ofMillis(300), 0, 0L, 1),
+                        List.of(caso),
+                        null);
+        EvaluacionService evaluacion =
+                new EvaluacionService(
+                        new RegistroExtensiones(List.of(), List.of(), List.of(), List.of()));
+
+        try (SesionService sesiones = new SesionService(conAgenteFalso, ESPERA, ESPERA)) {
+            new EjecucionService(PROYECTO, sesiones, evaluacion).ejecutar(suite);
+        }
+
+        List<TipoMensaje> tipos =
+                agentes.get(0).mensajesRecibidos().stream().map(Mensaje::getTipo).toList();
+        assertThat(tipos)
+                .containsSubsequence(
+                        TipoMensaje.ARBOL_SOLICITUD,
+                        TipoMensaje.CONFIG_GANCHOS,
+                        TipoMensaje.EJECUTAR_PASO);
+    }
+
+    private static Caso casoConFallos(Paso... pasos) {
+        return new Caso(
+                "R1",
+                null,
+                null,
+                List.of(pasos),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of("SQL_CONEXION:java.sql.SQLException:sin red"));
     }
 
     @Test
