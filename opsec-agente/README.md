@@ -15,7 +15,7 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | Clase | Paquete | Qué hace |
 |---|---|---|
 | `AgenteMain` | `agente` | `premain`: lee los argumentos, instala los observadores y arranca el servidor en un hilo daemon. |
-| `ServidorProtocolo` | `agente` | Saluda con `HOLA`; atiende `EJECUTAR_PASO`, `ARBOL_SOLICITUD`, `CAPTURAR` y `CERRAR`; responde `NO_IMPLEMENTADO` a lo demás. |
+| `ServidorProtocolo` | `agente` | Saluda con `HOLA`; atiende `EJECUTAR_PASO`, `ARBOL_SOLICITUD`, `CAPTURAR`, `CONFIG_GANCHOS`, `MODO_INTERACCION` y `CERRAR`; responde `NO_IMPLEMENTADO` a lo demás. |
 | `EmisorProtocolo` | `agente` | Implementa `EmisorEventos`: numera y envía los `EVENTO`; guarda los anteriores a la conexión y los envía después del saludo. |
 | `ObservadorConsola` | `agente` | Envuelve `System.out` y `System.err`; emite `CONSOLA` por línea sin cambiar lo que la app muestra. |
 | `RegistroAgente` | `agente` | Mensajes propios del agente en la salida de error original, con el prefijo `[opsec-agente]`. |
@@ -29,6 +29,10 @@ Es una primera versión funcional, pensada para ejecutar la demo de punta a punt
 | `ObservadorExcepciones` | `agente.swing` | Manejador por defecto de excepciones no capturadas: emite `EXCEPCION` (`capturada=false`) por las del EDT y las de los demás hilos y las pasa al manejador anterior. |
 | `ObservadorVentanas` | `agente.swing` | Emite `VENTANA_ABIERTA`, `VENTANA_CERRADA` (con `liberada`) y `DIALOGO` (con el texto de los `JOptionPane`). |
 | `VigilanteEdt` | `agente.swing` | Mide cada 100 ms cuánto tarda el EDT en atender una tarea mínima y emite `TIEMPO` con `medida=EDT_BLOQUEADO` si supera el umbral (#18). |
+| `ControlInteraccion` | `agente.swing` | Atiende `MODO_INTERACCION`: deja activo a lo sumo uno de los dos modos, el inspector o la grabadora, y responde `OK` o `ERROR` (sin pantalla) (#17). |
+| `Inspector` | `agente.swing` | Cubre cada ventana con un panel transparente que resalta el componente bajo el cursor; el clic emite `COMPONENTE_INSPECCIONADO` y no llega a la aplicación (#17). |
+| `Grabadora` | `agente.swing` | Observa ratón, teclado y foco de AWT y emite `ACCION_GRABADA` (`PULSAR`, `LLENAR`, `SELECCIONAR`, `MARCAR`) (#17). |
+| `LocalizadoresComponente` | `agente.swing` | Calcula, para un componente, los criterios de localizador que el buscador resuelve a ese mismo componente (inversa de `BuscadorComponentes`) (#17). |
 | `CierreAplicacion` | `agente.swing` | Cierra la app después de `CERRAR`: pide el cierre de sus ventanas y, si no termina sola en 1 s, llama a `System.exit(0)`. |
 | `DescriptorComponentes` | `agente.swing` | Describe componentes como `NodoArbolDto`; nunca incluye el texto de un `JPasswordField`. |
 
@@ -138,11 +142,19 @@ Los valores de los parámetros se envían como texto, porque el oráculo de cana
 
 **Inyección de fallos (#16, contratos-v1.6).** Cada elemento de `fallosInyectados` del `CONFIG_GANCHOS` tiene el formato `<punto>:<clase-excepcion>[:<mensaje>]`. `SQL_CONEXION` se provoca en `Driver.connect` (lo que `DriverManager.getConnection` invoca; así no se instrumenta una clase del JDK), `SQL_EJECUTAR` en `execute*` de `Statement` y `FIRESTORE_ESCRIBIR` en las escrituras de Firestore. El agente lanza la excepción antes del método original, con un constructor `(String)` (o una `RuntimeException` si no existe) y emite un evento `ESTADO` con `fallo` y `excepcion`. `ARCHIVO_ESCRIBIR` está reservado y todavía no lo atiende nadie.
 
+### Inspector y grabadora (#17, contratos-v1.7)
+
+`MODO_INTERACCION` activa un modo; el agente responde `RESULTADO_PASO` `OK` cuando ya está vigente, o `ERROR` con la causa en `detalle` si no hay entorno gráfico. Un modo nuevo reemplaza al anterior y `NINGUNO` los apaga; si el motor se desconecta sin pedir `CERRAR`, el agente los apaga.
+
+- **`INSPECCIONAR`.** Cada ventana visible (y las que se abran después) recibe un panel de cristal propio que dibuja un borde naranja sobre el componente bajo el cursor y atrapa el ratón: el clic izquierdo emite `COMPONENTE_INSPECCIONADO` (ventana, clase, ruta, texto y localizador) y **no llega a la aplicación**. Al detenerse se devuelve a cada ventana su panel original. No cubre los menús desplegables ni las ventanas emergentes pesadas.
+- **`GRABAR`.** La aplicación funciona con normalidad. `PULSAR` por clic (o espacio) sobre botones y elementos de menú, y Enter en un campo de una línea cuando hay botón por defecto; `MARCAR` con el estado en que quedó una casilla o botón de alternancia; `SELECCIONAR` cuando cambia la opción de un combo o una lista; `LLENAR` con el texto completo de un campo, una sola vez, al perder el foco, al pulsar Enter, antes de cualquier otra acción o al detener la grabación. Un campo de contraseña lleva `sensible=true` y su valor tal como se escribió. No se graban todavía las pestañas, las tablas ni los árboles, ni las flechas internas de combos, spinners y barras de desplazamiento. Un menú se graba como la secuencia de pulsaciones sobre sus elementos.
+- **Localizador.** `LocalizadoresComponente` propone, en orden, `NOMBRE_COMPONENTE`, `ETIQUETA` (campos, combos, listas, tablas y árboles; busca entre las etiquetas de la ventana), `TEXTO`, `NOMBRE_ACCESIBLE` y `RUTA`, y solo conserva los criterios con los que `BuscadorComponentes` resuelve ese mismo componente (con un texto repetido el buscador elige el primero, así que el segundo componente solo conserva la ruta). Por eso lo grabado se puede reproducir con el propio agente. El orden de los eventos es el de las acciones del usuario.
+
 ### Pendiente para el dueño del módulo (P1)
 
 Ordenado según `PLAN_DE_TRABAJO.md`:
 
-1. Inspector y grabadora (#17) y cobertura (#19).
+1. Cobertura (#19).
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
