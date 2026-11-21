@@ -55,8 +55,13 @@ import java.util.logging.Logger;
  * del proyecto.
  *
  * <p><b>Límites.</b> Se detiene por profundidad, por tiempo o cuando no aparecen ventanas nuevas.
- * Un contexto cuyo login falla se omite y se informa por el progreso. Los puntos de entrada
- * alternativos ({@code entrada:<clase>}) no se exploran todavía.
+ * Un contexto cuyo login falla se omite y se informa por el progreso.
+ *
+ * <p><b>Puntos de entrada alternativos.</b> Las clases de {@link ConfigExploracion#entradas()} y de
+ * la lista {@code extensiones.entradas} del proyecto se exploran cada una en su contexto {@link
+ * MapaApp#contextoEntrada(String)}: la aplicación se lanza con esa clase como principal, sin
+ * iniciar sesión, y se recorre igual que los demás contextos. Así se encuentran las ventanas que se
+ * abren sin pasar por el login. Una entrada que no abre ninguna ventana se omite y se informa.
  *
  * <p>No es seguro entre hilos: usa una sola {@link SesionService}, una sesión a la vez.
  */
@@ -66,6 +71,9 @@ public final class ExploracionService {
     private static final Duration ESPERA_PASO = Duration.ofSeconds(5);
     private static final Duration ESPERA_VENTANA_INICIAL = Duration.ofSeconds(10);
     private static final long INTERVALO_MS = 100;
+
+    /** Clave de {@code extensiones} del proyecto con las clases de entrada alternativas. */
+    public static final String EXTENSION_ENTRADAS = "entradas";
 
     private final Proyecto proyecto;
     private final SesionService sesiones;
@@ -110,22 +118,72 @@ public final class ExploracionService {
         long limite = System.nanoTime() + config.tiempoMaximo().toNanos();
         Map<String, Ventana> ventanas = new LinkedHashMap<>();
         List<Transicion> transiciones = new ArrayList<>();
-        explorarContexto(null, MapaApp.SIN_SESION, config, limite, ventanas, transiciones);
+        explorarContexto(
+                proyecto, null, MapaApp.SIN_SESION, config, limite, ventanas, transiciones);
         for (Rol rol : proyecto.roles()) {
             explorarContexto(
-                    rol, MapaApp.contextoRol(rol.nombre()), config, limite, ventanas, transiciones);
+                    proyecto,
+                    rol,
+                    MapaApp.contextoRol(rol.nombre()),
+                    config,
+                    limite,
+                    ventanas,
+                    transiciones);
+        }
+        for (String entrada : entradas(config)) {
+            explorarContexto(
+                    conClasePrincipal(entrada),
+                    null,
+                    MapaApp.contextoEntrada(entrada),
+                    config,
+                    limite,
+                    ventanas,
+                    transiciones);
         }
         return new MapaApp(new HashSet<>(ventanas.values()), transiciones);
     }
 
+    /**
+     * Clases de entrada pedidas en la configuración y en {@code extensiones.entradas}, sin repetir.
+     */
+    private Set<String> entradas(ConfigExploracion config) {
+        Set<String> entradas = new LinkedHashSet<>(config.entradas());
+        if (proyecto.extensiones().get(EXTENSION_ENTRADAS) instanceof List<?> lista) {
+            for (Object elemento : lista) {
+                if (elemento instanceof String clase && !clase.isBlank()) {
+                    entradas.add(clase.trim());
+                }
+            }
+        }
+        entradas.remove(proyecto.clasePrincipal());
+        return entradas;
+    }
+
+    /** El mismo proyecto, pero lanzado por otra clase principal. */
+    private Proyecto conClasePrincipal(String clase) {
+        return new Proyecto(
+                proyecto.nombre(),
+                proyecto.jar(),
+                clase,
+                proyecto.argumentosJvm(),
+                proyecto.javaApp(),
+                proyecto.datos(),
+                proyecto.roles(),
+                proyecto.pasosLogin(),
+                proyecto.sensibles(),
+                proyecto.politica(),
+                proyecto.extensiones());
+    }
+
     private void explorarContexto(
+            Proyecto app,
             Rol rol,
             String contexto,
             ConfigExploracion config,
             long limite,
             Map<String, Ventana> ventanas,
             List<Transicion> transiciones) {
-        Observacion inicial = observar(rol, List.of(), null, config);
+        Observacion inicial = observar(app, rol, List.of(), null, config);
         if (inicial == null) {
             progreso.accept("Contexto " + contexto + " omitido: no se pudo abrir o iniciar sesión");
             return;
@@ -144,7 +202,7 @@ public final class ExploracionService {
             if (pendiente.profundidad() >= config.profundidadMaxima()) {
                 continue;
             }
-            Observacion estado = observar(rol, pendiente.camino(), null, config);
+            Observacion estado = observar(app, rol, pendiente.camino(), null, config);
             NodoArbolDto raiz = estado == null ? null : buscar(estado.antes(), pendiente.ventana());
             if (raiz == null) {
                 continue;
@@ -153,7 +211,7 @@ public final class ExploracionService {
                 if (System.nanoTime() >= limite) {
                     break;
                 }
-                Observacion resultado = observar(rol, pendiente.camino(), tramo, config);
+                Observacion resultado = observar(app, rol, pendiente.camino(), tramo, config);
                 if (resultado == null) {
                     continue;
                 }
@@ -183,12 +241,13 @@ public final class ExploracionService {
      * Abre la aplicación, inicia sesión si hay rol, repite el camino y, si se pide, ejecuta una
      * acción más y espera a que cambien las ventanas. Devuelve null si algo falla.
      */
-    private Observacion observar(Rol rol, List<Tramo> camino, Tramo accion, ConfigExploracion c) {
+    private Observacion observar(
+            Proyecto app, Rol rol, List<Tramo> camino, Tramo accion, ConfigExploracion c) {
         ConfigEjecucion config = configuracionDePasos(c);
         try {
-            ClienteAgente cliente = sesiones.abrir(proyecto, c.oculto());
+            ClienteAgente cliente = sesiones.abrir(app, c.oculto());
             if (rol != null) {
-                String problema = InicioSesion.iniciar(proyecto, rol, cliente, config);
+                String problema = InicioSesion.iniciar(app, rol, cliente, config);
                 if (problema != null) {
                     REGISTRO.log(Level.WARNING, "Exploración: {0}", problema);
                     return null;

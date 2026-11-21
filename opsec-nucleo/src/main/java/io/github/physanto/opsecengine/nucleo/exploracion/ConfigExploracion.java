@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.nucleo.exploracion;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -16,13 +17,17 @@ import java.util.Set;
  * @param oculto si la aplicación se explora con las ventanas fuera de pantalla
  * @param esperaTransicion cuánto se espera, tras una acción, a que cambien las ventanas; debe ser
  *     positivo
+ * @param entradas clases con {@code main} (o ventanas que se pueden lanzar solas) que se exploran
+ *     como puntos de entrada alternativos, cada una en su contexto {@code entrada:<clase>} y sin
+ *     iniciar sesión; no puede ser null (vacía si no hay)
  */
 public record ConfigExploracion(
         int profundidadMaxima,
         Duration tiempoMaximo,
         Set<String> textosDestructivos,
         boolean oculto,
-        Duration esperaTransicion) {
+        Duration esperaTransicion,
+        List<String> entradas) {
 
     /** Profundidad máxima por defecto. */
     public static final int PROFUNDIDAD_POR_DEFECTO = 4;
@@ -50,6 +55,52 @@ public record ConfigExploracion(
         positiva(tiempoMaximo, "El tiempo máximo");
         positiva(esperaTransicion, "La espera de transición");
         textosDestructivos = Set.copyOf(textosDestructivos);
+        entradas = List.copyOf(entradas);
+        for (String entrada : entradas) {
+            if (entrada.isBlank()) {
+                throw new IllegalArgumentException("Una clase de entrada está en blanco");
+            }
+        }
+    }
+
+    /**
+     * Crea la configuración sin puntos de entrada alternativos.
+     *
+     * @param profundidadMaxima cantidad máxima de acciones encadenadas; no negativa
+     * @param tiempoMaximo tiempo total máximo; positivo
+     * @param textosDestructivos textos de controles que nunca se pulsan
+     * @param oculto si la aplicación se explora con las ventanas fuera de pantalla
+     * @param esperaTransicion espera a que cambien las ventanas tras una acción; positiva
+     */
+    public ConfigExploracion(
+            int profundidadMaxima,
+            Duration tiempoMaximo,
+            Set<String> textosDestructivos,
+            boolean oculto,
+            Duration esperaTransicion) {
+        this(
+                profundidadMaxima,
+                tiempoMaximo,
+                textosDestructivos,
+                oculto,
+                esperaTransicion,
+                List.of());
+    }
+
+    /**
+     * Devuelve una copia que además explora estas clases como puntos de entrada.
+     *
+     * @param clases clases con {@code main}, con su nombre completo; no puede ser null
+     * @return la configuración con esas entradas, en lugar de las anteriores
+     */
+    public ConfigExploracion conEntradas(List<String> clases) {
+        return new ConfigExploracion(
+                profundidadMaxima,
+                tiempoMaximo,
+                textosDestructivos,
+                oculto,
+                esperaTransicion,
+                clases);
     }
 
     /**
