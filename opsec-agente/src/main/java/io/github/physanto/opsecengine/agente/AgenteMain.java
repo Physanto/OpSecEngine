@@ -5,6 +5,7 @@ import io.github.physanto.opsecengine.agente.ganchos.GanchoFirestore;
 import io.github.physanto.opsecengine.agente.ganchos.GanchoJdbc;
 import io.github.physanto.opsecengine.agente.swing.AdaptadorSwing;
 import io.github.physanto.opsecengine.agente.swing.CierreAplicacion;
+import io.github.physanto.opsecengine.agente.swing.ControlInteraccion;
 import io.github.physanto.opsecengine.agente.swing.ObservadorExcepciones;
 import io.github.physanto.opsecengine.agente.swing.ObservadorVentanas;
 import io.github.physanto.opsecengine.agente.swing.SupresorFoco;
@@ -124,7 +125,8 @@ public final class AgenteMain {
                                     new AdaptadorSwing(emisor, ventanas),
                                     emisor,
                                     codec,
-                                    new CierreAplicacion(RegistroAgente::error)),
+                                    new CierreAplicacion(RegistroAgente::error),
+                                    new ControlInteraccion(emisor, RegistroAgente::error)),
                             NOMBRE_HILO);
             hilo.setDaemon(true);
             hilo.start();
