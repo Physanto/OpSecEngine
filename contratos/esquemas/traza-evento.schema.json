@@ -75,7 +75,9 @@
         "ESTADO",
         "SESION",
         "TIEMPO",
-        "APP_TERMINADA"
+        "APP_TERMINADA",
+        "COMPONENTE_INSPECCIONADO",
+        "ACCION_GRABADA"
       ]
     }
   }

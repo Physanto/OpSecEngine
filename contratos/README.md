@@ -1,6 +1,6 @@
 # Contratos de OpSecEngine
 
-Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman los contratos, hoy en la versión 1.3.
+Esta carpeta guarda los contratos que comparten todos los módulos y quienes escriben proyectos, suites, payloads o reglas: los formatos de archivo, los catálogos de identificadores y los ejemplos. Junto con `opsec-dominio`, `opsec-protocolo` y el paquete `api` de `opsec-agente`, forman los contratos, hoy en la versión 1.7.
 
 Todo lo que hay aquí es un contrato: se usa tal como está y los cambios se piden con una solicitud de cambio de contrato (ver más abajo). El módulo `opsec-verificacion` valida en cada build que los ejemplos cumplan sus esquemas y que los catálogos coincidan con el código.
 
@@ -120,6 +120,7 @@ eventos de ejecución ya están implementados.
 | 1.3 | `contratos-v1.3` | Aditivo (#23): interfaces `ProveedorEvaluacion`, `Evaluador` y `EvaluacionCaso` para descubrimiento del evaluador, reglas YAML opcionales y evaluación por evento, caso y suite. Se conservan los contratos anteriores. |
 | 1.5 | `contratos-v1.5` | Aditivo (#15): campo opcional `sensible` en los eventos `SQL` y `FIRESTORE`; el agente responde `CONFIG_GANCHOS` con un `RESULTADO_PASO` `OK` y la misma correlación. |
 | 1.6 | `contratos-v1.6` | Aditivo (#16): sección opcional `fallos` del caso (campo `fallos` del record `Caso`, que conserva el constructor anterior) y formato de `fallosInyectados` en `CONFIG_GANCHOS`; evento `ESTADO` con `fallo`. |
+| 1.7 | `contratos-v1.7` | Aditivo (#17): mensaje `MODO_INTERACCION` (motor → agente, cuerpo `ModoInteraccionDto`) y eventos `COMPONENTE_INSPECCIONADO` y `ACCION_GRABADA` (valores nuevos de `TipoEvento`), para el inspector y la grabadora del agente. |
 
 ## Cambiar un contrato
 

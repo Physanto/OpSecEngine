@@ -9,6 +9,7 @@ import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
 import io.github.physanto.opsecengine.protocolo.dto.LocalizadorDto;
+import io.github.physanto.opsecengine.protocolo.dto.ModoInteraccionDto;
 import io.github.physanto.opsecengine.protocolo.dto.NodoArbolDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
@@ -89,6 +90,7 @@ final class Muestras {
                 TipoMensaje.CONFIG_GANCHOS,
                 new ConfigGanchosDto(
                         List.of("DELETE"), List.of("delete"), List.of("CANARIO-1"), null));
+        registrar(TipoMensaje.MODO_INTERACCION, new ModoInteraccionDto(ModoInteraccionDto.GRABAR));
         registrar(TipoMensaje.CERRAR, null);
         registrar(TipoMensaje.ERROR, new ErrorDto(ErrorDto.TOKEN_INVALIDO, "Token distinto"));
     }

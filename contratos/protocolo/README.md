@@ -56,3 +56,29 @@ Cada elemento de `fallosInyectados` de `CONFIG_GANCHOS` (y de `caso.fallos` en l
 
 Antes de ejecutar el método original, el agente lanza la excepción (instanciada con un constructor `(String)`; si la clase no existe o no se puede crear, una `RuntimeException`) y emite un evento `ESTADO` con `fallo=<punto>`. Un punto desconocido se ignora y se registra. Al terminar el caso el motor envía de nuevo `CONFIG_GANCHOS` sin fallos.
 
+## Inspector y grabadora (contratos-v1.7)
+
+`MODO_INTERACCION` (motor → agente) activa o desactiva el modo de inspección o de grabación. Su cuerpo es `{"modo": "INSPECCIONAR" | "GRABAR" | "NINGUNO"}`. El agente responde un `RESULTADO_PASO` de código `OK`, con la misma correlación, cuando el modo ya está vigente; si no puede activarlo (por ejemplo, sin entorno gráfico) responde `ERROR` en el código del resultado, con la causa en `detalle`. Solo hay un modo activo a la vez: un mensaje nuevo reemplaza al anterior.
+
+- **`INSPECCIONAR`:** el agente resalta el componente que está bajo el cursor. El clic elige el componente y **no llega a la aplicación**; el agente emite un evento `COMPONENTE_INSPECCIONADO` con su localizador y sigue en el modo hasta que el motor pida otro.
+- **`GRABAR`:** la aplicación funciona con normalidad y el agente emite un evento `ACCION_GRABADA` por cada acción del usuario (`PULSAR`, `LLENAR`, `SELECCIONAR` o `MARCAR`), en el orden en que ocurrieron. El texto escrito en un campo se emite una vez, al dejar de editarlo (al perder el foco, al pulsar Enter o antes de cualquier otra acción).
+
+El campo `localizador` de ambos eventos es una lista de criterios `{estrategia, valor}` ordenados de más a menos legible (`NOMBRE_COMPONENTE`, `ETIQUETA`, `TEXTO`, `NOMBRE_ACCESIBLE` y, siempre al final, `RUTA`). El agente comprueba cada criterio contra la ventana abierta y solo incluye los que encuentran únicamente ese componente, así que el localizador sirve tal cual en un paso. Los eventos viajan en un `EVENTO` como el resto. Ejemplo del `cuerpo` de una acción grabada:
+
+```json
+{
+  "secuencia": 4,
+  "instanteEpochMs": 1793287800456,
+  "tipo": "ACCION_GRABADA",
+  "datos": {
+    "accion": "LLENAR",
+    "ventana": "Inicio de sesión",
+    "componente": "javax.swing.JTextField",
+    "localizador": [
+      {"estrategia": "ETIQUETA", "valor": "Usuario"},
+      {"estrategia": "RUTA", "valor": "Inicio de sesión/JRootPane[0]/JLayeredPane[0]/JPanel[0]/JTextField[0]"}
+    ],
+    "valor": "Admin"
+  }
+}
+```
