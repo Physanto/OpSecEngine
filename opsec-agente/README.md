@@ -141,7 +141,7 @@ Los valores de los parámetros se envían como texto, porque el oráculo de cana
 
 `GanchoFirestore` instrumenta por nombre (sin depender de Firestore al compilar) `com.google.cloud.firestore.DocumentReference` (`set`, `update`, `delete`, `create`, `get`) y `WriteBatch` (`set`, `update`, `delete`, `create`, `commit`) y emite un evento `FIRESTORE` con `operacion`, `ruta` (`getPath()` por reflexión), `campos` (solo los nombres, nunca los valores), `lote`, `error` y `sensible`. Si esas clases no existen en la aplicación no hace nada. `GanchoFirestoreIT` lo prueba con dobles de esas clases que viven solo en las pruebas; no hace falta el emulador.
 
-**Inyección de fallos (#16, contratos-v1.6).** Cada elemento de `fallosInyectados` del `CONFIG_GANCHOS` tiene el formato `<punto>:<clase-excepcion>[:<mensaje>]`. `SQL_CONEXION` se provoca en `Driver.connect` (lo que `DriverManager.getConnection` invoca; así no se instrumenta una clase del JDK), `SQL_EJECUTAR` en `execute*` de `Statement` y `FIRESTORE_ESCRIBIR` en las escrituras de Firestore. El agente lanza la excepción antes del método original, con un constructor `(String)` (o una `RuntimeException` si no existe) y emite un evento `ESTADO` con `fallo` y `excepcion`. `ARCHIVO_ESCRIBIR` está reservado y todavía no lo atiende nadie.
+**Inyección de fallos (#16, contratos-v1.6).** Cada elemento de `fallosInyectados` del `CONFIG_GANCHOS` tiene el formato `<punto>:<clase-excepcion>[:<mensaje>]`. `SQL_CONEXION` se provoca en `Driver.connect` (lo que `DriverManager.getConnection` invoca; así no se instrumenta una clase del JDK) y en `DataSource.getConnection` de las clases de la aplicación o de sus librerías (por ejemplo, el `JdbcDataSource` de H2), `SQL_EJECUTAR` en `execute*` de `Statement` y `FIRESTORE_ESCRIBIR` en las escrituras de Firestore. El agente lanza la excepción antes del método original, con un constructor `(String)` (o una `RuntimeException` si no existe) y emite un evento `ESTADO` con `fallo` y `excepcion`. `ARCHIVO_ESCRIBIR` está reservado y todavía no lo atiende nadie.
 
 ### Inspector y grabadora (#17, contratos-v1.7)
 
@@ -159,7 +159,7 @@ El motor (`LanzadorProceso` con una `ConfigCobertura`) arranca la app con dos ag
 
 Ordenado según `PLAN_DE_TRABAJO.md`:
 
-1. Fallos inyectados: `ARCHIVO_ESCRIBIR` no tiene gancho y `SQL_CONEXION` no cubre `DataSource.getConnection`.
+1. Fallos inyectados: `ARCHIVO_ESCRIBIR` sigue reservado. Atenderlo exige instrumentar clases del JDK (`FileOutputStream`, `Files`), que cargan en el cargador de arranque y no ven las clases del agente; se deja para cuando haya un caso que lo necesite.
 
 - **Dueño:** P1. El paquete `api` (`AdaptadorToolkit`, `Gancho`, `EmisorEventos`) es un contrato del líder (L).
 - **Paquete raíz:** `io.github.physanto.opsecengine.agente`
