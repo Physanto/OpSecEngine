@@ -20,17 +20,32 @@ import java.util.Objects;
  * @param incluir patrones de nombres de clase que se miden, con {@code *} y {@code ?} y puntos como
  *     separador (por ejemplo {@code miapp.*}); si es null o está vacío se miden todas las clases de
  *     la aplicación
+ * @param volcarAlSalir si JaCoCo también escribe sus datos al terminar la JVM ({@code dumponexit});
+ *     es lo normal. Con false solo se escriben al recibir {@code CERRAR} el agente del motor, que
+ *     es lo que comprueban las pruebas de integración
  * @throws IllegalArgumentException si una ruta contiene una coma, que JaCoCo no admite en sus
  *     opciones, o si el jar contiene un signo igual, que la JVM no admite en la ruta de un agente;
  *     o si un patrón está en blanco
  */
-public record ConfigCobertura(Path jarJacoco, Path archivoExec, List<String> incluir) {
+public record ConfigCobertura(
+        Path jarJacoco, Path archivoExec, List<String> incluir, boolean volcarAlSalir) {
 
     /** Nombre del archivo de datos dentro de la carpeta de resultados. */
     public static final String ARCHIVO_EXEC = "jacoco.exec";
 
     /** Clases del agente del motor, que nunca se miden. */
     public static final String EXCLUIDAS = "io.github.physanto.opsecengine.agente.*";
+
+    /**
+     * Crea la configuración con el volcado al terminar la JVM activado.
+     *
+     * @param jarJacoco ruta del agente de JaCoCo; no puede ser null
+     * @param archivoExec archivo donde JaCoCo guarda los datos; no puede ser null
+     * @param incluir patrones de clases que se miden; vacío o null para todas
+     */
+    public ConfigCobertura(Path jarJacoco, Path archivoExec, List<String> incluir) {
+        this(jarJacoco, archivoExec, incluir, true);
+    }
 
     /** Valida las rutas y los patrones y hace inmutable la lista. */
     public ConfigCobertura {
@@ -69,10 +84,21 @@ public record ConfigCobertura(Path jarJacoco, Path archivoExec, List<String> inc
     }
 
     /**
+     * Devuelve una copia que no escribe los datos al terminar la JVM: solo los escribe el agente
+     * del motor al recibir {@code CERRAR}. Sirve para comprobar que ese volcado basta.
+     *
+     * @return la misma configuración con {@code volcarAlSalir} en false
+     */
+    public ConfigCobertura sinVolcadoAlSalir() {
+        return new ConfigCobertura(jarJacoco, archivoExec, incluir, false);
+    }
+
+    /**
      * Devuelve el argumento {@code -javaagent} que carga JaCoCo.
      *
      * <p>Los datos se añaden al archivo ({@code append=true}) al volcarlos el agente del motor al
-     * recibir {@code CERRAR} y, por si la aplicación termina sola, al salir la JVM.
+     * recibir {@code CERRAR} y, por si la aplicación termina sola, al salir la JVM (salvo {@link
+     * #sinVolcadoAlSalir()}).
      *
      * @return el argumento para la línea de comandos de la JVM
      */
@@ -82,7 +108,9 @@ public record ConfigCobertura(Path jarJacoco, Path archivoExec, List<String> inc
                         .append(jarJacoco.toAbsolutePath())
                         .append("=destfile=")
                         .append(archivoExec.toAbsolutePath())
-                        .append(",append=true,dumponexit=true,output=file,excludes=")
+                        .append(",append=true,dumponexit=")
+                        .append(volcarAlSalir)
+                        .append(",output=file,excludes=")
                         .append(EXCLUIDAS);
         if (!incluir.isEmpty()) {
             argumento.append(",includes=").append(String.join(":", incluir));
