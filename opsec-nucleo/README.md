@@ -197,3 +197,12 @@ La lista se elimina de las copias para que no se expandan de nuevo.
 Esta opción usa la sección de extensiones existente y no modifica contratos.
 No conecta los ids de `caso.ataques` con la biblioteca, no genera canarios y no instala
 ganchos JDBC/Firestore. Véase la demostración completa en `demo/payloads/`.
+
+## Fallos inyectados (#16)
+
+La sección `fallos` de un caso (`punto:clase[:mensaje]`, ver `contratos/protocolo/README.md`) pide al agente que lance excepciones en SQL, Firestore o archivos. `EjecucionService` los envía en un segundo `CONFIG_GANCHOS` y terminan con la sesión del caso:
+
+- Con `rol`, después del inicio de sesión: el login no debe fallar por el fallo del caso.
+- Sin `rol`, cuando la aplicación ya mostró su primera ventana (consulta `ARBOL_SOLICITUD` cada 100 ms, hasta la espera máxima de un paso; si no aparece ninguna ventana, los activa de todos modos y lo registra). Sin esa espera, el fallo llegaba mientras la app abría su base de datos y la app terminaba antes de ejecutar el primer paso.
+
+`InyeccionFallosIT` lo comprueba con la app de práctica real y `demo/robustez`: el agente informa el fallo, los cinco pasos terminan en `OK` y el diálogo de error muestra la pila (F7) o un mensaje genérico según la app.
