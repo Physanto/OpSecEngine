@@ -182,6 +182,7 @@ class GanchoJdbcIT {
                 String texto = Files.readString(salida, StandardCharsets.UTF_8);
                 assertThat(texto)
                         .contains("conexion: java.sql.SQLException sin red")
+                        .contains("datasource: java.sql.SQLException sin red")
                         .contains("ejecucion: java.lang.IllegalStateException disco lleno");
                 Thread.sleep(300);
                 assertThat(

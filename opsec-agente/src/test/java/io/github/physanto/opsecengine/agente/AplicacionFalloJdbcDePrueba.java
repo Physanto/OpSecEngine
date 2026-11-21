@@ -3,6 +3,7 @@ package io.github.physanto.opsecengine.agente;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import javax.sql.DataSource;
 
 /** Aplicación de prueba sin interfaz que intenta conectarse y ejecutar con fallos inyectados. */
 public final class AplicacionFalloJdbcDePrueba {
@@ -23,6 +24,16 @@ public final class AplicacionFalloJdbcDePrueba {
             System.out.println("conexion: sin fallo");
         } catch (Exception e) {
             System.out.println("conexion: " + e.getClass().getName() + " " + e.getMessage());
+        }
+        // El DataSource de H2 viene en el jar de la app de práctica, no en el classpath de pruebas.
+        Class<?> claseOrigen = Class.forName("org.h2.jdbcx.JdbcDataSource");
+        Object origen = claseOrigen.getDeclaredConstructor().newInstance();
+        claseOrigen.getMethod("setURL", String.class).invoke(origen, "jdbc:h2:mem:fallo3");
+        try {
+            ((DataSource) origen).getConnection();
+            System.out.println("datasource: sin fallo");
+        } catch (Exception e) {
+            System.out.println("datasource: " + e.getClass().getName() + " " + e.getMessage());
         }
         try {
             abierta.createStatement().execute("SELECT 1");

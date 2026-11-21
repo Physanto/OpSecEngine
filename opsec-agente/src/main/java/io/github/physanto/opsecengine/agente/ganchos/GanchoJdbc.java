@@ -20,6 +20,7 @@ import java.sql.Driver;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.function.Consumer;
+import javax.sql.DataSource;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.method.MethodDescription;
@@ -35,8 +36,9 @@ import net.bytebuddy.matcher.ElementMatcher;
  * <ul>
  *   <li>{@code execute}, {@code executeQuery}, {@code executeUpdate} y {@code executeLargeUpdate}
  *       de {@code Statement} con el SQL como argumento: evento con {@code tipoSentencia=STATEMENT}.
- *   <li>{@code Driver.connect} y las ejecuciones: además provocan los fallos inyectados {@code
- *       SQL_CONEXION} y {@code SQL_EJECUTAR} (ver {@link InyectorFallos}).
+ *   <li>{@code Driver.connect}, {@code DataSource.getConnection} y las ejecuciones: además provocan
+ *       los fallos inyectados {@code SQL_CONEXION} (las dos primeras) y {@code SQL_EJECUTAR} (ver
+ *       {@link InyectorFallos}).
  *   <li>{@code Connection.prepareStatement}: recuerda el SQL; los {@code setXxx(int, ...)} guardan
  *       los parámetros y el {@code execute*()} sin argumentos emite el evento con {@code
  *       tipoSentencia=PREPARED} y {@code parametros}.
@@ -107,7 +109,8 @@ public final class GanchoJdbc implements Gancho {
                                     .and(
                                             isSubTypeOf(Statement.class)
                                                     .or(isSubTypeOf(Connection.class))
-                                                    .or(isSubTypeOf(Driver.class))))
+                                                    .or(isSubTypeOf(Driver.class))
+                                                    .or(isSubTypeOf(DataSource.class))))
                     .transform((builder, tipo, cargador, modulo, dominio) -> {
                         if (tipo.isAssignableTo(Driver.class)) {
                             builder =
@@ -115,6 +118,15 @@ public final class GanchoJdbc implements Gancho {
                                             Advice.to(ConsejoFallo.Conexion.class)
                                                     .on(
                                                             named("connect")
+                                                                    .and(isPublic())
+                                                                    .and(not(isAbstract()))));
+                        }
+                        if (tipo.isAssignableTo(DataSource.class)) {
+                            builder =
+                                    builder.visit(
+                                            Advice.to(ConsejoFallo.Conexion.class)
+                                                    .on(
+                                                            named("getConnection")
                                                                     .and(isPublic())
                                                                     .and(not(isAbstract()))));
                         }
