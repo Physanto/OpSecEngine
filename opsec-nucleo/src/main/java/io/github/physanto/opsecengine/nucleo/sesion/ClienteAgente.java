@@ -11,6 +11,7 @@ import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
+import io.github.physanto.opsecengine.protocolo.dto.ModoInteraccionDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.SolicitudCapturaDto;
@@ -225,6 +226,30 @@ public final class ClienteAgente implements AutoCloseable {
         return solicitar(
                 TipoMensaje.CONFIG_GANCHOS,
                 config,
+                TipoMensaje.RESULTADO_PASO,
+                ResultadoPasoDto.class,
+                tiempoMaximo);
+    }
+
+    /**
+     * Activa en el agente el modo de inspección o de grabación, o los desactiva, y espera la
+     * confirmación. Un modo nuevo reemplaza al anterior. Los eventos {@code
+     * COMPONENTE_INSPECCIONADO} y {@code ACCION_GRABADA} llegan después por {@link
+     * #tomarEventos()}.
+     *
+     * @param modo modo pedido; no puede ser null
+     * @return la confirmación del agente, un resultado con código {@code OK}
+     * @throws ExcepcionErrorAgente si el agente responde {@code ERROR}, por ejemplo porque no
+     *     conoce el mensaje
+     * @throws ExcepcionProtocolo si no hay respuesta a tiempo o es de otro tipo
+     * @throws IOException si falla la conexión
+     * @throws IllegalStateException si todavía no se recibió el saludo
+     */
+    public ResultadoPasoDto modoInteraccion(ModoInteraccionDto modo) throws IOException {
+        Objects.requireNonNull(modo, "El modo no puede ser null");
+        return solicitar(
+                TipoMensaje.MODO_INTERACCION,
+                modo,
                 TipoMensaje.RESULTADO_PASO,
                 ResultadoPasoDto.class,
                 tiempoMaximo);
