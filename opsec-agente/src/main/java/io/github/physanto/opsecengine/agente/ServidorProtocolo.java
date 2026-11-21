@@ -1,6 +1,7 @@
 package io.github.physanto.opsecengine.agente;
 
 import io.github.physanto.opsecengine.agente.api.AdaptadorToolkit;
+import io.github.physanto.opsecengine.agente.cobertura.CoberturaJacoco;
 import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
 import io.github.physanto.opsecengine.agente.swing.ControlInteraccion;
 import io.github.physanto.opsecengine.protocolo.CanalMensajes;
@@ -42,9 +43,10 @@ import java.util.Optional;
  *   <li>{@code CAPTURAR}: responde {@code CAPTURA} con la imagen PNG de la ventana pedida. Si
  *       ninguna ventana visible coincide, o si la captura falla, responde {@code ERROR} con el
  *       código {@code ERROR_INTERNO} y la causa.
- *   <li>{@code CERRAR}: emite el evento {@code APP_TERMINADA} con {@code esperada=true} y {@code
- *       causa=CERRAR}, cierra la conexión (esa es la respuesta: el motor la espera) y después
- *       ejecuta el cierre de la aplicación que recibió en el constructor.
+ *   <li>{@code CERRAR}: si JaCoCo está cargado, escribe en su archivo la cobertura de la sesión
+ *       ({@link CoberturaJacoco}); emite el evento {@code APP_TERMINADA} con {@code esperada=true}
+ *       y {@code causa=CERRAR}, cierra la conexión (esa es la respuesta: el motor la espera) y
+ *       después ejecuta el cierre de la aplicación que recibió en el constructor.
  *   <li>{@code ERROR} del motor: lo registra y termina la conversación.
  *   <li>{@code CONFIG_GANCHOS}: reemplaza la configuración de los ganchos ({@link
  *       ConfiguracionGanchos}) y responde {@code RESULTADO_PASO} con código {@code OK} para
@@ -72,6 +74,7 @@ final class ServidorProtocolo implements Runnable {
     private final CodecMensajes codec;
     private final Runnable cierre;
     private final ControlInteraccion interaccion;
+    private final CoberturaJacoco cobertura;
     private boolean cierrePedido;
     private boolean interaccionUsada;
 
@@ -116,6 +119,39 @@ final class ServidorProtocolo implements Runnable {
             CodecMensajes codec,
             Runnable cierre,
             ControlInteraccion interaccion) {
+        this(
+                argumentos,
+                versionAgente,
+                adaptador,
+                emisor,
+                codec,
+                cierre,
+                interaccion,
+                new CoberturaJacoco(RegistroAgente::error));
+    }
+
+    /**
+     * Crea el servidor con inspector, grabadora y un volcador de cobertura propio.
+     *
+     * @param argumentos puerto y token del motor
+     * @param versionAgente versión que se informa en el {@code HOLA}
+     * @param adaptador adaptador que ejecuta las acciones sobre la interfaz
+     * @param emisor emisor de eventos que se conecta después del saludo
+     * @param codec codec del protocolo
+     * @param cierre acción que cierra la aplicación después de {@code CERRAR}
+     * @param interaccion atiende {@code MODO_INTERACCION}; puede ser null si no está disponible
+     * @param cobertura escribe la cobertura de JaCoCo al recibir {@code CERRAR}; no puede ser null
+     */
+    ServidorProtocolo(
+            ArgumentosAgente argumentos,
+            String versionAgente,
+            AdaptadorToolkit adaptador,
+            EmisorProtocolo emisor,
+            CodecMensajes codec,
+            Runnable cierre,
+            ControlInteraccion interaccion,
+            CoberturaJacoco cobertura) {
+        this.cobertura = cobertura;
         this.interaccion = interaccion;
         this.argumentos = argumentos;
         this.versionAgente = versionAgente;
@@ -194,6 +230,7 @@ final class ServidorProtocolo implements Runnable {
     private boolean atender(CanalMensajes canal, Mensaje mensaje) throws IOException {
         switch (mensaje.getTipo()) {
             case CERRAR:
+                cobertura.volcar();
                 avisarCierre();
                 cierrePedido = true;
                 return false;
