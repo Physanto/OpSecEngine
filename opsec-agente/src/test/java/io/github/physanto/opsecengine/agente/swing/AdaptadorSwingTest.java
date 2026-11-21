@@ -104,6 +104,11 @@ class AdaptadorSwingTest {
             assertThat(lleno.getCodigo()).isEqualTo(CodigoResultado.OK);
             assertThat(pulsado.getCodigo()).isEqualTo(CodigoResultado.OK);
             assertThat(campo.getText()).isEqualTo("Contraseña Ñ 123");
+            // El clic real llega al EDT un instante después de que el Robot lo envía.
+            long espera = System.nanoTime() + 3_000_000_000L;
+            while (pulsaciones.get() == 0 && System.nanoTime() < espera) {
+                Thread.sleep(25);
+            }
             assertThat(pulsaciones).hasValue(1);
         } finally {
             SwingUtilities.invokeAndWait(ventana[0]::dispose);
