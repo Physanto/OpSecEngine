@@ -12,6 +12,7 @@ import io.github.physanto.opsecengine.dominio.caso.Suite;
 import io.github.physanto.opsecengine.dominio.configuracion.Proyecto;
 import io.github.physanto.opsecengine.dominio.resultado.EstadoVeredicto;
 import io.github.physanto.opsecengine.dominio.resultado.ResultadoCaso;
+import io.github.physanto.opsecengine.dominio.traza.TipoEvento;
 import io.github.physanto.opsecengine.nucleo.evaluacion.EvaluacionService;
 import io.github.physanto.opsecengine.nucleo.extensiones.RegistroExtensiones;
 import io.github.physanto.opsecengine.nucleo.sesion.ArranqueApp;
@@ -19,13 +20,19 @@ import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.soporte.AgenteFalso;
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Pruebas de la repetición de casos que no cumplen y de la marca de inestables. */
 class ReintentosCasoTest {
@@ -88,6 +95,69 @@ class ReintentosCasoTest {
     }
 
     /** Ejecuta un caso; el intento n responde con el código n (el último se repite). */
+    @Test
+    void lasCapturasDeCadaIntentoTienenSuPropioArchivo(@TempDir Path resultados) throws Exception {
+        ArranqueApp arranque =
+                new ArranqueApp() {
+                    @Override
+                    public Closeable arrancar(Proyecto proyecto, int puerto, String token)
+                            throws IOException {
+                        AgenteFalso agente = new AgenteFalso();
+                        agente.cuandoPaso(paso -> true)
+                                .responder(new ResultadoPasoDto(CodigoResultado.ERROR, "falla", 1));
+                        agentes.add(agente);
+                        agente.conectar(puerto, token);
+                        return agente::close;
+                    }
+
+                    @Override
+                    public Optional<Path> carpetaResultados() {
+                        return Optional.of(resultados);
+                    }
+                };
+        Paso captura = new Paso(1, Accion.CAPTURAR, Localizador.porTexto("Menú"), null, null, null);
+        Paso pulsar = new Paso(2, Accion.PULSAR, Localizador.porTexto("Avanzar"), null, null, null);
+        Suite suite =
+                new Suite(
+                        "capturas",
+                        "1",
+                        null,
+                        new ConfigEjecucion(ModoAccion.SEMANTICO, false, ESPERA, 2, 0L, 1),
+                        List.of(
+                                new Caso(
+                                        "A",
+                                        null,
+                                        null,
+                                        List.of(captura, pulsar),
+                                        null,
+                                        null,
+                                        null)),
+                        null);
+        EvaluacionService evaluacion =
+                new EvaluacionService(
+                        new RegistroExtensiones(List.of(), List.of(), List.of(), List.of()));
+
+        ResultadoCaso caso;
+        try (SesionService sesiones = new SesionService(arranque, ESPERA, ESPERA)) {
+            caso =
+                    new EjecucionService(PROYECTO, sesiones, evaluacion)
+                            .ejecutar(suite)
+                            .casos()
+                            .get(0);
+        }
+
+        assertThat(caso.intentos()).isEqualTo(3);
+        try (Stream<Path> archivos = Files.list(resultados.resolve("capturas"))) {
+            assertThat(archivos.map(a -> a.getFileName().toString()))
+                    .containsExactlyInAnyOrder("A-1.png", "A-intento2-1.png", "A-intento3-1.png");
+        }
+        assertThat(caso.traza().eventos())
+                .filteredOn(e -> e.tipo() == TipoEvento.CAPTURA)
+                .extracting(e -> e.datos().get("archivo"))
+                .as("la traza del intento informado apunta a su propia captura")
+                .containsExactly("capturas/A-intento3-1.png");
+    }
+
     private ResultadoCaso ejecutar(int reintentos, CodigoResultado... codigos) {
         AtomicInteger intento = new AtomicInteger();
         ArranqueApp arranque =

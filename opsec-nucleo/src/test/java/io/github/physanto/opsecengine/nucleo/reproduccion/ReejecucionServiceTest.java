@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.github.physanto.opsecengine.dominio.caso.Accion;
 import io.github.physanto.opsecengine.dominio.caso.Caso;
 import io.github.physanto.opsecengine.dominio.caso.ConfigEjecucion;
+import io.github.physanto.opsecengine.dominio.caso.Criterio;
+import io.github.physanto.opsecengine.dominio.caso.EstrategiaLocalizacion;
 import io.github.physanto.opsecengine.dominio.caso.Localizador;
 import io.github.physanto.opsecengine.dominio.caso.ModoAccion;
 import io.github.physanto.opsecengine.dominio.caso.Paso;
@@ -17,6 +19,7 @@ import io.github.physanto.opsecengine.dominio.resultado.ResultadoSuite;
 import io.github.physanto.opsecengine.nucleo.ejecucion.EjecucionService;
 import io.github.physanto.opsecengine.nucleo.evaluacion.EvaluacionService;
 import io.github.physanto.opsecengine.nucleo.extensiones.RegistroExtensiones;
+import io.github.physanto.opsecengine.nucleo.generacion.SuiteYaml;
 import io.github.physanto.opsecengine.nucleo.sesion.ArranqueApp;
 import io.github.physanto.opsecengine.nucleo.sesion.SesionService;
 import io.github.physanto.opsecengine.protocolo.dto.CodigoResultado;
@@ -83,6 +86,60 @@ class ReejecucionServiceTest {
                     .isEqualTo(original.manifiesto().hashJar());
             assertThat(repetido.resultado().manifiesto().semilla()).isEqualTo(7L);
         }
+    }
+
+    @Test
+    void unaSuiteQueNoCabeEnYamlSeRechazaConLosPasosYSinEscribirNada() throws Exception {
+        Paso llenarPorNombre =
+                new Paso(
+                        2,
+                        Accion.LLENAR,
+                        new Localizador(
+                                List.of(
+                                        new Criterio(
+                                                EstrategiaLocalizacion.NOMBRE_COMPONENTE,
+                                                "campo"))),
+                        "x",
+                        null,
+                        null);
+        Paso pulsar = new Paso(1, Accion.PULSAR, Localizador.porTexto("Avanzar"), null, null, null);
+        Suite suite =
+                new Suite(
+                        "no-cabe",
+                        "1",
+                        null,
+                        null,
+                        List.of(
+                                new Caso(
+                                        "K1",
+                                        null,
+                                        null,
+                                        List.of(pulsar, llenarPorNombre),
+                                        null,
+                                        null,
+                                        null)),
+                        null);
+        Path resultados = carpeta.resolve("rechazada");
+        try (SesionService sesiones = new SesionService(arranque, ESPERA, ESPERA)) {
+            ResultadoSuite original = ejecucion(proyecto(jar("app-v1")), sesiones).ejecutar(suite);
+
+            assertThat(SuiteYaml.noExpresables(suite))
+                    .hasSize(1)
+                    .first()
+                    .asString()
+                    .contains("K1", "paso 2");
+            assertThatThrownBy(
+                            () -> new ReejecucionService().registrar(original, suite, resultados))
+                    .isInstanceOf(ExcepcionReejecucion.class)
+                    .hasMessageContaining("no se escribió nada")
+                    .hasMessageContaining("K1");
+            assertThat(resultados).doesNotExist();
+        }
+    }
+
+    @Test
+    void unaSuiteNormalNoTienePasosNoExpresables() {
+        assertThat(SuiteYaml.noExpresables(suite(1L))).isEmpty();
     }
 
     @Test

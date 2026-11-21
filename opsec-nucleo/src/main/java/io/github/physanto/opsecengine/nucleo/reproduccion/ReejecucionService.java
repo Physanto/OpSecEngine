@@ -37,7 +37,7 @@ import java.util.Objects;
  *
  * <pre>{@code
  * ReejecucionService reejecucion = new ReejecucionService();
- * reejecucion.registrar(resultado, suite, carpetaResultados);
+ * reejecucion.registrar(resultado, suite, carpetaResultados); // ExcepcionReejecucion si no cabe en YAML
  * ResultadoReejecucion otra = reejecucion.reejecutar(carpetaResultados, proyecto, ejecucion, false);
  * List<String> distintos = ReejecucionService.casosConVeredictoDistinto(resultado, otra.resultado());
  * }</pre>
@@ -76,14 +76,22 @@ public final class ReejecucionService {
      * @param suite suite que se ejecutó; no puede ser null
      * @param carpeta carpeta de resultados; se crea si no existe; no puede ser null
      * @throws IOException si no se puede escribir
-     * @throws IllegalArgumentException si la suite tiene un paso que el formato YAML no puede
-     *     expresar
+     * @throws ExcepcionReejecucion si la suite tiene pasos que el formato YAML no puede expresar
+     *     (por ejemplo, llenar un campo localizado por su nombre de componente): la ejecución no se
+     *     podría repetir, así que no se escribe nada y el mensaje enumera esos pasos
      * @throws NullPointerException si algún parámetro es null
      */
-    public void registrar(ResultadoSuite resultado, Suite suite, Path carpeta) throws IOException {
+    public void registrar(ResultadoSuite resultado, Suite suite, Path carpeta)
+            throws IOException, ExcepcionReejecucion {
         Objects.requireNonNull(resultado, "El resultado no puede ser null");
         Objects.requireNonNull(suite, "La suite no puede ser null");
         Objects.requireNonNull(carpeta, "La carpeta no puede ser null");
+        List<String> problemas = SuiteYaml.noExpresables(suite);
+        if (!problemas.isEmpty()) {
+            throw new ExcepcionReejecucion(
+                    "No se puede guardar la suite para repetir la ejecución; no se escribió nada. "
+                            + String.join("; ", problemas));
+        }
         Files.createDirectories(carpeta);
         SuiteYaml.guardar(suite, carpeta.resolve(ARCHIVO_SUITE));
         ManifiestoJson.escribir(resultado.manifiesto(), carpeta.resolve(ARCHIVO_MANIFIESTO));

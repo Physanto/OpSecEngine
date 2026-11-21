@@ -96,8 +96,9 @@ import java.util.logging.Logger;
  * ConfigEjecucion#reintentos()} veces más; se detiene en el primer intento que cumple. {@link
  * ResultadoCaso#intentos()} cuenta los intentos hechos. Si los intentos no dieron todos el mismo
  * estado (por ejemplo, falló y luego cumplió), el caso es {@link ResultadoCaso#inestable()} y se
- * informa el intento más grave, con su veredicto y su traza, para no ocultar hallazgos; las
- * capturas de un intento reemplazan a las del anterior. Un caso que falla siempre igual no es
+ * informa el intento más grave, con su veredicto y su traza, para no ocultar hallazgos. Las
+ * capturas del primer intento se guardan como siempre y las de cada reintento llevan {@code
+ * -intento<n>} en el nombre, así que ninguno pisa a otro. Un caso que falla siempre igual no es
  * inestable. Con cero reintentos (el valor por defecto) cada caso se ejecuta una vez.
  *
  * <p>Los pasos {@code CAPTURAR} no se envían como {@code EJECUTAR_PASO}: el motor pide la imagen
@@ -107,7 +108,8 @@ import java.util.logging.Logger;
  * objetivo que sea {@code TITULO_VENTANA}, {@code CLASE_VENTANA}, {@code TEXTO} o {@code ETIQUETA};
  * sin objetivo se captura la ventana activa. Si el agente no encuentra la ventana, no hay carpeta
  * de resultados o la imagen no se puede guardar, el paso termina con {@code ERROR}. Las capturas de
- * los pasos de login se guardan como {@code capturas/<caso>-login-<paso>.png}.
+ * los pasos de login se guardan como {@code capturas/<caso>-login-<paso>.png}; en un reintento,
+ * {@code capturas/<caso>-intento<n>-<paso>.png}.
  *
  * <p>Si el último intento de un paso no termina con {@code OK} (el agente responde {@code ERROR},
  * {@code NO_ENCONTRADO}, {@code NO_ALCANZABLE} o {@code TIEMPO_AGOTADO}, o no responde), los pasos
@@ -126,7 +128,9 @@ import java.util.logging.Logger;
  * NO_CONCLUYENTE}. Un caso que escribe {@code {canario}} en un paso {@code LLENAR} sin declarar
  * canario recibe uno determinista según la semilla y su id; queda en {@link Caso#canario()}. Los
  * fallos del caso ({@link Caso#fallos()}) se envían en un segundo {@code CONFIG_GANCHOS}, después
- * del inicio de sesión, y terminan con la sesión del caso.
+ * del inicio de sesión, y terminan con la sesión del caso. Si el caso no inicia sesión con un rol,
+ * antes de enviarlos se espera a que la aplicación muestre su primera ventana (hasta la espera
+ * máxima de un paso), para que no interfieran con su arranque.
  *
  * <p>Ejemplo:
  *
@@ -185,6 +189,9 @@ public final class EjecucionService {
 
     /** Clave de {@code extensiones} del caso que une los casos que dependen unos de otros. */
     public static final String EXTENSION_GRUPO = "grupo";
+
+    /** Pausa entre consultas de las ventanas mientras se espera la primera. */
+    private static final long INTERVALO_VENTANA_MS = 100;
 
     /** Tiempo que se espera a que terminen los hilos cancelados tras un fallo. */
     private static final Duration ESPERA_FIN_HILOS = Duration.ofSeconds(30);
@@ -398,6 +405,37 @@ public final class EjecucionService {
         return List.of(resultados);
     }
 
+    /**
+     * Espera a que la aplicación muestre su primera ventana, que es cuando terminó de arrancar. Los
+     * fallos inyectados no deben llegar antes: la aplicación puede estar abriendo su base de datos
+     * y terminaría sin que el caso llegue a ejecutar un paso. Si no aparece ninguna ventana en el
+     * plazo, se sigue de todos modos (hay aplicaciones sin ventanas).
+     */
+    private static void esperarPrimeraVentana(
+            ClienteAgente cliente, Duration plazo, String casoId) {
+        long limite = System.nanoTime() + plazo.toNanos();
+        try {
+            do {
+                if (!cliente.pedirArbol().getVentanas().isEmpty()) {
+                    return;
+                }
+                Thread.sleep(INTERVALO_VENTANA_MS);
+            } while (System.nanoTime() < limite);
+        } catch (IOException | RuntimeException e) {
+            REGISTRO.log(Level.WARNING, "No se pudo consultar las ventanas de " + casoId, e);
+            return;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+        REGISTRO.warning(
+                "La aplicación del caso "
+                        + casoId
+                        + " no mostró ninguna ventana en "
+                        + plazo.toMillis()
+                        + " ms; se activan los fallos de todos modos");
+    }
+
     /** Espera a que los hilos cancelados cierren sus sesiones, sin perder la interrupción. */
     private static void esperarFin(ExecutorService pool) {
         try {
@@ -458,7 +496,7 @@ public final class EjecucionService {
         List<ResultadoCaso> intentos = new ArrayList<>();
         int maximo = 1 + suite.config().reintentos();
         do {
-            intentos.add(ejecutarIntento(suite, caso, sesion));
+            intentos.add(ejecutarIntento(suite, caso, sesion, intentos.size() + 1));
         } while (intentos.size() < maximo
                 && !Thread.currentThread().isInterrupted()
                 && intentos.get(intentos.size() - 1).veredicto().estado()
@@ -492,12 +530,14 @@ public final class EjecucionService {
         };
     }
 
-    private ResultadoCaso ejecutarIntento(Suite suite, Caso caso, SesionService sesion) {
+    private ResultadoCaso ejecutarIntento(
+            Suite suite, Caso caso, SesionService sesion, int intento) {
         long comienzo = System.nanoTime();
         TrazaEnCurso traza =
                 new TrazaEnCurso(
                         suite,
                         caso,
+                        intento,
                         evaluacion.iniciarCaso(Contexto.deCaso(proyecto, suite, caso)));
         String motivo;
         Optional<Rol> rol = caso.rol() == null ? Optional.empty() : proyecto.buscarRol(caso.rol());
@@ -555,6 +595,9 @@ public final class EjecucionService {
                 }
             }
             if (!caso.fallos().isEmpty()) {
+                if (rol == null) {
+                    esperarPrimeraVentana(cliente, config.esperaMaximaPaso(), caso.id());
+                }
                 try {
                     cliente.configurarGanchos(Canarios.configuracionGanchos(proyecto, caso, true));
                 } catch (IOException | RuntimeException e) {
@@ -703,6 +746,7 @@ public final class EjecucionService {
                         capturar(
                                 cliente,
                                 traza.caso.id(),
+                                traza.intento,
                                 paso,
                                 numero == 0 ? "login-" + paso.orden() : String.valueOf(numero));
                 resultado = new ResultadoPasoDto(CodigoResultado.OK, null, milisDesde(comienzo));
@@ -742,7 +786,8 @@ public final class EjecucionService {
      * @throws IOException si el agente no la toma, no hay carpeta o no se puede guardar
      */
     private Map<String, Object> capturar(
-            ClienteAgente cliente, String idCaso, Paso paso, String sufijo) throws IOException {
+            ClienteAgente cliente, String idCaso, int intento, Paso paso, String sufijo)
+            throws IOException {
         Optional<Path> carpeta = sesiones.carpetaResultados();
         if (carpeta.isEmpty()) {
             throw new IOException("No hay carpeta de resultados donde guardar la captura");
@@ -757,7 +802,12 @@ public final class EjecucionService {
         } catch (IllegalArgumentException e) {
             throw new IOException("El agente envió una captura que no está en Base64", e);
         }
-        String nombre = nombreArchivo(idCaso) + "-" + sufijo + ".png";
+        String nombre =
+                nombreArchivo(idCaso)
+                        + (intento > 1 ? "-intento" + intento : "")
+                        + "-"
+                        + sufijo
+                        + ".png";
         Path capturas = carpeta.get().resolve(CARPETA_CAPTURAS);
         Files.createDirectories(capturas);
         Files.write(capturas.resolve(nombre), imagen);
@@ -839,13 +889,15 @@ public final class EjecucionService {
 
         private final Suite suite;
         private final Caso caso;
+        private final int intento;
         private final List<Evento> eventos = new ArrayList<>();
         private final EvaluacionCaso evaluacion;
         private boolean sesionActiva;
 
-        TrazaEnCurso(Suite suite, Caso caso, EvaluacionCaso evaluacion) {
+        TrazaEnCurso(Suite suite, Caso caso, int intento, EvaluacionCaso evaluacion) {
             this.suite = suite;
             this.caso = caso;
+            this.intento = intento;
             this.evaluacion = evaluacion;
         }
 
