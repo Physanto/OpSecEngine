@@ -126,7 +126,9 @@ import java.util.logging.Logger;
  * NO_CONCLUYENTE}. Un caso que escribe {@code {canario}} en un paso {@code LLENAR} sin declarar
  * canario recibe uno determinista según la semilla y su id; queda en {@link Caso#canario()}. Los
  * fallos del caso ({@link Caso#fallos()}) se envían en un segundo {@code CONFIG_GANCHOS}, después
- * del inicio de sesión, y terminan con la sesión del caso.
+ * del inicio de sesión, y terminan con la sesión del caso. Si el caso no inicia sesión con un rol,
+ * antes de enviarlos se espera a que la aplicación muestre su primera ventana (hasta la espera
+ * máxima de un paso), para que no interfieran con su arranque.
  *
  * <p>Ejemplo:
  *
@@ -185,6 +187,9 @@ public final class EjecucionService {
 
     /** Clave de {@code extensiones} del caso que une los casos que dependen unos de otros. */
     public static final String EXTENSION_GRUPO = "grupo";
+
+    /** Pausa entre consultas de las ventanas mientras se espera la primera. */
+    private static final long INTERVALO_VENTANA_MS = 100;
 
     /** Tiempo que se espera a que terminen los hilos cancelados tras un fallo. */
     private static final Duration ESPERA_FIN_HILOS = Duration.ofSeconds(30);
@@ -398,6 +403,37 @@ public final class EjecucionService {
         return List.of(resultados);
     }
 
+    /**
+     * Espera a que la aplicación muestre su primera ventana, que es cuando terminó de arrancar. Los
+     * fallos inyectados no deben llegar antes: la aplicación puede estar abriendo su base de datos
+     * y terminaría sin que el caso llegue a ejecutar un paso. Si no aparece ninguna ventana en el
+     * plazo, se sigue de todos modos (hay aplicaciones sin ventanas).
+     */
+    private static void esperarPrimeraVentana(
+            ClienteAgente cliente, Duration plazo, String casoId) {
+        long limite = System.nanoTime() + plazo.toNanos();
+        try {
+            do {
+                if (!cliente.pedirArbol().getVentanas().isEmpty()) {
+                    return;
+                }
+                Thread.sleep(INTERVALO_VENTANA_MS);
+            } while (System.nanoTime() < limite);
+        } catch (IOException | RuntimeException e) {
+            REGISTRO.log(Level.WARNING, "No se pudo consultar las ventanas de " + casoId, e);
+            return;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+        REGISTRO.warning(
+                "La aplicación del caso "
+                        + casoId
+                        + " no mostró ninguna ventana en "
+                        + plazo.toMillis()
+                        + " ms; se activan los fallos de todos modos");
+    }
+
     /** Espera a que los hilos cancelados cierren sus sesiones, sin perder la interrupción. */
     private static void esperarFin(ExecutorService pool) {
         try {
@@ -555,6 +591,9 @@ public final class EjecucionService {
                 }
             }
             if (!caso.fallos().isEmpty()) {
+                if (rol == null) {
+                    esperarPrimeraVentana(cliente, config.esperaMaximaPaso(), caso.id());
+                }
                 try {
                     cliente.configurarGanchos(Canarios.configuracionGanchos(proyecto, caso, true));
                 } catch (IOException | RuntimeException e) {
