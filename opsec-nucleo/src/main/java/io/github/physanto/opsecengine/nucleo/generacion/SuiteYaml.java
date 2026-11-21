@@ -48,6 +48,30 @@ public final class SuiteYaml {
     private SuiteYaml() {}
 
     /**
+     * Lista los pasos de la suite que el formato YAML no puede expresar, para saberlo antes de
+     * escribirla. {@link #escribir(Suite)} falla con el primero.
+     *
+     * @param suite suite a revisar; no puede ser null
+     * @return un mensaje en español por cada paso que no se puede expresar, con su caso y su
+     *     número; vacío si la suite se puede escribir completa
+     * @throws NullPointerException si {@code suite} es null
+     */
+    public static List<String> noExpresables(Suite suite) {
+        Objects.requireNonNull(suite, "Suite null");
+        List<String> problemas = new ArrayList<>();
+        for (Caso caso : suite.casos()) {
+            for (Paso paso : caso.pasos()) {
+                try {
+                    paso(caso.id(), paso);
+                } catch (IllegalArgumentException e) {
+                    problemas.add(e.getMessage());
+                }
+            }
+        }
+        return problemas;
+    }
+
+    /**
      * Convierte la suite a texto YAML.
      *
      * @param suite suite a escribir; no puede ser null
