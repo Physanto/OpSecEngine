@@ -1,0 +1,8 @@
+# ROBUSTEZ-001 (#16): la misma app con todos sus fallos corregidos y el mismo fallo inyectado.
+# Formato: contratos/esquemas/proyecto.schema.json
+
+nombre: robustez-001-corregido
+
+app:
+  jar: ../../apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=todos"]

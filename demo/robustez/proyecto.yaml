@@ -1,0 +1,12 @@
+# ROBUSTEZ-001 (#16): la app de práctica con F7 activo (pila de llamadas en el diálogo de error)
+# y un fallo de conexión a la base de datos inyectado por el agente. F6 se corrige para aislar F7.
+# Formato: contratos/esquemas/proyecto.schema.json
+#
+# Antes de ejecutar, construya el proyecto desde la raíz del repositorio: ./mvnw -B package
+# (en Windows: mvnw.cmd -B package). Las rutas son relativas a esta carpeta.
+
+nombre: robustez-001-vulnerable
+
+app:
+  jar: ../../apps-practica/clientes-vulnerable/target/clientes-vulnerable.jar
+  argumentosJvm: ["-Dpractica.corregir=F6"]
