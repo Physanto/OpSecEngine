@@ -49,7 +49,7 @@ Cada elemento de `fallosInyectados` de `CONFIG_GANCHOS` (y de `caso.fallos` en l
 
 | Punto | Dónde se provoca |
 |---|---|
-| `SQL_CONEXION` | `DriverManager.getConnection` |
+| `SQL_CONEXION` | `DriverManager.getConnection` y `DataSource.getConnection` |
 | `SQL_EJECUTAR` | `execute`, `executeQuery` y `executeUpdate` de `Statement` y `PreparedStatement` |
 | `FIRESTORE_ESCRIBIR` | `set`, `update`, `delete`, `create` y `commit` de Firestore |
 | `ARCHIVO_ESCRIBIR` | reservado; todavía no lo atiende ningún gancho |
