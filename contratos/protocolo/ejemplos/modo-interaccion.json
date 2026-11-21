@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "tipo": "MODO_INTERACCION",
+  "id": "a1b2c3d4-0011-4000-8000-000000000011",
+  "cuerpo": {
+    "modo": "GRABAR"
+  }
+}

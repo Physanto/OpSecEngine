@@ -48,7 +48,8 @@ import javax.imageio.ImageIO;
  *   <li>{@code ARBOL_SOLICITUD}: responde el {@linkplain #conArbol(ArbolDto) árbol configurado}
  *       (vacío si no se configuró).
  *   <li>{@code CAPTURAR}: responde una imagen PNG pequeña generada en memoria.
- *   <li>{@code CONFIG_GANCHOS}: la registra y responde {@code RESULTADO_PASO} {@code OK}.
+ *   <li>{@code CONFIG_GANCHOS} y {@code MODO_INTERACCION}: las registra y responde {@code
+ *       RESULTADO_PASO} {@code OK}.
  *   <li>{@code ERROR}: solo lo registra.
  *   <li>{@code CERRAR}: termina la conversación y cierra la conexión.
  *   <li>Cualquier otro tipo: responde {@code ERROR} con el código {@code TIPO_NO_SOPORTADO}.
@@ -334,6 +335,7 @@ public final class AgenteFalso implements AutoCloseable {
                 canal.enviar(codec.responder(mensaje, TipoMensaje.CAPTURA, captura));
                 return true;
             case CONFIG_GANCHOS:
+            case MODO_INTERACCION:
                 canal.enviar(
                         codec.responder(
                                 mensaje,

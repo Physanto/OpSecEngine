@@ -75,5 +75,15 @@ public enum TipoEvento {
      * La aplicación probada termina, de forma normal o inesperada. Campos: ver {@code
      * contratos/catalogos/eventos.yaml}.
      */
-    APP_TERMINADA
+    APP_TERMINADA,
+    /**
+     * El usuario eligió un componente en el modo de inspección. Campos: ver {@code
+     * contratos/catalogos/eventos.yaml}.
+     */
+    COMPONENTE_INSPECCIONADO,
+    /**
+     * El usuario hizo una acción que se grabó como paso. Campos: ver {@code
+     * contratos/catalogos/eventos.yaml}.
+     */
+    ACCION_GRABADA
 }

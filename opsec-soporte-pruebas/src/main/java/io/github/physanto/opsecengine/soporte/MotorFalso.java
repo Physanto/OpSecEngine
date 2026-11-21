@@ -11,6 +11,7 @@ import io.github.physanto.opsecengine.protocolo.dto.ConfigGanchosDto;
 import io.github.physanto.opsecengine.protocolo.dto.ErrorDto;
 import io.github.physanto.opsecengine.protocolo.dto.EventoDto;
 import io.github.physanto.opsecengine.protocolo.dto.HolaDto;
+import io.github.physanto.opsecengine.protocolo.dto.ModoInteraccionDto;
 import io.github.physanto.opsecengine.protocolo.dto.PasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.ResultadoPasoDto;
 import io.github.physanto.opsecengine.protocolo.dto.SolicitudCapturaDto;
@@ -240,6 +241,27 @@ public final class MotorFalso implements AutoCloseable {
         return solicitar(
                 TipoMensaje.CONFIG_GANCHOS,
                 config,
+                TipoMensaje.RESULTADO_PASO,
+                ResultadoPasoDto.class,
+                tiempoMaximo);
+    }
+
+    /**
+     * Pide al agente que active o desactive el modo de inspección o de grabación y espera la
+     * confirmación.
+     *
+     * @param modo modo pedido; no puede ser null
+     * @return la confirmación, un resultado con código {@code OK}
+     * @throws ExcepcionErrorRemoto si el agente responde {@code ERROR}
+     * @throws ExcepcionProtocolo si no hay respuesta a tiempo o es de otro tipo
+     * @throws IOException si falla la conexión
+     * @throws IllegalStateException si todavía no se recibió el saludo
+     */
+    public ResultadoPasoDto modoInteraccion(ModoInteraccionDto modo) throws IOException {
+        Objects.requireNonNull(modo, "El modo no puede ser null");
+        return solicitar(
+                TipoMensaje.MODO_INTERACCION,
+                modo,
                 TipoMensaje.RESULTADO_PASO,
                 ResultadoPasoDto.class,
                 tiempoMaximo);

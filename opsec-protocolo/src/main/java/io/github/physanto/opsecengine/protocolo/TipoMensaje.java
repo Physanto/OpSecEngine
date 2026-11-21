@@ -41,6 +41,12 @@ public enum TipoMensaje {
      * Cuerpo: {@code ConfigGanchosDto}.
      */
     CONFIG_GANCHOS,
+    /**
+     * Motor → agente. Activa o desactiva el modo de inspección o de grabación. El agente responde
+     * {@link #RESULTADO_PASO} con {@code OK} cuando el modo ya está vigente, o con {@code ERROR} si
+     * no puede activarlo (por ejemplo, sin entorno gráfico). Cuerpo: {@code ModoInteraccionDto}.
+     */
+    MODO_INTERACCION,
     /** Motor → agente. Pide cerrar la aplicación de forma ordenada. Cuerpo: objeto vacío. */
     CERRAR,
     /**

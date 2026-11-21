@@ -367,3 +367,58 @@ eventos:
         tipo: entero
         obligatorio: false
         descripcion: Código de salida del proceso, si se conoce.
+
+  - tipo: COMPONENTE_INSPECCIONADO
+    origen: [agente]
+    descripcion: El usuario hizo clic en un componente con el modo de inspección activo (MODO_INTERACCION con INSPECCIONAR). El clic no llega a la aplicación.
+    campos:
+      - nombre: ventana
+        tipo: texto
+        obligatorio: true
+        descripcion: Título de la ventana que contiene el componente; si no tiene, su nombre o su clase simple.
+      - nombre: componente
+        tipo: texto
+        obligatorio: true
+        descripcion: Nombre completo de la clase del componente, por ejemplo javax.swing.JButton.
+      - nombre: ruta
+        tipo: texto
+        obligatorio: false
+        descripcion: Ruta del componente en el árbol de la ventana, con el formato de la estrategia RUTA.
+      - nombre: texto
+        tipo: texto
+        obligatorio: false
+        descripcion: Texto visible del componente, si lo tiene.
+      - nombre: localizador
+        tipo: lista
+        obligatorio: true
+        descripcion: Criterios que identifican el componente, en orden de preferencia. Cada elemento es un objeto con estrategia (valor de EstrategiaLocalizacion) y valor. Cada criterio se comprobó contra la ventana y encuentra solo este componente; el último es siempre la ruta.
+
+  - tipo: ACCION_GRABADA
+    origen: [agente]
+    descripcion: El usuario hizo una acción con el modo de grabación activo (MODO_INTERACCION con GRABAR); se registra como un paso. Las acciones llegan en el orden en que ocurrieron; un texto escrito se emite una sola vez, al terminar de editarlo.
+    campos:
+      - nombre: accion
+        tipo: texto
+        obligatorio: true
+        valores: [PULSAR, LLENAR, SELECCIONAR, MARCAR]
+        descripcion: Acción del paso grabado.
+      - nombre: ventana
+        tipo: texto
+        obligatorio: true
+        descripcion: Título de la ventana donde ocurrió la acción; si no tiene, su nombre o su clase simple.
+      - nombre: componente
+        tipo: texto
+        obligatorio: true
+        descripcion: Nombre completo de la clase del componente.
+      - nombre: localizador
+        tipo: lista
+        obligatorio: true
+        descripcion: Criterios que identifican el componente, con el mismo formato y garantías que en COMPONENTE_INSPECCIONADO.
+      - nombre: valor
+        tipo: texto
+        obligatorio: false
+        descripcion: Texto escrito (LLENAR), opción elegida (SELECCIONAR) o "true" o "false" (MARCAR). Ausente en PULSAR.
+      - nombre: sensible
+        tipo: booleano
+        obligatorio: false
+        descripcion: true si el valor viene de un campo de contraseña; el valor se envía tal como se escribió.
