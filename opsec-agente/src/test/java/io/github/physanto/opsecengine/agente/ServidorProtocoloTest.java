@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.physanto.opsecengine.agente.api.AdaptadorToolkit;
 import io.github.physanto.opsecengine.agente.api.ResultadoBusqueda;
+import io.github.physanto.opsecengine.agente.cobertura.CoberturaJacoco;
+import io.github.physanto.opsecengine.agente.cobertura.RtFalso;
 import io.github.physanto.opsecengine.agente.ganchos.ConfiguracionGanchos;
 import io.github.physanto.opsecengine.agente.swing.ControlInteraccion;
 import io.github.physanto.opsecengine.protocolo.CodecMensajes;
@@ -113,6 +115,39 @@ class ServidorProtocoloTest {
                     new ConfigGanchosDto(List.of(), List.of(), List.of(), List.of()));
             assertThat(ConfiguracionGanchos.esSqlSensible("DELETE")).isFalse();
             motor.cerrar();
+        }
+    }
+
+    @Test
+    void alRecibirCerrarVuelcaLaCoberturaAntesDeCortarLaConexion() throws Exception {
+        EmisorProtocolo emisor = new EmisorProtocolo(CODEC);
+        RtFalso.reiniciar();
+        CountDownLatch cierre = new CountDownLatch(1);
+        try (MotorFalso motor = new MotorFalso()) {
+            Thread hilo =
+                    new Thread(
+                            new ServidorProtocolo(
+                                    ArgumentosAgente.leer(motor.argumentosAgente()),
+                                    AgenteMain.version(),
+                                    new AdaptadorFijo(emisor),
+                                    emisor,
+                                    CODEC,
+                                    cierre::countDown,
+                                    null,
+                                    new CoberturaJacoco(RtFalso.class.getName(), mensaje -> {})),
+                            "servidor-cobertura");
+            hilo.setDaemon(true);
+            hilo.start();
+            motor.esperarHola(ESPERA);
+            assertThat(RtFalso.VOLCADOS).as("no vuelca antes de CERRAR").isEmpty();
+
+            assertThat(motor.cerrar()).isTrue();
+            hilo.join(ESPERA.toMillis());
+
+            assertThat(RtFalso.VOLCADOS).containsExactly(true);
+            assertThat(cierre.getCount()).isZero();
+        } finally {
+            RtFalso.reiniciar();
         }
     }
 
